@@ -2,13 +2,6 @@
   <div class="files-list-section">
     <div class="section-header">
       <h4>📁 Fichiers CSV disponibles</h4>
-      <button 
-        @click="refreshFiles" 
-        class="btn btn-refresh"
-        :disabled="loading"
-      >
-        🔄 Actualiser
-      </button>
     </div>
 
     <div v-if="loading" class="loading-indicator">
@@ -32,7 +25,6 @@
             <th>Timeframe</th>
             <th>Période</th>
             <th>Lignes</th>
-            <th>Période couverte</th>
             <th>Taille</th>
             <th>Modifié</th>
             <th class="actions-col">Actions</th>
@@ -54,7 +46,6 @@
             </td>
             <td>{{ file.period || 'N/A' }}</td>
             <td>{{ file.line_count ? file.line_count.toLocaleString() : 'N/A' }}</td>
-            <td class="date-range-col">{{ file.date_range || 'N/A' }}</td>
             <td>{{ formatSize(file.size_bytes) }}</td>
             <td>{{ file.modified }}</td>
             <td class="actions-col">
@@ -103,6 +94,11 @@ async function refreshFiles() {
     loading.value = false
   }
 }
+
+// Exposer la fonction pour les composants parents
+defineExpose({
+  refreshFiles
+})
 
 async function deleteFile(filePath: string) {
   const confirmed = confirm(
@@ -167,22 +163,6 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-}
-
-.btn-refresh {
-  background: #238636;
-  color: white;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: #2ea043;
-  transform: translateY(-2px);
-}
-
-.btn-refresh:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .loading-indicator,

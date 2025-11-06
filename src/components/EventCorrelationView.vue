@@ -325,8 +325,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useDataRefresh } from '../composables/useDataRefresh'
 
 // Types
 interface PastEvent {
@@ -398,9 +399,17 @@ watch(viewMode, (newMode) => {
 })
 
 // Fonctions
+const { onPairDataRefresh } = useDataRefresh()
+
 onMounted(async () => {
   await loadPastEvents()
   await loadAvailablePairs()
+  
+  // S'abonner aux événements de rafraîchissement
+  const unsubscribe = onPairDataRefresh(loadAvailablePairs)
+  
+  // Se désabonner au démontage
+  onBeforeUnmount(unsubscribe)
 })
 
 function switchViewMode(mode: 'by-event' | 'by-pair' | 'heatmap') {

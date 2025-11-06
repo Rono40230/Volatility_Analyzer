@@ -44,7 +44,9 @@ impl<'a> MetricsCalculator<'a> {
         let mut atr_values = Vec::new();
 
         for i in (period - 1)..true_ranges.len() {
-            let sum: f64 = true_ranges[i - period + 1..=i].iter().sum();
+            // Calculer l'indice de début : i - (period - 1) = i + 1 - period
+            let start_idx = i + 1 - period;
+            let sum: f64 = true_ranges[start_idx..=i].iter().sum();
             let atr = sum / period as f64;
             atr_values.push(atr);
         }
@@ -76,7 +78,8 @@ impl<'a> MetricsCalculator<'a> {
         let mut volatilities = Vec::new();
 
         for i in (period - 1)..returns.len() {
-            let slice = &returns[i - period + 1..=i];
+            let start_idx = i + 1 - period;
+            let slice = &returns[start_idx..=i];
             let mean = slice.iter().sum::<f64>() / period as f64;
             let variance = slice
                 .iter()
@@ -125,7 +128,8 @@ impl<'a> MetricsCalculator<'a> {
         let mut imbalances = Vec::new();
 
         for i in (period - 1)..self.candles.len() {
-            let slice = &self.candles[i - period + 1..=i];
+            let start_idx = i + 1 - period;
+            let slice = &self.candles[start_idx..=i];
             let mean_volume = slice.iter().map(|c| c.volume).sum::<f64>() / period as f64;
             let current_volume = self.candles[i].volume;
             let imbalance = (current_volume - mean_volume) / mean_volume.max(0.1);

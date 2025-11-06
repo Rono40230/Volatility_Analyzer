@@ -96,6 +96,7 @@ pub fn run() {
             // Pair data import commands (Phase 4)
             import_pair_data,
             clean_csv_files, // Nouveau: nettoyage CSV européens
+            import_and_clean_files, // Nouveau: import unifié (clean + import)
             // Session analysis commands (Phase 5)
             analyze_sessions,
             // File management commands (Phase 6)

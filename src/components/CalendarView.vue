@@ -64,7 +64,7 @@
         </div>
 
         <!-- Liste des fichiers disponibles -->
-        <CalendarFilesList />
+        <CalendarFilesList ref="calendarFilesListRef" />
         
         <!-- Section Import Automatisé -->
         <div class="import-section">
@@ -130,6 +130,7 @@ const importError = ref('')
 const importInfo = ref<CalendarImportInfo | null>(null)
 const loadingInfo = ref(false)
 const fileSelectorRef = ref<InstanceType<typeof CalendarFileSelector> | null>(null)
+const calendarFilesListRef = ref<InstanceType<typeof CalendarFilesList> | null>(null)
 
 // Gérer le changement de fichier calendrier
 async function handleFileSelected(filename: string) {
@@ -218,6 +219,12 @@ async function importCalendar() {
     importSuccess.value = `${count} événements importés avec succès !`
     selectedFilePath.value = ''
     selectedFileName.value = ''
+    
+    // Rafraîchir automatiquement la liste des fichiers
+    if (calendarFilesListRef.value) {
+      await calendarFilesListRef.value.refreshFiles()
+    }
+    
     await loadImportInfo()
     setTimeout(() => { importSuccess.value = '' }, 5000)
   } catch (e) {

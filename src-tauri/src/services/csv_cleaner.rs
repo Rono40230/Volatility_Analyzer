@@ -76,10 +76,30 @@ pub fn clean_european_csv(input_path: &str, output_dir: &Path) -> Result<Cleanin
 
 /// Nettoie une ligne individuelle
 fn clean_line(line: &str) -> Result<String, String> {
-    let parts: Vec<&str> = line.split(',').collect();
+    // Détecter le délimiteur : point-virgule (nouveau format) ou virgule (ancien)
+    let delimiter = if line.contains(';') { ';' } else { ',' };
+    
+    let parts: Vec<&str> = line.split(delimiter).collect();
     if parts.len() < 2 { return Err("Format invalide".to_string()); }
     
-    // Timestamp = première partie (peut contenir un espace)
+    // Format point-virgule (nouveau) : 6 colonnes directes
+    if delimiter == ';' {
+        if parts.len() != 6 {
+            return Err(format!("Attendu 6 colonnes, trouvé {}", parts.len()));
+        }
+        
+        // Time (UTC);Open;High;Low;Close;Volume
+        let timestamp = parts[0];
+        let open = parts[1].replace(',', ".");
+        let high = parts[2].replace(',', ".");
+        let low = parts[3].replace(',', ".");
+        let close = parts[4].replace(',', ".");
+        let volume = parts[5].replace(',', ".");
+        
+        return Ok(format!("{},{},{},{},{},{}", timestamp, open, high, low, close, volume));
+    }
+    
+    // Format virgule (ancien) : parsing complexe
     let timestamp_parts: Vec<&str> = parts.iter()
         .take_while(|p| p.contains('.') || p.contains(':'))
         .map(|s| *s)
@@ -90,39 +110,84 @@ fn clean_line(line: &str) -> Result<String, String> {
     let timestamp = timestamp_parts.join(" ");
     let data_start = timestamp_parts.len();
     
-    // Valeurs numériques = tout après le timestamp
     let values: Vec<&str> = parts[data_start..].iter().map(|s| *s).collect();
-    
-    // Reconstruction OHLCV : fusionner paires adjacentes si besoin
     let ohlcv = reconstruct_ohlcv(&values)?;
     
     Ok(format!("{},{},{},{},{},{}", timestamp, ohlcv[0], ohlcv[1], ohlcv[2], ohlcv[3], ohlcv[4]))
 }
 
 /// Reconstruit les 5 valeurs OHLCV depuis un tableau de valeurs séparées
+/// Gère le format européen où les virgules décimales créent des colonnes supplémentaires
 fn reconstruct_ohlcv(values: &[&str]) -> Result<Vec<String>, String> {
     if values.is_empty() { return Err("Aucune valeur".to_string()); }
     
-    let mut result = Vec::new();
-    let mut i = 0;
-    
-    while result.len() < 5 && i < values.len() {
-        let current = values[i];
-        
-        // Si nombre court (0-2 chiffres) ET suivi d'un nombre (partie décimale), fusionner
-        if current.len() <= 2 && i + 1 < values.len() && values[i + 1].len() >= 1 && values[i + 1].chars().all(|c| c.is_numeric()) {
-            result.push(format!("{}.{}", current, values[i + 1]));
-            i += 2;
-        }
-        // Sinon prendre tel quel
-        else {
-            result.push(current.to_string());
-            i += 1;
-        }
+    // Format standard : exactement 5 valeurs (déjà au bon format)
+    if values.len() == 5 {
+        return Ok(values.iter().map(|s| s.to_string()).collect());
     }
     
-    if result.len() < 5 { return Err(format!("Seulement {} valeurs trouvées", result.len())); }
-    Ok(result[..5].to_vec())
+    // Format EU avec virgules décimales : 9, 10 ou 11 valeurs
+    // 11 valeurs = OHLCV avec toutes les décimales (ex: 0,996,1,003,0,996,1,003,0,072)
+    // 10 valeurs = volume entier sans décimale (ex: 106,401,106,401,106,401,106,401,0)
+    // 9 valeurs  = high ET volume entiers (ex: 106,993,107,106,977,106,978,134,52)
+    
+    match values.len() {
+        11 => {
+            // Fusion systématique par paires : [0,1], [2,3], [4,5], [6,7], [8,9], reste 10
+            Ok(vec![
+                format!("{}.{}", values[0], values[1]),
+                format!("{}.{}", values[2], values[3]),
+                format!("{}.{}", values[4], values[5]),
+                format!("{}.{}", values[6], values[7]),
+                format!("{}.{}", values[8], values[9]),
+            ])
+        },
+        10 => {
+            // Fusion des 4 premières paires + volume entier
+            Ok(vec![
+                format!("{}.{}", values[0], values[1]),
+                format!("{}.{}", values[2], values[3]),
+                format!("{}.{}", values[4], values[5]),
+                format!("{}.{}", values[6], values[7]),
+                values[8].to_string(), // Volume entier (ex: "0")
+            ])
+        },
+        9 => {
+            // Cas spécial : détecter quelle valeur est entière
+            // Si values[2] est un seul chiffre (1-9), c'est le high entier
+            // Sinon, fusion normale
+            if values[2].len() <= 2 && values[2].parse::<u32>().is_ok() {
+                // High entier détecté (ex: "107")
+                Ok(vec![
+                    format!("{}.{}", values[0], values[1]),  // Open
+                    values[2].to_string(),                    // High entier
+                    format!("{}.{}", values[3], values[4]),  // Low
+                    format!("{}.{}", values[5], values[6]),  // Close
+                    format!("{}.{}", values[7], values[8]),  // Volume
+                ])
+            } else {
+                // Fusion normale par paires + dernier entier
+                Ok(vec![
+                    format!("{}.{}", values[0], values[1]),
+                    format!("{}.{}", values[2], values[3]),
+                    format!("{}.{}", values[4], values[5]),
+                    format!("{}.{}", values[6], values[7]),
+                    values[8].to_string(),
+                ])
+            }
+        },
+        8 => {
+            // 4 paires exactes (rare mais possible)
+            Ok(vec![
+                format!("{}.{}", values[0], values[1]),
+                format!("{}.{}", values[2], values[3]),
+                format!("{}.{}", values[4], values[5]),
+                format!("{}.{}", values[6], values[7]),
+                "0".to_string(), // Volume = 0
+            ])
+        },
+        _ => Err(format!("Format invalide: {} valeurs (attendu 5, 8-11)", values.len()))
+    }
 }
 
 /// Crée le répertoire de sortie pour les fichiers nettoyés

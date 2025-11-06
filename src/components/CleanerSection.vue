@@ -1,44 +1,40 @@
 <template>
   <div class="cleaner-section">
-    <h4>🧹 Nettoyage et Import</h4>
+    <h4>📥 Import de Données</h4>
     <p class="info-text">
-      ⚠️ Vos fichiers utilisent la virgule comme séparateur décimal (format européen) ? 
-      Nettoyez-les avant l'import.
+      Importez vos fichiers CSV (formats européen ou international). 
+      Le nettoyage et l'import sont effectués automatiquement.
     </p>
     
     <div class="cleaner-controls">
-      <button @click="selectFilesToClean" class="btn btn-cleaner" :disabled="cleaning">
-        🧹 Nettoyer vos fichiers avant leur importation
+      <button @click="selectFilesToImport" class="btn btn-import-unified" :disabled="importing">
+        📥 Importer vos données
       </button>
     </div>
 
-    <!-- Cleaning Progress -->
-    <div v-if="cleaning" class="progress-bar">
-      <div class="progress-fill" :style="{ width: `${cleanProgress}%` }"></div>
-      <span class="progress-text">Nettoyage en cours... {{ cleanProgress }}%</span>
+    <!-- Import en cours : sablier tournant -->
+    <div v-if="importing" class="importing-overlay">
+      <div class="hourglass">⏳</div>
+      <p class="importing-text">Import en cours...</p>
     </div>
 
-    <!-- Cleaning Results -->
-    <div v-if="cleanedFiles.length > 0" class="cleaned-files-list">
-      <h5>✅ Fichiers nettoyés ({{ cleanedFiles.length }})</h5>
-      <div class="clean-item" v-for="(report, index) in cleanedFiles" :key="index">
-        <span v-if="report.status === 'success'" class="status-icon">✅</span>
-        <span v-else-if="report.status === 'partial'" class="status-icon">⚠️</span>
+    <!-- Message d'erreur uniquement -->
+    <div v-if="importError" class="error-message">
+      ❌ {{ importError }}
+    </div>
+
+    <!-- Import Results -->
+    <div v-if="importResults.length > 0" class="import-results-list">
+      <h5>✅ Fichiers importés ({{ importResults.length }})</h5>
+      <div class="result-item" v-for="(result, index) in importResults" :key="index">
+        <span v-if="result.import_status === 'success'" class="status-icon">✅</span>
+        <span v-else-if="result.import_status === 'partial'" class="status-icon">⚠️</span>
         <span v-else class="status-icon">❌</span>
-        <span class="file-name">{{ report.original_file }}</span>
-        <span class="file-stats">{{ report.lines_cleaned }} lignes</span>
-        <span v-if="getErrorRate(report) >= 1.0" class="file-errors">{{ report.errors }} erreurs ({{ getErrorRate(report).toFixed(2) }}%)</span>
-        <button 
-          @click="handleImport(report.cleaned_file, index)" 
-          class="btn btn-import-single"
-          :class="{ 'importing': importing && importingIndex === index }"
-          :disabled="importing"
-        >
-          <span :class="{ 'spin': importing && importingIndex === index }">
-            {{ importing && importingIndex === index ? '⏳' : '📥' }}
-          </span>
-          Importer
-        </button>
+        <span class="file-name">{{ getFileName(result.original_file) }}</span>
+        <span class="file-stats">{{ result.lines_imported }} lignes</span>
+        <span v-if="result.cleaning_stats && result.cleaning_stats.errors > 0" class="file-errors">
+          {{ result.cleaning_stats.errors }} erreurs nettoyées
+        </span>
       </div>
     </div>
   </div>
@@ -49,34 +45,42 @@ import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 
-interface CleaningReport {
-  original_file: string
-  cleaned_file: string
-  status: string
+interface FileCleaningStats {
   lines_processed: number
   lines_cleaned: number
   errors: number
   warnings: string[]
 }
 
+interface ImportCleanResult {
+  original_file: string
+  import_status: string
+  lines_imported: number
+  cleaning_stats?: FileCleaningStats
+  error_message?: string
+}
+
+interface ImportCleanReport {
+  total_files: number
+  successful: number
+  failed: number
+  results: ImportCleanResult[]
+}
+
 const emit = defineEmits<{
-  importStarted: [index: number]
-  importCompleted: [success: boolean, index: number]
+  importCompleted: [success: boolean]
   error: [message: string]
 }>()
 
-const cleaning = ref(false)
-const cleanProgress = ref(0)
-const cleanedFiles = ref<CleaningReport[]>([])
 const importing = ref(false)
-const importingIndex = ref<number | null>(null)
+const importError = ref('')
+const importResults = ref<ImportCleanResult[]>([])
 
-function getErrorRate(report: CleaningReport): number {
-  if (report.lines_processed === 0) return 0
-  return (report.errors / report.lines_processed) * 100
+function getFileName(path: string): string {
+  return path.split('/').pop() || path
 }
 
-async function selectFilesToClean() {
+async function selectFilesToImport() {
   try {
     const selected = await open({
       multiple: true,
@@ -88,7 +92,7 @@ async function selectFilesToClean() {
 
     if (selected) {
       const paths = Array.isArray(selected) ? selected : [selected]
-      await cleanFiles(paths)
+      await importFiles(paths)
     }
   } catch (error) {
     console.error('Erreur sélection fichiers:', error)
@@ -96,55 +100,34 @@ async function selectFilesToClean() {
   }
 }
 
-async function cleanFiles(paths: string[]) {
-  cleaning.value = true
-  cleanProgress.value = 0
-  
-  try {
-    const progressInterval = setInterval(() => {
-      if (cleanProgress.value < 90) {
-        cleanProgress.value += 10
-      }
-    }, 200)
-    
-    const reports = await invoke<CleaningReport[]>('clean_csv_files', { paths })
-    
-    clearInterval(progressInterval)
-    cleanProgress.value = 100
-    
-    cleanedFiles.value = reports
-    
-    setTimeout(() => {
-      cleanProgress.value = 0
-      cleaning.value = false
-    }, 1000)
-    
-  } catch (error) {
-    console.error('Erreur nettoyage:', error)
-    emit('error', `Erreur nettoyage: ${error}`)
-    cleaning.value = false
-  }
-}
-
-async function handleImport(cleanedFilePath: string, index: number) {
+async function importFiles(paths: string[]) {
   importing.value = true
-  importingIndex.value = index
-  emit('importStarted', index)
+  importError.value = ''
+  importResults.value = []
   
   try {
-    await invoke('import_pair_data', { paths: [cleanedFilePath] })
+    const report = await invoke<ImportCleanReport>('import_and_clean_files', { paths })
     
-    // Remove from cleaned files list after successful import
-    cleanedFiles.value.splice(index, 1)
-    emit('importCompleted', true, index)
+    importResults.value = report.results
+    
+    // Afficher les résultats pendant 5 secondes puis les cacher
+    setTimeout(() => {
+      importResults.value = []
+      importing.value = false
+    }, 5000)
+    
+    emit('importCompleted', report.failed === 0)
     
   } catch (error) {
     console.error('Erreur import:', error)
-    emit('error', `Erreur import: ${error}`)
-    emit('importCompleted', false, index)
-  } finally {
+    importError.value = `Erreur lors de l'import : ${error}`
     importing.value = false
-    importingIndex.value = null
+    emit('importCompleted', false)
+    
+    // Cacher le message d'erreur après 10 secondes
+    setTimeout(() => {
+      importError.value = ''
+    }, 10000)
   }
 }
 </script>
@@ -175,8 +158,8 @@ async function handleImport(cleanedFilePath: string, index: number) {
   margin-bottom: 15px;
 }
 
-.btn-cleaner {
-  background: linear-gradient(180deg, #388bfd 0%, #1f6feb 100%);
+.btn-import-unified {
+  background: linear-gradient(180deg, #2ea043 0%, #238636 100%);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -184,68 +167,80 @@ async function handleImport(cleanedFilePath: string, index: number) {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(56, 139, 253, 0.2);
+  box-shadow: 0 2px 8px rgba(46, 160, 67, 0.2);
 }
 
-.btn-cleaner:hover:not(:disabled) {
-  background: linear-gradient(180deg, #539bf5 0%, #388bfd 100%);
+.btn-import-unified:hover:not(:disabled) {
+  background: linear-gradient(180deg, #3fb950 0%, #2ea043 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(56, 139, 253, 0.3);
+  box-shadow: 0 4px 12px rgba(46, 160, 67, 0.3);
 }
 
-.btn-cleaner:disabled {
+.btn-import-unified:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.progress-bar {
-  background: rgba(0, 0, 0, 0.2);
+/* Overlay de chargement avec sablier */
+.importing-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
-  overflow: hidden;
-  height: 30px;
-  position: relative;
-  margin-bottom: 15px;
+  margin: 20px 0;
 }
 
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #1f6feb, #58a6ff, #1f6feb);
-  background-size: 200% 100%;
-  animation: gradient-shift 2s ease infinite;
-  transition: width 0.3s ease;
+.hourglass {
+  font-size: 4em;
+  animation: spin 2s linear infinite;
 }
 
-.progress-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.importing-text {
+  color: #58a6ff;
+  font-size: 1.1em;
   font-weight: 600;
-  font-size: 0.9em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  margin-top: 15px;
 }
 
-@keyframes gradient-shift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Message d'erreur */
+.error-message {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid #f85149;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  color: #f85149;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
 }
 
-.cleaned-files-list {
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.import-results-list {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 8px;
   padding: 15px;
   margin-top: 15px;
 }
 
-.cleaned-files-list h5 {
+.import-results-list h5 {
   color: #7ee787;
   margin-bottom: 12px;
   font-size: 0.95em;
 }
 
-.clean-item {
+.result-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -255,7 +250,6 @@ async function handleImport(cleanedFilePath: string, index: number) {
   margin-bottom: 8px;
   font-size: 0.9em;
   flex-wrap: wrap;
-  position: relative;
 }
 
 .status-icon {
@@ -265,6 +259,7 @@ async function handleImport(cleanedFilePath: string, index: number) {
 .file-name {
   flex: 1;
   min-width: 200px;
+  color: #c9d1d9;
 }
 
 .file-stats {
@@ -273,42 +268,8 @@ async function handleImport(cleanedFilePath: string, index: number) {
 }
 
 .file-errors {
-  color: #f85149;
+  color: #ffa657;
   font-weight: 500;
-  margin-right: 10px;
-}
-
-.btn-import-single {
-  background: linear-gradient(180deg, #2ea043 0%, #238636 100%);
-  color: white;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: auto;
   font-size: 0.85em;
-}
-
-.btn-import-single:hover:not(:disabled) {
-  background: linear-gradient(180deg, #3fb950 0%, #2ea043 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(46, 160, 67, 0.3);
-}
-
-.btn-import-single:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.spin {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 </style>

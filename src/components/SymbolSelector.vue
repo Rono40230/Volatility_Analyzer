@@ -21,13 +21,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useVolatilityStore } from '../stores/volatility'
+import { useDataRefresh } from '../composables/useDataRefresh'
 import { storeToRefs } from 'pinia'
 
 const store = useVolatilityStore()
 const { symbols, loading } = storeToRefs(store)
 const selectedSymbol = ref('')
+
+const { onPairDataRefresh } = useDataRefresh()
 
 const emit = defineEmits<{
   symbolSelected: [symbol: string]
@@ -35,6 +38,14 @@ const emit = defineEmits<{
 
 onMounted(() => {
   store.loadSymbols()
+  
+  // S'abonner aux événements de rafraîchissement
+  const unsubscribe = onPairDataRefresh(() => {
+    store.loadSymbols()
+  })
+  
+  // Se désabonner au démontage
+  onBeforeUnmount(unsubscribe)
 })
 
 function onSymbolChange() {

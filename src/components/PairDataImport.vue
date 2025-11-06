@@ -1,53 +1,50 @@
 <template>
   <div class="pair-import">
     <!-- Liste des fichiers CSV disponibles -->
-    <PairFilesList />
+    <PairFilesList ref="filesListRef" />
 
     <!-- CSV Cleaner Section -->
     <CleanerSection 
-      @import-started="handleImportStarted"
       @import-completed="handleImportCompleted"
       @error="handleError"
     />
 
-    <!-- Import Summary -->
-    <ImportSummary 
-      :import-success="importSuccess"
-      :import-error="importError"
-      :import-summary="importSummary"
-    />
+    <!-- Afficher uniquement les erreurs -->
+    <div v-if="importError" class="import-error-message">
+      ❌ {{ importError }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useVolatilityStore } from '../stores/volatility'
+import { useDataRefresh } from '../composables/useDataRefresh'
 import PairFilesList from './PairFilesList.vue'
 import CleanerSection from './CleanerSection.vue'
-import ImportSummary from './ImportSummary.vue'
 
-interface ImportSummary {
-  total_files: number
-  successful: number
-  failed: number
-  pairs_updated: string[]
-  timeframes: string[]
-  errors: string[]
-}
-
-const importSuccess = ref('')
+const volatilityStore = useVolatilityStore()
+const { triggerPairDataRefresh } = useDataRefresh()
+const filesListRef = ref<InstanceType<typeof PairFilesList>>()
 const importError = ref('')
-const importSummary = ref<ImportSummary | null>(null)
 
-function handleImportStarted(_index: number) {
-  importSuccess.value = ''
-  importError.value = ''
-}
-
-function handleImportCompleted(success: boolean, _index: number) {
+async function handleImportCompleted(success: boolean) {
   if (success) {
-    importSuccess.value = '✅ Fichier importé avec succès !'
+    // Rafraîchir automatiquement la liste des fichiers
+    if (filesListRef.value) {
+      await filesListRef.value.refreshFiles()
+    }
+    
+    // Rafraîchir automatiquement le store Pinia (pour le dropdown)
+    await volatilityStore.loadSymbols()
+    
+    // Notifier tous les autres composants abonnés
+    await triggerPairDataRefresh()
+    
+    // Effacer toute erreur précédente
+    importError.value = ''
   } else {
-    importError.value = '❌ Échec de l\'import'
+    importError.value = 'Une erreur s\'est produite lors de l\'import'
   }
 }
 
@@ -59,5 +56,21 @@ function handleError(message: string) {
 <style scoped>
 .pair-import {
   padding: 20px 0;
+}
+
+.import-error-message {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid #f85149;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 20px 0;
+  color: #f85149;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 </style>

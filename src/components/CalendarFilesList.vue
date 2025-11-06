@@ -2,13 +2,6 @@
   <div class="files-list-section">
     <div class="section-header">
       <h4>📁 Fichiers disponibles</h4>
-      <button 
-        @click="refreshFiles" 
-        class="btn btn-refresh"
-        :disabled="loading"
-      >
-        🔄 Actualiser
-      </button>
     </div>
 
     <div v-if="loading" class="loading-indicator">
@@ -90,6 +83,11 @@ async function refreshFiles() {
   }
 }
 
+// Exposer la fonction pour les composants parents
+defineExpose({
+  refreshFiles
+})
+
 async function deleteFile(filePath: string) {
   const confirmed = confirm(
     `Êtes-vous sûr de vouloir supprimer ce fichier ?\nCette action est irréversible.`
@@ -153,22 +151,6 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s;
-}
-
-.btn-refresh {
-  background: #238636;
-  color: white;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: #2ea043;
-  transform: translateY(-2px);
-}
-
-.btn-refresh:disabled {
-  background: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .loading-indicator,

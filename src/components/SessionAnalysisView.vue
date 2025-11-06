@@ -194,8 +194,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useDataRefresh } from '../composables/useDataRefresh'
 
 interface SessionStats {
   name: string
@@ -248,13 +249,25 @@ const sessionData = ref<SessionAnalysisResult | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)
 
-onMounted(async () => {
+const { onPairDataRefresh } = useDataRefresh()
+
+async function loadSymbols() {
   try {
     symbols.value = await invoke<SymbolInfo[]>('load_symbols')
   } catch (e) {
     console.error('Erreur lors du chargement des symboles:', e)
     error.value = 'Impossible de charger la liste des paires'
   }
+}
+
+onMounted(async () => {
+  await loadSymbols()
+  
+  // S'abonner aux événements de rafraîchissement
+  const unsubscribe = onPairDataRefresh(loadSymbols)
+  
+  // Se désabonner au démontage
+  onBeforeUnmount(unsubscribe)
 })
 
 async function analyzeSymbol() {
