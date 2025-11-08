@@ -81,7 +81,7 @@ impl MetricsAggregator {
         score.min(100.0)
     }
 
-    /// Trouve les 2 meilleures heures pour trader
+    /// Trouve les 3 meilleures heures pour trader
     pub(super) fn find_best_hours(hourly_stats: &[HourlyStats]) -> Vec<u8> {
         let mut scored_hours: Vec<(u8, f64)> = hourly_stats
             .iter()
@@ -92,7 +92,7 @@ impl MetricsAggregator {
         // Trie par score décroissant
         scored_hours.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Retourne les 2 meilleures heures
-        scored_hours.iter().take(2).map(|(hour, _)| *hour).collect()
+        // Retourne les 3 meilleures heures
+        scored_hours.iter().take(3).map(|(hour, _)| *hour).collect()
     }
 }

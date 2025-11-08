@@ -48,7 +48,7 @@
 
     <div class="confidence-section">
       <h3>Score de Confiance</h3>
-      <div class="confidence-bar-container">
+      <div class="confidence-bar-container" :title="tooltips.confidenceScore">
         <div 
           class="confidence-bar" 
           :style="{ width: `${result.confidence_score}%` }"
@@ -106,7 +106,7 @@
     </div>
 
     <div class="best-hours-section">
-      <h3>⭐ Top 2 Meilleures Heures de Trading (UTC)</h3>
+      <h3>⭐ Top 3 Meilleures Heures de Trading (UTC)</h3>
       <div class="hours-badges">
         <span 
           v-for="hour in result.best_hours" 
@@ -269,7 +269,25 @@ const tooltips = {
 ✅ EXCELLENT: > 500,000 (très fiable)
 🟢 BON: 100,000 - 500,000
 ⚠️ MOYEN: 10,000 - 100,000
-❌ INSUFFISANT: < 10,000 (peu fiable)`
+❌ INSUFFISANT: < 10,000 (peu fiable)`,
+
+  confidenceScore: `Score de Confiance - Fiabilité globale de l'analyse (0-100%)
+
+📊 COMMENT C'EST CALCULÉ:
+• 25 pts : ATR significatif (>0.001)
+• 25 pts : Body Range élevé (>50%)
+• 20 pts : Tick Quality excellente (>0.001)
+• 20 pts : Noise Ratio faible (<2.0)
+• 10 pts : Volatilité raisonnable (<15%)
+
+💡 INTERPRÉTATION:
+✅ EXCELLENT (80-100%) : Conditions idéales pour trader
+🟢 BON (60-80%) : Bonnes conditions, tradable
+🟡 MOYEN (40-60%) : Conditions acceptables, prudence
+🔴 FAIBLE (<40%) : Éviter de trader, trop risqué
+
+📌 UTILITÉ STRADDLE:
+Plus le score est élevé, plus votre stratégie Straddle a de chances de réussir sur cette paire et cette période horaire.`
 }
 
 const recommendationClass = computed(() => {
