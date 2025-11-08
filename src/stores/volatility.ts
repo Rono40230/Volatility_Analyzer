@@ -30,6 +30,7 @@ export interface GlobalMetrics {
   mean_tick_quality: number
   mean_noise_ratio: number
   mean_volume_imbalance: number
+  mean_breakout_percentage: number
   total_candles: number
 }
 

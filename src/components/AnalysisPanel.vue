@@ -271,23 +271,26 @@ const tooltips = {
 ⚠️ MOYEN: 10,000 - 100,000
 ❌ INSUFFISANT: < 10,000 (peu fiable)`,
 
-  confidenceScore: `Score de Confiance - Fiabilité globale de l'analyse (0-100%)
+  confidenceScore: `Score de Confiance - Potentiel Scalping de la paire (0-100%)
 
 📊 COMMENT C'EST CALCULÉ:
-• 25 pts : ATR significatif (>0.001)
-• 25 pts : Body Range élevé (>50%)
-• 20 pts : Tick Quality excellente (>0.001)
-• 20 pts : Noise Ratio faible (<2.0)
-• 10 pts : Volatilité raisonnable (<15%)
+• 30 pts : ATR adapté Forex M1 (>15 pips = excellent)
+• 25 pts : Body Range directionnel (>35% = mouvements francs)
+• 25 pts : Volatilité élevée (>20% = opportunités)
+• 10 pts : Noise Ratio faible (<2.0 = signal propre)
+• 10 pts : Breakout % élevé (>10% = cassures fréquentes)
+• 5 pts : Données suffisantes (>100k bougies)
 
 💡 INTERPRÉTATION:
-✅ EXCELLENT (80-100%) : Conditions idéales pour trader
-🟢 BON (60-80%) : Bonnes conditions, tradable
-🟡 MOYEN (40-60%) : Conditions acceptables, prudence
-🔴 FAIBLE (<40%) : Éviter de trader, trop risqué
+✅ EXCELLENT (80-100%) : Paire idéale pour scalping agressif
+🟢 BON (60-80%) : Très bonne paire, tradable en confiance
+🟡 MOYEN (40-60%) : Acceptable, adapter sa stratégie
+🔴 FAIBLE (<40%) : Peu volatile, privilégier autres paires
 
 📌 UTILITÉ STRADDLE:
-Plus le score est élevé, plus votre stratégie Straddle a de chances de réussir sur cette paire et cette période horaire.`
+Plus le score est élevé, plus les mouvements sont amples et directionnels.
+Le Breakout % mesure les cassures fortes (>P80 ATR) = signal Straddle !
+Idéal : score >60% avec volatilité >15% et breakout >10%`
 }
 
 const recommendationClass = computed(() => {
@@ -524,6 +527,13 @@ function hasEconomicData(event: any): boolean {
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid #30363d;
+  cursor: help;
+  transition: all 0.3s ease;
+}
+
+.confidence-bar-container:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
 }
 
 .confidence-bar {

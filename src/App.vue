@@ -50,21 +50,21 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') 
         :class="{ active: activeTab === 'volatility' }"
         @click="switchTab('volatility')"
       >
-        📊 Volatilité brute d'un actif
+        📊 Volatilité brute
       </button>
       <button 
         class="tab-button" 
         :class="{ active: activeTab === 'correlation' }"
         @click="switchTab('correlation')"
       >
-        📈 Volatilité d'un actif par rapport aux événements économiques
+        📈 Volatilité par rapport aux événements économiques
       </button>
       <button 
         class="tab-button" 
         :class="{ active: activeTab === 'sessions' }"
         @click="switchTab('sessions')"
       >
-        📍 Volatilité d'un actif par rapport aux ouvertures boursières
+        📍 Volatilité par rapport aux ouvertures boursières
       </button>
       <div class="tab-spacer"></div>
       <button 

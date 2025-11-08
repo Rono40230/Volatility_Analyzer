@@ -19,15 +19,39 @@ pub struct HourlyStats {
 }
 
 impl HourlyStats {
-    /// Calcule un score de qualité global (0-100)
+    /// Calcule un score de qualité global (0-100) - Adapté Forex M1 scalping
     pub fn quality_score(&self) -> f64 {
         if self.candle_count == 0 { return 0.0; }
         let mut score: f64 = 0.0;
-        if self.atr_mean > 0.001 { score += 25.0; } else if self.atr_mean > 0.0005 { score += 15.0; }
-        if self.body_range_mean > 50.0 { score += 25.0; } else if self.body_range_mean > 30.0 { score += 15.0; }
-        if self.tick_quality_mean > 0.001 { score += 20.0; } else if self.tick_quality_mean > 0.0005 { score += 10.0; }
-        if self.noise_ratio_mean < 2.0 { score += 20.0; } else if self.noise_ratio_mean < 3.0 { score += 10.0; }
-        if self.breakout_percentage > 20.0 { score += 10.0; }
+        
+        // ATR adapté Forex (30 pts)
+        if self.atr_mean > 0.00025 { score += 30.0; } 
+        else if self.atr_mean > 0.00015 { score += 25.0; }
+        else if self.atr_mean > 0.00010 { score += 20.0; }
+        else if self.atr_mean > 0.00005 { score += 10.0; }
+        
+        // Body Range réaliste (25 pts)
+        if self.body_range_mean > 45.0 { score += 25.0; }
+        else if self.body_range_mean > 35.0 { score += 20.0; }
+        else if self.body_range_mean > 25.0 { score += 15.0; }
+        else if self.body_range_mean > 15.0 { score += 8.0; }
+        
+        // Volatilité (bonus) (20 pts)
+        if self.volatility_mean > 0.30 { score += 20.0; }
+        else if self.volatility_mean > 0.20 { score += 16.0; }
+        else if self.volatility_mean > 0.10 { score += 12.0; }
+        else if self.volatility_mean > 0.05 { score += 6.0; }
+        
+        // Noise Ratio (15 pts)
+        if self.noise_ratio_mean < 2.0 { score += 15.0; }
+        else if self.noise_ratio_mean < 3.0 { score += 10.0; }
+        else if self.noise_ratio_mean < 4.0 { score += 5.0; }
+        
+        // Breakout % - CRITIQUE pour Straddle (10 pts)
+        if self.breakout_percentage > 15.0 { score += 10.0; }
+        else if self.breakout_percentage > 10.0 { score += 7.0; }
+        else if self.breakout_percentage > 5.0 { score += 4.0; }
+        
         score.min(100.0)
     }
     

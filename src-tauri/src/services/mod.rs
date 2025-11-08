@@ -14,6 +14,8 @@ pub mod session;
 pub mod metrics;
 pub mod pair_data;
 pub mod pair_data_stats;
+pub mod event_duration_analyzer;
+pub mod win_rate_calculator;
 
 pub use csv_loader::*;
 pub use calendar_converter::*;

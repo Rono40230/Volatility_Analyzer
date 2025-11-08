@@ -78,6 +78,7 @@ pub struct GlobalMetrics {
     pub mean_tick_quality: f64,
     pub mean_noise_ratio: f64,
     pub mean_volume_imbalance: f64,
+    pub mean_breakout_percentage: f64,
     pub total_candles: usize,
 }
 
