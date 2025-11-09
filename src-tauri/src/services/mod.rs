@@ -1,7 +1,6 @@
 // services/mod.rs - Exports publics des services
 pub mod csv_loader;
 pub mod calendar_converter;
-pub mod calendar_file_stats;
 pub mod volatility;
 pub mod calendar_scraper;
 pub mod economic_event_loader;
@@ -13,26 +12,24 @@ pub mod import_processor;
 pub mod session;
 pub mod metrics;
 pub mod pair_data;
-pub mod pair_data_stats;
 pub mod event_duration_analyzer;
 pub mod win_rate_calculator;
 pub mod entry_timing_optimizer;
 pub mod contextual_atr_analyzer;
 pub mod event_metrics_aggregator;
 pub mod candle_index;
+pub mod calendar_file_stats;
+pub mod pair_data_stats;
 
 pub use csv_loader::*;
 pub use calendar_converter::*;
-pub use calendar_file_stats::*;
 pub use volatility::*;
 pub use calendar_scraper::*;
 pub use economic_event_loader::*;
 pub use event_correlation::*;
-pub use session_analyzer::*;
 pub use csv_cleaner::*;
 pub use config_service::*;
 pub use import_processor::*;
 pub use session::*;
 pub use metrics::*;
 pub use pair_data::*;
-pub use pair_data_stats::*;

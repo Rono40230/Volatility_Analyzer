@@ -13,5 +13,5 @@ pub use candle::Candle;
 pub use hourly_stats::HourlyStats;
 pub use analysis_result::{AnalysisResult, CorrelatedEvent, GlobalMetrics, TradingRecommendation, RiskLevel};
 pub use calendar_event::CalendarEvent;
-pub use event_metrics::{EventMetrics, EntryWindowAnalysis, TradingRecommendation as EventTradingRecommendation};
+pub use event_metrics::EventMetrics;
 pub use errors::{VolatilityError, Result};

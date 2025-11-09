@@ -74,13 +74,13 @@ pub fn calculate_volatilities_optimized(
     pip_value: f64,  // ✅ CORRECTION: passer pip_value en paramètre
 ) -> Result<VolatilityMetrics, String> {
     let event_dt = Utc.from_utc_datetime(&event_datetime);
-    let event_hour = event_dt.hour();
-    let event_date = event_dt.date_naive();
+    let _event_hour = event_dt.hour();
+    let _event_date = event_dt.date_naive();
 
     // Fenêtres temporelles
     let event_window_start = event_dt - Duration::minutes(event_window_minutes);
     let event_window_end = event_dt + Duration::minutes(event_window_minutes);
-    let baseline_start = event_dt - Duration::days(baseline_days_back);
+    let _baseline_start = event_dt - Duration::days(baseline_days_back);
 
     // OPTIMISATION 1: Récupérer candles pour la fenêtre EVENT par plage de dates
     // Au lieu de parcourir 970k, on récupère ~60 candles (30 min avant + 30 min après)
@@ -138,6 +138,10 @@ pub fn calculate_volatilities_optimized(
 /// Version BATCH: calcule volatilités pour plusieurs événements avec UN SEUL index
 /// Utilisé par "Par Paire" et "Heatmap" pour 500+ événements
 /// Bénéfice: charge l'index UNE FOIS au lieu de charger CSV 500+ fois
+/// 
+/// NOTE: Cette fonction est laissée disponible pour optimisations futures.
+/// Elle n'est pas actuellement appelée mais reste utile en tant qu'API public pour les clients.
+#[allow(dead_code)]
 pub fn calculate_batch_volatilities_optimized(
     candle_index: &CandleIndex,
     pair_symbol: &str,

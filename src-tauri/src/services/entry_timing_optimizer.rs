@@ -16,8 +16,12 @@ pub struct EntryTimingOptimizer<'a> {
 #[derive(Debug, Clone)]
 pub struct TimingAnalysis {
     pub minutes_before: i32,
+    /// NOTE: Ces fields sont publics pour introspection mais non utilisés actuellement
+    #[allow(dead_code)]
     pub win_count: usize,
+    #[allow(dead_code)]
     pub loss_count: usize,
+    #[allow(dead_code)]
     pub whipsaw_count: usize,
     pub win_rate: f64,
 }
@@ -29,6 +33,8 @@ pub struct OptimalTimingResult {
     pub best_win_rate: f64,
     pub worst_entry_minutes_before: i32,
     pub worst_win_rate: f64,
+    /// NOTE: Ce field est public pour introspection mais non utilisé actuellement
+    #[allow(dead_code)]
     pub all_timings: Vec<TimingAnalysis>,
 }
 
@@ -137,6 +143,8 @@ impl<'a> EntryTimingOptimizer<'a> {
 
     /// Analyse multiple événements pour statistiques robustes
     /// (À utiliser quand on a plusieurs occurrences du même type d'événement)
+    /// NOTE: Cette fonction est conservée pour usage futur
+    #[allow(dead_code)]
     pub fn analyze_multiple_events(
         events: &[(Vec<Candle>, DateTime<Utc>)],
         atr_multiplier_sl: f64,

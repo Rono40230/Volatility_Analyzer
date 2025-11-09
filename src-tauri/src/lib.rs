@@ -16,7 +16,7 @@ pub fn run() {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    println!("🚀 Démarrage de l'application Tauri...");
+    tracing::info!("🚀 Démarrage de l'application Tauri...");
     tracing::info!("Initialisation du pool DB calendrier");
 
     // Initialise le pool DB pour le calendrier économique
@@ -24,8 +24,8 @@ pub fn run() {
     let data_dir = match dirs::data_local_dir() {
         Some(dir) => dir,
         None => {
-            eprintln!("❌ ERREUR: Impossible de déterminer le répertoire de données local");
-            eprintln!("   Votre système ne semble pas avoir de répertoire de données standard.");
+            tracing::error!("❌ ERREUR: Impossible de déterminer le répertoire de données local");
+            tracing::error!("   Votre système ne semble pas avoir de répertoire de données standard.");
             std::process::exit(1);
         }
     };
@@ -37,8 +37,8 @@ pub fn run() {
     // Créer le dossier si nécessaire
     if let Some(parent) = db_path.parent() {
         if let Err(e) = std::fs::create_dir_all(parent) {
-            eprintln!("❌ ERREUR: Impossible de créer le répertoire de données: {}", e);
-            eprintln!("   Chemin: {:?}", parent);
+            tracing::error!("❌ ERREUR: Impossible de créer le répertoire de données: {}", e);
+            tracing::error!("   Chemin: {:?}", parent);
             std::process::exit(1);
         }
     }
@@ -47,42 +47,42 @@ pub fn run() {
     let calendar_pool = match db::create_pool(&db_url) {
         Ok(pool) => pool,
         Err(e) => {
-            eprintln!("❌ ERREUR: Impossible de créer le pool de base de données calendrier: {}", e);
-            eprintln!("   URL: {}", db_url);
+            tracing::error!("❌ ERREUR: Impossible de créer le pool de base de données calendrier: {}", e);
+            tracing::error!("   URL: {}", db_url);
             std::process::exit(1);
         }
     };
     
-    println!("✅ Pool de base de données calendrier initialisé");
+    tracing::info!("✅ Pool de base de données calendrier initialisé");
     
     // Crée la table calendar_events si elle n'existe pas
     if let Err(e) = db::ensure_calendar_table(&calendar_pool) {
-        eprintln!("❌ ERREUR: Impossible de créer la table calendar_events: {}", e);
-        eprintln!("   La base de données pourrait être corrompue.");
+        tracing::error!("❌ ERREUR: Impossible de créer la table calendar_events: {}", e);
+        tracing::error!("   La base de données pourrait être corrompue.");
         std::process::exit(1);
     }
     
-    println!("✅ Table calendar_events vérifiée/créée");
+    tracing::info!("✅ Table calendar_events vérifiée/créée");
 
     let calendar_state = calendar_commands::CalendarState {
         pool: Mutex::new(Some(calendar_pool)),
     };
 
-    println!("✅ CalendarState créé avec pool actif");
+    tracing::info!("✅ CalendarState créé avec pool actif");
 
     // Initialise le state pour les métriques d'événements
     let candles_state = event_metrics_commands::CandlesState {
         candles: Mutex::new(Vec::new()),
     };
 
-    println!("✅ CandlesState créé pour event metrics");
+    tracing::info!("✅ CandlesState créé pour event metrics");
 
     // Initialise l'index des candles (vide au démarrage, rempli par init_candle_index)
     let candle_index_state = candle_index_commands::CandleIndexState {
         index: Mutex::new(None),
     };
 
-    println!("✅ CandleIndexState créé (vide, en attente d'initialisation)");
+    tracing::info!("✅ CandleIndexState créé (vide, en attente d'initialisation)");
 
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -135,12 +135,12 @@ pub fn run() {
             get_candle_index_stats,
         ]);
 
-    println!("✅ Tauri Builder configuré");
-    println!("📋 Commandes enregistrées: ping, load_symbols, analyze_symbol, get_hourly_stats, get_best_hours, get_upcoming_events, load_economic_events_from_csv, import_pair_data, analyze_sessions");
-    println!("🔧 Lancement de l'application...");
+    tracing::info!("✅ Tauri Builder configuré");
+    tracing::info!("📋 Commandes enregistrées: ping, load_symbols, analyze_symbol, get_hourly_stats, get_best_hours, get_upcoming_events, load_economic_events_from_csv, import_pair_data, analyze_sessions");
+    tracing::info!("🔧 Lancement de l'application...");
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
-        eprintln!("❌ ERREUR FATALE lors du lancement de l'application Tauri: {}", e);
+        tracing::error!("❌ ERREUR FATALE lors du lancement de l'application Tauri: {}", e);
         std::process::exit(1);
     }
 }

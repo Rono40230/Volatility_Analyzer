@@ -144,6 +144,8 @@ impl<'a> EventMetricsAggregator<'a> {
     }
 
     /// Calcule les métriques agrégées pour plusieurs occurrences du même événement
+    /// NOTE: Cette fonction est conservée pour usage futur (agrégation multi-événements)
+    #[allow(dead_code)]
     pub fn calculate_aggregated_metrics(
         events: Vec<(Vec<Candle>, DateTime<Utc>)>,
         event_name: String,

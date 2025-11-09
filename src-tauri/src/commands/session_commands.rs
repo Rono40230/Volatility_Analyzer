@@ -1,6 +1,6 @@
 use crate::commands::calendar_commands::CalendarState;
 use crate::services::session_analyzer::{
-    CalendarCorrelation, OverlapStats, SessionAnalysisResult, SessionAnalyzer,
+    OverlapStats, SessionAnalysisResult, SessionAnalyzer,
     SessionStats, TradingSession,
 };
 use crate::services::{CsvLoader, CalendarCorrelator};

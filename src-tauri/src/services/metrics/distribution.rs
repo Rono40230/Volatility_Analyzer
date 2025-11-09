@@ -9,8 +9,12 @@ use tracing::debug;
 #[derive(Debug, Clone)]
 pub struct TrueRangeDistribution {
     /// Tous les True Ranges calculés
+    /// NOTE: Ce field est public pour introspection (utilisé par clients externes)
+    #[allow(dead_code)]
     pub true_ranges: Vec<f64>,
     /// 80e percentile du TR (seuil de breakout)
+    /// NOTE: Ce field est public pour introspection (utilisé par clients externes)
+    #[allow(dead_code)]
     pub percentile_80: f64,
     /// Indicateur de breakout pour chaque bougie
     pub is_breakout: Vec<bool>,

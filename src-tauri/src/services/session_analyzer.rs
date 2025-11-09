@@ -89,6 +89,8 @@ impl SessionAnalyzer {
     }
 
     /// Convertit une heure UTC en heure de Paris (avec gestion hiver/été)
+    /// NOTE: Fonction conservée pour usage futur
+    #[allow(dead_code)]
     pub fn utc_to_paris(utc_hour: u32, date: &NaiveDateTime) -> u32 {
         let is_dst = Self::is_paris_dst(date);
         let offset = if is_dst { 2 } else { 1 };
@@ -97,6 +99,8 @@ impl SessionAnalyzer {
 
     /// Détermine si Paris est en heure d'été (UTC+2) ou d'hiver (UTC+1)
     /// Heure d'été : dernier dimanche de mars à dernier dimanche d'octobre
+    /// NOTE: Fonction conservée pour usage futur
+    #[allow(dead_code)]
     pub fn is_paris_dst(date: &NaiveDateTime) -> bool {
         let month = date.month();
         let day = date.day();
@@ -128,6 +132,8 @@ impl SessionAnalyzer {
     }
 
     /// Calcule le jour du dernier dimanche d'un mois donné
+    /// NOTE: Fonction conservée pour usage futur
+    #[allow(dead_code)]
     fn last_sunday_of_month(year: i32, month: u32) -> u32 {
         let mut day = 31;
         if month == 3 {

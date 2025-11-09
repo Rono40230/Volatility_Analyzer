@@ -85,38 +85,3 @@ pub struct EventTypeInfo {
     pub event_type: String,
     pub count: i32,
 }
-
-#[tauri::command]
-pub async fn get_event_types_command() -> Result<Vec<EventTypeInfo>, String> {
-    let data_dir = dirs::data_local_dir()
-        .ok_or("Failed to get data directory")?
-        .join("volatility-analyzer");
-    
-    let db_path = data_dir.join("volatility.db");
-    
-    if !db_path.exists() {
-        return Err("Database not found".to_string());
-    }
-    
-    let conn = Connection::open(&db_path)
-        .map_err(|e| format!("Failed to open database: {}", e))?;
-    
-    let mut stmt = conn
-        .prepare("SELECT impact, COUNT(*) as count FROM calendar_events GROUP BY impact ORDER BY count DESC")
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-    
-    let types_iter = stmt
-        .query_map([], |row| {
-            Ok(EventTypeInfo {
-                event_type: row.get(0)?,
-                count: row.get(1)?,
-            })
-        })
-        .map_err(|e| format!("Failed to query event types: {}", e))?;
-    
-    let types: Vec<EventTypeInfo> = types_iter
-        .collect::<rusqlite::Result<Vec<_>>>()
-        .map_err(|e| format!("Failed to collect event types: {}", e))?;
-    
-    Ok(types)
-}

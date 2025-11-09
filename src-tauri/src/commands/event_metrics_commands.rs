@@ -1,7 +1,7 @@
 // commands/event_metrics_commands.rs - Commandes Tauri pour calcul de métriques d'événements
 // Conforme .clinerules : < 200L, pas d'unwrap()
 
-use crate::models::{Candle, EventMetrics, Result as AppResult, VolatilityError};
+use crate::models::{Candle, EventMetrics};
 use crate::services::event_metrics_aggregator::{EventMetricsAggregator, MetricsConfig};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

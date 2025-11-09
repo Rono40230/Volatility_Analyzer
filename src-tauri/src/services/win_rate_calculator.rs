@@ -23,13 +23,17 @@ pub enum TradeOutcome {
 /// Métriques de win rate
 #[derive(Debug, Clone)]
 pub struct WinRateMetrics {
+    /// NOTE: Ces fields sont publics pour introspection mais non utilisés actuellement
+    #[allow(dead_code)]
     pub total_simulations: usize,
     pub wins: usize,
     pub losses: usize,
     pub whipsaws: usize,
     pub win_rate: f64,
     pub whipsaw_rate: f64,
+    #[allow(dead_code)]
     pub avg_profit_pips: f64,
+    #[allow(dead_code)]
     pub avg_loss_pips: f64,
     pub risk_reward_ratio: f64,
 }

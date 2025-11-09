@@ -36,6 +36,7 @@ pub enum VolatilityError {
     DatabaseError(String),
     
     #[error("Erreur réseau: {0}")]
+    #[allow(dead_code)]
     NetworkError(String),
     
     #[error("Erreur de parsing: {0}")]

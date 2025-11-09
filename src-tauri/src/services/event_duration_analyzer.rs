@@ -254,10 +254,10 @@ mod tests {
         let metrics = analyzer.analyze().unwrap();
 
         // Pic devrait durer ~60 minutes
-        assert!(metrics.peak_duration_minutes > 50.0);
-        assert!(metrics.peak_duration_minutes < 70.0);
+        assert!(metrics.peak_duration_minutes > 50);
+        assert!(metrics.peak_duration_minutes < 70);
 
         // Retour normal après ~60 minutes
-        assert!(metrics.return_to_normal_minutes > 50.0);
+        assert!(metrics.return_to_normal_minutes > 50);
     }
 }

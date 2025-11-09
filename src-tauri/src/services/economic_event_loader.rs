@@ -12,6 +12,8 @@ use tracing::{info, warn};
 
 /// Service pour charger événements économiques depuis CSV
 pub struct EconomicEventLoader {
+    /// NOTE: Ce field est public pour usage futur (Phase 2 - intégration scraper)
+    #[allow(dead_code)]
     scraper: CalendarScraper,
 }
 

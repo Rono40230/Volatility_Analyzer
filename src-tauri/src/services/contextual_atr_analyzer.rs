@@ -24,6 +24,8 @@ pub struct ContextualAtrMetrics {
     /// ATR maximum atteint dans les 2h post-événement
     pub max_atr_spike: f64,
     /// Temps en minutes pour atteindre le pic d'ATR
+    /// NOTE: Ce field est public pour introspection mais non utilisé actuellement
+    #[allow(dead_code)]
     pub minutes_to_peak: i64,
     /// Multiplicateur SL recommandé basé sur l'historique
     pub recommended_sl_multiplier: f64,

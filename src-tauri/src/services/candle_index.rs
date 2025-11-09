@@ -36,6 +36,8 @@ impl CandleIndex {
 
     /// Charge et indexe ALL CSV files au démarrage
     /// Appelé UNE SEULE FOIS au startup de l'app
+    /// NOTE: Cette fonction est conservée pour usage futur
+    #[allow(dead_code)]
     pub fn load_all_pairs() -> Result<Self, String> {
         let mut index = CandleIndex::new();
         let loader = CsvLoader::new();
@@ -96,6 +98,8 @@ impl CandleIndex {
     }
 
     /// Récupère ALL candles pour une paire
+    /// NOTE: Cette fonction est conservée pour usage futur
+    #[allow(dead_code)]
     pub fn get_all_candles(&self, symbol: &str) -> Option<Vec<Candle>> {
         self.data.get(symbol).map(|date_map| {
             date_map
@@ -123,6 +127,8 @@ impl CandleIndex {
     }
 
     /// Récupère les candles pour UN JOUR SPÉCIFIQUE
+    /// NOTE: Cette fonction est conservée pour usage futur
+    #[allow(dead_code)]
     pub fn get_candles_for_date(
         &self,
         symbol: &str,

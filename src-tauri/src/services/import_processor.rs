@@ -1,7 +1,7 @@
 // services/import_processor.rs - Logique de traitement pour l'import unifié
 // Conforme .clinerules : < 300L, pas d'unwrap()
 
-use crate::services::{clean_european_csv, CleaningReport, PairDataConverter};
+use crate::services::{clean_european_csv, PairDataConverter};
 use std::fs;
 use std::path::{Path, PathBuf};
 

@@ -22,6 +22,10 @@ pub struct ParsedEvent {
 #[derive(Debug)]
 pub struct ConversionResult {
     pub events: Vec<ParsedEvent>,
+    /// Nombre total d'événements lus du fichier source (avant filtrage)
+    /// NOTE: Ce champ n'est pas actuellement utilisé en interne mais reste public
+    /// pour les clients qui souhaiteraient l'exploiter
+    #[allow(dead_code)]
     pub total_read: usize,
     pub total_filtered: usize,
 }

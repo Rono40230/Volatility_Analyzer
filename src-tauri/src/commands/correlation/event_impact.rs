@@ -1,7 +1,7 @@
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use crate::services::CsvLoader;
-use chrono::{DateTime, Utc, TimeZone, Duration, Timelike};
+use chrono::{DateTime, Utc, TimeZone};
 use tauri::State;
 
 use super::volatility_helpers::{parse_sqlite_datetime, calculate_volatilities_optimized};
@@ -78,81 +78,7 @@ fn get_available_pairs() -> Result<Vec<String>, String> {
 }
 
 /// Calcule les volatilités pour plusieurs événements avec les candles déjà chargés (une seule lecture CSV)
-/// 
-/// Option C - Baseline glissante :
-/// - event_volatility : moyenne des volatilités sur la fenêtre événement (±30min autour de l'événement)
-/// - baseline_volatility : moyenne des volatilités sur les 7 jours ouvrables AVANT l'événement,
-///   à la même heure, excluant les autres événements HIGH/MEDIUM
-fn calculate_volatilities_for_events(
-    candles: &[(DateTime<Utc>, f64, f64)], // (datetime, high, low)
-    event_datetimes: &[DateTime<Utc>],
-    event_window_minutes: i64,
-    baseline_days_back: i64,
-    symbol: &str,
-) -> (f64, f64) {
-    let pip_value = get_pip_value(symbol);
-    let mut all_event_volatilities = Vec::new();
-    let mut all_baseline_volatilities = Vec::new();
-    
-    for event_dt in event_datetimes {
-        let event_hour = event_dt.hour();
-        let event_date = event_dt.date_naive();
-        
-        let event_window_start = *event_dt - Duration::minutes(event_window_minutes);
-        let event_window_end = *event_dt + Duration::minutes(event_window_minutes);
-        let baseline_start = *event_dt - Duration::days(baseline_days_back);
-        
-        let mut event_vol_sum = 0.0;
-        let mut event_count = 0;
-        let mut baseline_vol_sum = 0.0;
-        let mut baseline_count = 0;
-        
-        for (candle_dt, high, low) in candles.iter() {
-            // Convertir en pips en utilisant la valeur correcte pour la paire
-            let pips = (high - low) / pip_value;
-            
-            // Volatilité pendant l'événement (±N min)
-            if candle_dt >= &event_window_start && candle_dt <= &event_window_end {
-                event_vol_sum += pips;
-                event_count += 1;
-            }
-            
-            // Volatilité baseline (même heure sur 7 jours précédents)
-            // Option C: 7 jours ouvrables avant l'événement, même heure
-            let candle_date = candle_dt.date_naive();
-            if candle_dt >= &baseline_start 
-               && candle_dt < event_dt 
-               && candle_date != event_date
-               && candle_dt.hour() == event_hour {
-                baseline_vol_sum += pips;
-                baseline_count += 1;
-            }
-        }
-        
-        // Moyennes pour CET événement
-        if event_count > 0 {
-            all_event_volatilities.push(event_vol_sum / event_count as f64);
-        }
-        if baseline_count > 0 {
-            all_baseline_volatilities.push(baseline_vol_sum / baseline_count as f64);
-        }
-    }
-    
-    // Moyennes sur TOUS les événements
-    let event_volatility = if all_event_volatilities.is_empty() {
-        0.0
-    } else {
-        all_event_volatilities.iter().sum::<f64>() / all_event_volatilities.len() as f64
-    };
-    
-    let baseline_volatility = if all_baseline_volatilities.is_empty() {
-        0.0
-    } else {
-        all_baseline_volatilities.iter().sum::<f64>() / all_baseline_volatilities.len() as f64
-    };
-    
-    (event_volatility, baseline_volatility)
-}
+/// Conforme .clinerules - ce code est remplacé par `calculate_volatilities_optimized` de volatility_helpers
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PairImpactDetail {
@@ -233,7 +159,7 @@ pub async fn get_event_impact_by_pair(
     
     // Récupérer la dernière datetime
     let (_, last_datetime, _, _) = &events[events.len() - 1];
-    let last_event_datetime = parse_sqlite_datetime(last_datetime)?;
+    let _last_event_datetime = parse_sqlite_datetime(last_datetime)?;
     let last_datetime_formatted = last_datetime.clone();
     
     // Le event_count est passé en paramètre depuis le frontend (du dropdown)

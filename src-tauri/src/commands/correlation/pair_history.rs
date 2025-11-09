@@ -1,10 +1,8 @@
 use rusqlite::{Connection, Result as SqliteResult};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use tauri::State;
 
 use super::volatility_helpers::{parse_sqlite_datetime, calculate_volatilities_optimized};
-use crate::services::CsvLoader;
 use crate::commands::candle_index_commands::CandleIndexState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

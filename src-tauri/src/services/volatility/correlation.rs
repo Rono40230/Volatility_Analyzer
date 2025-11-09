@@ -8,10 +8,14 @@ use chrono::Timelike;
 use tracing::{info, warn};
 
 /// Corrélateur d'événements économiques
+/// NOTE: Cette structure est conservée pour usage futur (Phase 2 - corrélations avancées)
+#[allow(dead_code)]
 pub(super) struct EventCorrelator;
 
 impl EventCorrelator {
     /// Corrèle les événements économiques avec les pics de volatilité
+    /// NOTE: Cette fonction est conservée pour usage futur
+    #[allow(dead_code)]
     pub(super) fn correlate(
         candles: &[Candle],
         symbol: &str,

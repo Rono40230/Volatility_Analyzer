@@ -35,6 +35,8 @@ impl EventCorrelationService {
     }
 
     /// Analyse la corrélation entre un événement et la volatilité observée
+    /// NOTE: Méthode conservée pour usage futur (Phase 2 - analyses avancées)
+    #[allow(dead_code)]
     pub fn correlate_event_with_volatility(
         &self,
         event: &CalendarEvent,
@@ -112,6 +114,8 @@ impl EventCorrelationService {
     }
 
     /// Analyse complète : trouve tous les événements corrélés avec des pics de volatilité
+    /// NOTE: Méthode conservée pour usage futur (Phase 2 - analyses avancées)
+    #[allow(dead_code)]
     pub fn analyze_correlations(
         &self,
         symbol: &str,
@@ -149,6 +153,8 @@ impl EventCorrelationService {
     }
 
     /// Statistiques de corrélation globales
+    /// NOTE: Méthode conservée pour usage futur (Phase 2 - analyses avancées)
+    #[allow(dead_code)]
     pub fn get_correlation_stats(
         &self,
         symbol: &str,
