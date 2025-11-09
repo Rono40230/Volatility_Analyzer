@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use tauri::State;
 
-use super::helpers::{parse_sqlite_datetime, calculate_volatilities_from_preloaded_candles};
-use super::optimized_helpers::calculate_volatilities_optimized;
+use super::volatility_helpers::{parse_sqlite_datetime, calculate_volatilities_optimized};
 use crate::services::CsvLoader;
 use crate::commands::candle_index_commands::CandleIndexState;
 
@@ -119,9 +118,9 @@ pub async fn get_pair_event_history(
             event_datetime,
             30,  // event_window_minutes
             7,   // baseline_days_back (7 jours)
-            super::optimized_helpers::get_pip_value(&pair_symbol),  // ✅ CORRECTION: passer pip_value
+            super::volatility_helpers::get_pip_value(&pair_symbol),  // ✅ CORRECTION: passer pip_value
         )
-        .unwrap_or_else(|_| super::optimized_helpers::VolatilityMetrics {
+        .unwrap_or_else(|_| super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
         });

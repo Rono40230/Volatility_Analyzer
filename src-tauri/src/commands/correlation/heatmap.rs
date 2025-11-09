@@ -5,8 +5,7 @@ use chrono::DateTime;
 use tauri::State;
 
 use crate::services::csv_loader::CsvLoader;
-use super::helpers::{parse_sqlite_datetime, calculate_volatilities_from_preloaded_candles, calculate_both_volatilities};
-use super::optimized_helpers::calculate_volatilities_optimized;
+use super::volatility_helpers::{parse_sqlite_datetime, calculate_volatilities_optimized};
 use crate::commands::candle_index_commands::CandleIndexState;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -149,64 +148,6 @@ fn get_event_types(conn: &Connection, months_back: i32) -> Result<Vec<EventTypeI
     Ok(event_types)
 }
 
-fn calculate_avg_volatility_for_event_pair(
-    conn: &Connection,
-    event_name: &str,
-    pair: &str,
-    months_back: i32,
-) -> Result<f64, String> {
-    let cutoff_date = chrono::Utc::now()
-        .checked_sub_months(chrono::Months::new(months_back as u32))
-        .ok_or("Failed to calculate cutoff date")?
-        .format("%Y-%m-%d")
-        .to_string();
-    
-    // Récupérer tous les événements de ce type dans la période
-    let mut event_stmt = conn
-        .prepare(
-            "SELECT datetime(event_time) 
-             FROM calendar_events 
-             WHERE description = ?1 AND date(event_time) >= ?2
-             ORDER BY event_time"
-        )
-        .map_err(|e| format!("Failed to prepare event statement: {}", e))?;
-    
-    let events: Vec<String> = event_stmt
-        .query_map([event_name, &cutoff_date], |row| {
-            row.get::<_, String>(0)
-        })
-        .map_err(|e| format!("Failed to query events: {}", e))?
-        .collect::<SqliteResult<Vec<String>>>()
-        .map_err(|e| format!("Failed to collect events: {}", e))?;
-    
-    if events.is_empty() {
-        return Ok(0.0);
-    }
-    
-    let mut total_volatility = 0.0;
-    let mut valid_count = 0;
-    
-    for datetime_str in &events {
-        // Parser la datetime avec fonction robuste
-        let event_datetime = parse_sqlite_datetime(datetime_str)?;
-        
-        // Calculer la volatilité autour de cet événement (±30 min)
-        let metrics = calculate_both_volatilities(pair, event_datetime, 30, 30)?;
-        let event_volatility = metrics.event_volatility;
-        
-        if event_volatility > 0.0 {
-            total_volatility += event_volatility;
-            valid_count += 1;
-        }
-    }
-    
-    if valid_count == 0 {
-        Ok(0.0)
-    } else {
-        Ok(total_volatility / valid_count as f64)
-    }
-}
-
 /// Version optimisée : utilise CandleIndex pour recherches rapides par date
 fn calculate_avg_volatility_for_event_pair_optimized(
     conn: &Connection,
@@ -257,9 +198,9 @@ fn calculate_avg_volatility_for_event_pair_optimized(
             event_datetime,
             30,  // event_window_minutes
             7,   // baseline_days_back
-            super::optimized_helpers::get_pip_value(pair),  // ✅ CORRECTION: passer pip_value
+            super::volatility_helpers::get_pip_value(pair),  // ✅ CORRECTION: passer pip_value
         )
-        .unwrap_or_else(|_| super::optimized_helpers::VolatilityMetrics {
+        .unwrap_or_else(|_| super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
         });

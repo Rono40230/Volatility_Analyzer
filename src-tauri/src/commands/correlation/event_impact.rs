@@ -4,8 +4,7 @@ use crate::services::CsvLoader;
 use chrono::{DateTime, Utc, TimeZone, Duration, Timelike};
 use tauri::State;
 
-use super::helpers::{parse_sqlite_datetime};
-use super::optimized_helpers::calculate_volatilities_optimized;
+use super::volatility_helpers::{parse_sqlite_datetime, calculate_volatilities_optimized};
 use crate::commands::candle_index_commands::CandleIndexState;
 
 /// Retourne la valeur d'1 pip pour une paire donnée
@@ -276,7 +275,7 @@ pub async fn get_event_impact_by_pair(
             event_datetimes[0].naive_utc(),  // Première événement pour fenêtre
             30,  // event_window_minutes
             7,   // baseline_days_back
-            super::optimized_helpers::get_pip_value(pair),  // ✅ CORRECTION: passer pip_value
+            super::volatility_helpers::get_pip_value(pair),  // ✅ CORRECTION: passer pip_value
         )?;
         
         let event_volatility = metrics.event_volatility;

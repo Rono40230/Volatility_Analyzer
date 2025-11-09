@@ -2,13 +2,12 @@
 // Point d'entrée pour les commandes de corrélation événements × paires
 // Conforme .clinerules: < 100 lignes, exports seulement
 
-mod helpers;
 mod types;
 mod past_events;
 mod event_impact;
 mod pair_history;
 mod heatmap;
-mod optimized_helpers;
+mod volatility_helpers;
 
 // Ré-exporter les commandes Tauri
 pub use past_events::get_past_events;
