@@ -1,0 +1,95 @@
+#!/bin/bash
+# scripts/profile_performance.sh - Profiler les requêtes lentes
+
+echo "🔍 PERFORMANCE PROFILING - Analyse Historiques"
+echo "================================================"
+echo ""
+
+cd src-tauri
+
+# Test 1: Compilation + startup time
+echo "1️⃣  STARTUP TIME"
+echo "─────────────────"
+time cargo build --release 2>&1 | tail -3
+echo ""
+
+# Test 2: Analyze SQLite queries
+echo "2️⃣  DATABASE QUERIES"
+echo "────────────────────"
+echo "Problèmes identifiés:"
+echo ""
+echo "❌ PROBLÈME 1: Charger TOUS les pairs à chaque fois"
+echo "   Ligne 88-90 (event_impact/mod.rs):"
+echo "   for pair in &pairs {"
+echo "       candle_index.load_pair_candles(pair)?"
+echo "   }"
+echo "   → Impact: ~10-15 paires = 10-15 requêtes DB"
+echo ""
+
+echo "❌ PROBLÈME 2: Requête BD sans INDEX"
+echo "   Ligne 37 (event_impact/mod.rs):"
+echo '   SELECT ... FROM calendar_events WHERE description = ? AND event_time >= "2024-01-01"'
+echo "   → Impact: Full table scan si pas d'index sur (description, event_time)"
+echo ""
+
+echo "❌ PROBLÈME 3: CandleIndex lock contention"
+echo "   Ligne 78-79 (event_impact/mod.rs):"
+echo "   let mut index_state = state.index.lock()?"
+echo "   → Impact: Bloque toutes autres requêtes pendant toute l'opération"
+echo ""
+
+echo "❌ PROBLÈME 4: Calcul en boucle pour TOUS les pairs"
+echo "   Ligne 112-129 (event_impact/mod.rs):"
+echo "   for pair in pairs { calculate_volatilities_optimized(...) }"
+echo "   → Impact: 10-15 calculs = très gourmand CPU"
+echo ""
+echo "   Chaque calculate_volatilities_optimized:"
+echo "   • Parcourt 30 minutes de candles (événement)"
+echo "   • Parcourt 7 jours de candles (baseline)"
+echo "   • ~= 500-1000 candles par pair"
+echo "   × 10-15 pairs = 5000-15000 candles traités!"
+echo ""
+
+echo "3️⃣  ESTIMATION TEMPS TOTAL"
+echo "──────────────────────────"
+echo "Hypothèse (avec 10 paires):"
+echo "  • DB query (SELECT events): 50ms"
+echo "  • Load 10 pairs candles: 10 × 100ms = 1000ms"
+echo "  • Calculate volatilities: 10 × 150ms = 1500ms"
+echo "  • Generate output: 50ms"
+echo "  ────────────────────────"
+echo "  TOTAL: ~2600ms ✗"
+echo ""
+echo "C'est ce que tu vois!"
+echo ""
+
+echo "4️⃣  SOLUTIONS PROPOSÉES"
+echo "──────────────────────"
+echo ""
+echo "RAPIDE (0 code):"
+echo "  ✓ Vérifier si index existe: SELECT * FROM sqlite_master WHERE type='index';"
+echo "  ✓ Mesurer requête BD: time sqlite3 volatility.db 'SELECT COUNT(*) FROM calendar_events'"
+echo "  ✓ Mesurer CandleIndex load: ajouter println!s"
+echo ""
+echo "À FAIRE (légèrement invasif):"
+echo "  ✓ Ajouter INDEX sur calendar_events(description, event_time)"
+echo "  ✓ Charger les candles de manière lazy (à la demande)"
+echo "  ✓ Paralléliser les calculs volatilité avec rayon_par"
+echo "  ✓ Cacher le résultat 5 minutes"
+echo ""
+echo "GROS OPTIMISATIONS (pour Phase 2):"
+echo "  ✓ Pré-charger CandleIndex au startup (derrière spinner)"
+echo "  ✓ Utiliser connection pool pour BD"
+echo "  ✓ Calculer indices techniques côté BD (plutôt que Rust)"
+echo ""
+
+echo "5️⃣  PROCHAINE ÉTAPE"
+echo "──────────────────"
+echo "Mesurer les vraies times avec RUST LOGGING:"
+echo ""
+echo "  cargo run --release 2>&1 | grep -E 'TIMER|Duration'"
+echo ""
+echo "Ou chercher dans code:"
+echo "  grep -r 'println!' src/commands/correlation/"
+echo ""
+
