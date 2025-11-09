@@ -7,7 +7,7 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Configuration de l'application
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppConfig {
     /// Fichier calendrier actuellement sélectionné
     pub selected_calendar_file: Option<String>,
@@ -15,15 +15,6 @@ pub struct AppConfig {
     /// Timestamp de dernière mise à jour
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_updated: Option<String>,
-}
-
-impl Default for AppConfig {
-    fn default() -> Self {
-        Self {
-            selected_calendar_file: None,
-            last_updated: None,
-        }
-    }
 }
 
 /// Service de configuration

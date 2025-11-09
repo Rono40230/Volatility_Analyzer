@@ -102,7 +102,7 @@ fn clean_line(line: &str) -> Result<String, String> {
     // Format virgule (ancien) : parsing complexe
     let timestamp_parts: Vec<&str> = parts.iter()
         .take_while(|p| p.contains('.') || p.contains(':'))
-        .map(|s| *s)
+        .copied()
         .collect();
     
     if timestamp_parts.is_empty() { return Err("Pas de timestamp".to_string()); }
@@ -110,7 +110,7 @@ fn clean_line(line: &str) -> Result<String, String> {
     let timestamp = timestamp_parts.join(" ");
     let data_start = timestamp_parts.len();
     
-    let values: Vec<&str> = parts[data_start..].iter().map(|s| *s).collect();
+    let values: Vec<&str> = parts[data_start..].to_vec();
     let ohlcv = reconstruct_ohlcv(&values)?;
     
     Ok(format!("{},{},{},{},{},{}", timestamp, ohlcv[0], ohlcv[1], ohlcv[2], ohlcv[3], ohlcv[4]))

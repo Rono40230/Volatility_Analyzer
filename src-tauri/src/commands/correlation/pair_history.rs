@@ -118,7 +118,7 @@ pub async fn get_pair_event_history(
             7,   // baseline_days_back (7 jours)
             super::volatility_helpers::get_pip_value(&pair_symbol),  // ✅ CORRECTION: passer pip_value
         )
-        .unwrap_or_else(|_| super::volatility_helpers::VolatilityMetrics {
+        .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
         });

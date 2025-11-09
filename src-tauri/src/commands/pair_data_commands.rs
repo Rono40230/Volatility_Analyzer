@@ -108,7 +108,7 @@ fn process_single_file(
     
     // 4. Gérer les doublons (versioning)
     if output_path.exists() {
-        output_path = handle_duplicate(&output_dir, &output_filename)?;
+        output_path = handle_duplicate(output_dir, &output_filename)?;
     }
     
     println!("💾 Sauvegarde: {}", output_path.display());

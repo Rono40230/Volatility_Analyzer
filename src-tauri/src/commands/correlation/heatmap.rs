@@ -91,7 +91,7 @@ pub async fn get_correlation_heatmap(
             let avg_vol_rounded = (avg_vol * 10.0).round() / 10.0;
             
             data.entry(event_type.name.clone())
-                .or_insert_with(HashMap::new)
+                .or_default()
                 .insert(pair.clone(), avg_vol_rounded);
         }
     }
@@ -199,7 +199,7 @@ fn calculate_avg_volatility_for_event_pair_optimized(
             7,   // baseline_days_back
             super::volatility_helpers::get_pip_value(pair),  // ✅ CORRECTION: passer pip_value
         )
-        .unwrap_or_else(|_| super::volatility_helpers::VolatilityMetrics {
+        .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
         });

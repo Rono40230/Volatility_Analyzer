@@ -1,7 +1,7 @@
 // services/pair_data_stats.rs - Calcul des statistiques pour les données de paires
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::fs;
 use std::io::{BufReader, BufRead};
 
@@ -53,7 +53,7 @@ pub fn extract_date_range_from_filename(filename: &str) -> Option<String> {
 }
 
 /// Extrait la plage de dates depuis le chemin complet du fichier et retourne une chaîne formatée
-pub fn extract_date_range_from_path(file_path: &PathBuf) -> Option<String> {
+pub fn extract_date_range_from_path(file_path: &Path) -> Option<String> {
     if let Some(filename) = file_path.file_name().and_then(|n| n.to_str()) {
         extract_date_range_from_filename(filename)
     } else {
@@ -95,7 +95,7 @@ pub fn calculate_pair_summary(files: Vec<PairFileInfo>) -> PairDataSummary {
         // Extraire les dates de la plage
         if let Some(range) = &file.date_range {
             let dates: Vec<&str> = range.split(" → ").collect();
-            if let Some(start) = dates.get(0) {
+            if let Some(start) = dates.first() {
                 all_dates.push(start.to_string());
             }
             if let Some(end) = dates.get(1) {

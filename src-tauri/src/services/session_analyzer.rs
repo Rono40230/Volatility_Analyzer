@@ -112,7 +112,7 @@ impl SessionAnalyzer {
         }
 
         // Janvier, février, novembre, décembre : toujours heure d'hiver
-        if month < 3 || month > 10 {
+        if !(3..=10).contains(&month) {
             return false;
         }
 
@@ -135,12 +135,7 @@ impl SessionAnalyzer {
     /// NOTE: Fonction conservée pour usage futur
     #[allow(dead_code)]
     fn last_sunday_of_month(year: i32, month: u32) -> u32 {
-        let mut day = 31;
-        if month == 3 {
-            day = 31;
-        } else if month == 10 {
-            day = 31;
-        }
+        let day = 31;
 
         // Cherche le dernier dimanche en reculant depuis la fin du mois
         for d in (1..=day).rev() {

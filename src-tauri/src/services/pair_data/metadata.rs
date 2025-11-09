@@ -96,6 +96,7 @@ impl MetadataExtractor {
     }
     
     /// Génère le nom du fichier normalisé
+    #[allow(clippy::format_in_format_args)]
     pub(super) fn generate_filename(metadata: &PairMetadata) -> String {
         format!(
             "{}_{}_{}_{}.csv",
@@ -115,7 +116,7 @@ impl MetadataExtractor {
             .map_err(|e| format!("Erreur création CSV: {}", e))?;
         
         // Écrire les headers
-        writer.write_record(&["timestamp", "open", "high", "low", "close", "volume"])
+        writer.write_record(["timestamp", "open", "high", "low", "close", "volume"])
             .map_err(|e| format!("Erreur écriture headers: {}", e))?;
         
         // Écrire les données

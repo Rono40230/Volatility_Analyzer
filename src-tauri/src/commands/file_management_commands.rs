@@ -92,11 +92,11 @@ pub async fn list_pair_csv_files() -> Result<Vec<PairFileInfo>, String> {
                     let name_without_ext = filename_str.trim_end_matches(".csv");
                     let pair = name_without_ext.split('_').next().map(|s| s.to_string());
                     let timeframe = if name_without_ext.contains(" Min") {
-                        Some(name_without_ext.split('_').nth(1).and_then(|s| {
+                        Some(name_without_ext.split('_').nth(1).map(|s| {
                                 if s.contains("Min") || name_without_ext.contains(&format!("{} Min", s)) {
-                                    Some(format!("{} Min", s))
+                                    format!("{} Min", s)
                                 } else {
-                                    Some(s.to_string())
+                                    s.to_string()
                                 }
                             }).unwrap_or_else(|| "N/A".to_string()))
                     } else {
