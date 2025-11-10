@@ -5,6 +5,7 @@
 use crate::commands::calendar_commands::CalendarState;
 use crate::models::{AnalysisResult, HourlyStats};
 use crate::services::{CsvLoader, VolatilityAnalyzer};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use tracing::{error, info};
@@ -100,18 +101,41 @@ pub async fn load_symbols(
 pub async fn analyze_symbol(
     symbol: String,
     calendar_state: State<'_, CalendarState>,
+    pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<AnalysisResult, CommandError> {
     info!("Command: analyze_symbol({})", symbol);
 
-    let loader = CsvLoader::new();
+    // Essayer d'abord DatabaseLoader
+    let mut candles = Vec::new();
+    let pool_opt = pair_state.pool.lock().unwrap();
+    if let Some(pool) = pool_opt.as_ref() {
+        let db_loader = crate::services::DatabaseLoader::new(pool.clone());
+        // Charger tous les candles (période complète depuis 1970 jusqu'à maintenant)
+        let start = DateTime::<Utc>::from_timestamp(0, 0).unwrap();
+        let end = Utc::now();
+        match db_loader.load_candles_by_pair(&symbol, "M1", start, end) {
+            Ok(loaded) => {
+                candles = loaded;
+                info!("Loaded {} candles for {} from DatabaseLoader", candles.len(), symbol);
+            }
+            Err(e) => {
+                info!("DatabaseLoader failed for {}: {}, falling back to CsvLoader", symbol, e);
+            }
+        }
+    }
+    drop(pool_opt);
 
-    // 1. Charge les bougies
-    let candles = loader.load_candles(&symbol).map_err(|e| {
-        error!("Failed to load candles for {}: {}", symbol, e);
-        CommandError::from(e)
-    })?;
+    // Fallback sur CsvLoader
+    if candles.is_empty() {
+        let loader = CsvLoader::new();
+        candles = loader.load_candles(&symbol).map_err(|e| {
+            error!("Failed to load candles for {} from both DB and CSV: {}", symbol, e);
+            CommandError::from(e)
+        })?;
+        info!("Loaded {} candles for {} from CsvLoader", candles.len(), symbol);
+    }
 
-    info!("Loaded {} candles for {}", candles.len(), symbol);
+    info!("Total candles loaded for {}: {}", symbol, candles.len());
 
     // 2. Récupère le pool DB pour corrélation (optionnel)
     let pool = calendar_state.pool.lock()
