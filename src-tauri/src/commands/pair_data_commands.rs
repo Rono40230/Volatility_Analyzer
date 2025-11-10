@@ -30,7 +30,11 @@ pub async fn import_pair_data(
     state: tauri::State<'_, PairDataState>,
     paths: Vec<String>,
 ) -> Result<ImportSummary, String> {
+    info!("📥 ========== DÉBUT IMPORT PAIR DATA ==========");
     info!("📥 Import de {} fichiers de paires vers BD", paths.len());
+    for (idx, path) in paths.iter().enumerate() {
+        info!("   [{}] {}", idx + 1, path);
+    }
     
     let mut summary = ImportSummary {
         total_files: paths.len(),
@@ -42,25 +46,37 @@ pub async fn import_pair_data(
     };
     
     // Obtenir le pool de la DB paires
+    info!("🔐 Tentative d'accès au pool DB paires...");
     let pool = {
         let pool_opt = state.pool.lock().unwrap();
-        pool_opt.clone().ok_or("DB pool not initialized")?
+        match pool_opt.clone() {
+            Some(p) => {
+                info!("✅ Pool DB obtenu avec succès");
+                p
+            },
+            None => {
+                error!("❌ ERREUR CRITIQUE: Pool DB non initialisé!");
+                return Err("DB pool not initialized".to_string());
+            }
+        }
     };
     
-    for path in paths {
+    for (file_idx, path) in paths.into_iter().enumerate() {
+        info!("🔄 Traitement fichier [{}/{}]: {}", file_idx + 1, summary.total_files, path);
+        
         match process_single_file(&path, &pool) {
             Ok((pair, timeframe, row_count)) => {
                 summary.successful += 1;
                 
                 if !summary.pairs_updated.contains(&pair) {
-                    summary.pairs_updated.push(pair);
+                    summary.pairs_updated.push(pair.clone());
                 }
                 
                 if !summary.timeframes.contains(&timeframe) {
-                    summary.timeframes.push(timeframe);
+                    summary.timeframes.push(timeframe.clone());
                 }
                 
-                info!("✅ Fichier importé: {} ({} lignes)", path, row_count);
+                info!("✅ [{}/{}] Fichier importé avec succès: {} ({} lignes)", file_idx + 1, summary.total_files, path, row_count);
             }
             Err(e) => {
                 summary.failed += 1;
@@ -70,12 +86,21 @@ pub async fn import_pair_data(
                     .unwrap_or("unknown");
                 let error_msg = format!("{}: {}", file_name, e);
                 summary.errors.push(error_msg);
-                error!("❌ Erreur import {}: {}", path, e);
+                error!("❌ [{}/{}] Erreur import {}: {}", file_idx + 1, summary.total_files, path, e);
             }
         }
     }
     
-    info!("📊 Import terminé: {} succès, {} échecs", summary.successful, summary.failed);
+    info!("📊 ========== IMPORT TERMINÉ ==========");
+    info!("📊 Résumé final: {} succès, {} échecs sur {} fichiers", summary.successful, summary.failed, summary.total_files);
+    info!("📊 Paires mises à jour: {:?}", summary.pairs_updated);
+    info!("📊 Timeframes: {:?}", summary.timeframes);
+    if !summary.errors.is_empty() {
+        error!("📊 Erreurs rencontrées:");
+        for (idx, err) in summary.errors.iter().enumerate() {
+            error!("   [{}] {}", idx + 1, err);
+        }
+    }
     
     Ok(summary)
 }
@@ -135,13 +160,15 @@ fn process_single_file(
         )
         .map_err(|e| format!("Prepare error: {}", e))?;
     
-    for candle in &candles {
+    info!("📋 Prepared INSERT statement for candle_data");
+    
+    for (idx, candle) in candles.iter().enumerate() {
         // Convertir timestamp Unix en DateTime RFC3339
         let dt = chrono::DateTime::<Utc>::from_timestamp(candle.timestamp, 0)
             .ok_or(format!("Invalid timestamp: {}", candle.timestamp))?;
         let time_str = dt.to_rfc3339();
         
-        stmt.execute(rusqlite::params![
+        let res = stmt.execute(rusqlite::params![
             &metadata.pair,
             &metadata.timeframe,
             &time_str,
@@ -152,8 +179,16 @@ fn process_single_file(
             candle.volume,
             &imported_at,
             filename,
-        ])
-        .map_err(|e| format!("INSERT candle_data error: {}", e))?;
+        ]);
+        
+        if let Err(e) = res {
+            error!("❌ INSERT candle_data error at row {}: {}", idx, e);
+            return Err(format!("INSERT candle_data error at row {}: {}", idx, e));
+        }
+        
+        if idx % 50000 == 0 && idx > 0 {
+            info!("  ✓ {} candles processed", idx);
+        }
     }
     
     drop(stmt); // Libérer le statement avant de continuer
@@ -161,7 +196,8 @@ fn process_single_file(
     info!("✅ {} candles insérés en BD", row_count);
     
     // 5. Mettre à jour pair_metadata
-    tx.execute(
+    info!("📝 INSERT/UPDATE pair_metadata for {}/{}", metadata.pair, metadata.timeframe);
+    let metadata_res = tx.execute(
         "INSERT INTO pair_metadata (symbol, timeframe, row_count, last_updated, last_imported_file)
          VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(symbol, timeframe) DO UPDATE SET
@@ -175,13 +211,19 @@ fn process_single_file(
             &imported_at,
             filename,
         ]
-    )
-    .map_err(|e| format!("UPDATE pair_metadata error: {}", e))?;
+    );
     
-    info!("✅ Métadonnées paire mises à jour");
+    match metadata_res {
+        Ok(affected) => info!("✅ Métadonnées mises à jour ({} rows affected)", affected),
+        Err(e) => {
+            error!("❌ UPDATE pair_metadata error: {}", e);
+            return Err(format!("UPDATE pair_metadata error: {}", e));
+        }
+    }
     
     // 6. Logger l'import
-    tx.execute(
+    info!("📋 INSERT import_log entry");
+    let log_res = tx.execute(
         "INSERT INTO import_log (filename, symbol, timeframe, row_count, expected_row_count, status, imported_at)
          VALUES (?, ?, ?, ?, ?, 'success', ?)",
         rusqlite::params![
@@ -192,21 +234,39 @@ fn process_single_file(
             row_count as i32,
             &imported_at,
         ]
-    )
-    .map_err(|e| format!("INSERT import_log error: {}", e))?;
+    );
     
-    info!("✅ Import loggé");
+    match log_res {
+        Ok(affected) => info!("✅ Import loggé ({} rows affected)", affected),
+        Err(e) => {
+            error!("❌ INSERT import_log error: {}", e);
+            return Err(format!("INSERT import_log error: {}", e));
+        }
+    }
     
     // Commit transaction
-    tx.commit()
-        .map_err(|e| format!("Transaction commit error: {}", e))?;
+    info!("🔄 Committing transaction...");
+    match tx.commit() {
+        Ok(()) => info!("✅ Transaction committed successfully"),
+        Err(e) => {
+            error!("❌ Transaction commit error: {}", e);
+            return Err(format!("Transaction commit error: {}", e));
+        }
+    }
     
     // 7. Supprimer le fichier source
-    info!("🗑️  Suppression source: {}", source_path);
-    fs::remove_file(source_path)
-        .map_err(|e| format!("Erreur suppression fichier source: {}", e))?;
+    info!("🗑️  Tentative suppression: {}", source_path);
+    match fs::remove_file(source_path) {
+        Ok(()) => {
+            info!("✅ Fichier source supprimé avec succès");
+        }
+        Err(e) => {
+            error!("❌ Erreur suppression fichier source: {}", e);
+            return Err(format!("Erreur suppression fichier source: {}", e));
+        }
+    }
     
-    info!("✅ Fichier source supprimé");
+    info!("🎉 Import réussi: {}/{} ({} candles)", metadata.pair, metadata.timeframe, row_count);
     
     Ok((metadata.pair, metadata.timeframe, row_count))
 }
