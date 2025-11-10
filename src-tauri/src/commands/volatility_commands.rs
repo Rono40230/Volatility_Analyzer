@@ -159,14 +159,15 @@ pub async fn analyze_symbol(
     Ok(result)
 }
 
-/// Récupère les statistiques pour une heure spécifique
+/// Récupère les statistiques horaires pour un symbole et une heure
 #[tauri::command]
 pub async fn get_hourly_stats(
     symbol: String,
     hour: u8,
     calendar_state: State<'_, CalendarState>,
+    pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<HourlyStats, CommandError> {
-    info!("Command: get_hourly_stats({}, {})", symbol, hour);
+    info!("Command: get_hourly_stats({}, hour={})", symbol, hour);
 
     if hour > 23 {
         return Err(CommandError {
@@ -176,7 +177,7 @@ pub async fn get_hourly_stats(
     }
 
     // Charge et analyse le symbole
-    let result = analyze_symbol(symbol, calendar_state).await?;
+    let result = analyze_symbol(symbol, calendar_state, pair_state).await?;
 
     // Cherche l'heure demandée
     let stats = result
@@ -196,10 +197,11 @@ pub async fn get_hourly_stats(
 pub async fn get_best_hours(
     symbol: String,
     calendar_state: State<'_, CalendarState>,
+    pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<Vec<u8>, CommandError> {
     info!("Command: get_best_hours({})", symbol);
 
-    let result = analyze_symbol(symbol, calendar_state).await?;
+    let result = analyze_symbol(symbol, calendar_state, pair_state).await?;
     Ok(result.best_hours)
 }
 
