@@ -6,7 +6,7 @@ import { useVolatilityStore } from './stores/volatility'
 import SymbolSelector from './components/SymbolSelector.vue'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import HourlyTable from './components/HourlyTable.vue'
-import CalendarView from './components/CalendarView.vue'
+import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
 import SessionAnalysisView from './components/SessionAnalysisView.vue'
 
@@ -14,7 +14,7 @@ onMounted(async () => {
   console.log('🎯 Vue App.vue mounted - Application Vue initialisée');
   console.log('📱 activeTab:', activeTab.value);
   console.log('🌐 window.location:', window.location.href);
-  console.log('📦 Composants importés:', { SymbolSelector, AnalysisPanel, HourlyTable, CalendarView, EventCorrelationView, SessionAnalysisView });
+  console.log('📦 Composants importés:', { SymbolSelector, AnalysisPanel, HourlyTable, ImportHub, EventCorrelationView, SessionAnalysisView });
   
   // 🚀 OPTIMISATION: Initialiser l'index des candles au démarrage
   try {
@@ -34,6 +34,7 @@ const { analysisResult, selectedSymbol, loading, error } = storeToRefs(store)
 
 const activeTab = ref<'volatility' | 'calendar' | 'correlation' | 'sessions'>('volatility')
 const selectedSymbolLocal = ref('')
+const activeCalendarId = ref<number | null>(null)
 
 async function handleSymbolSelected(symbol: string) {
   console.log('🔍 Symbol selected:', symbol);
@@ -140,7 +141,7 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') 
       </template>
 
       <template v-if="activeTab === 'calendar'">
-        <CalendarView />
+        <ImportHub />
       </template>
 
       <template v-if="activeTab === 'correlation'">

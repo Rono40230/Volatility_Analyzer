@@ -98,12 +98,20 @@ export const useVolatilityStore = defineStore('volatility', () => {
     }
   }
 
-  async function analyzeSymbol(symbol: string) {
+  async function analyzeSymbol(symbol: string, calendarId?: number | null) {
     loading.value = true
     error.value = ''
     selectedSymbol.value = symbol
     try {
-      analysisResult.value = await invoke<AnalysisResult>('analyze_symbol', { symbol })
+      // Récupérer le calendar_id depuis localStorage si pas fourni
+      let cid = calendarId ?? parseInt(localStorage.getItem('activeCalendarId') || '0', 10)
+      
+      // Valider que le calendrier est sélectionné
+      if (!cid || cid <= 0) {
+        throw new Error('Veuillez sélectionner un calendrier avant de lancer l\'analyse')
+      }
+      
+      analysisResult.value = await invoke<AnalysisResult>('analyze_symbol', { symbol, calendarId: cid })
     } catch (e: any) {
       error.value = `Erreur analyse: ${e.message || e}`
       console.error('Analyze symbol error:', e)
@@ -113,9 +121,16 @@ export const useVolatilityStore = defineStore('volatility', () => {
     }
   }
 
-  async function getHourlyStats(symbol: string, hour: number) {
+  async function getHourlyStats(symbol: string, hour: number, calendarId?: number | null) {
     try {
-      return await invoke<HourlyStats>('get_hourly_stats', { symbol, hour })
+      let cid = calendarId ?? parseInt(localStorage.getItem('activeCalendarId') || '0', 10)
+      
+      // Valider que le calendrier est sélectionné
+      if (!cid || cid <= 0) {
+        throw new Error('Veuillez sélectionner un calendrier avant de lancer l\'analyse')
+      }
+      
+      return await invoke<HourlyStats>('get_hourly_stats', { symbol, hour, calendarId: cid })
     } catch (e: any) {
       error.value = `Erreur stats horaires: ${e.message || e}`
       console.error('Get hourly stats error:', e)

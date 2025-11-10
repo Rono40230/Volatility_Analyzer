@@ -100,10 +100,11 @@ pub async fn load_symbols(
 #[tauri::command]
 pub async fn analyze_symbol(
     symbol: String,
+    calendar_id: i32,
     calendar_state: State<'_, CalendarState>,
     pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<AnalysisResult, CommandError> {
-    info!("Command: analyze_symbol({})", symbol);
+    info!("Command: analyze_symbol({}, calendar_id={})", symbol, calendar_id);
 
     // Essayer d'abord DatabaseLoader
     let mut candles = Vec::new();
@@ -164,10 +165,11 @@ pub async fn analyze_symbol(
 pub async fn get_hourly_stats(
     symbol: String,
     hour: u8,
+    calendar_id: i32,
     calendar_state: State<'_, CalendarState>,
     pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<HourlyStats, CommandError> {
-    info!("Command: get_hourly_stats({}, hour={})", symbol, hour);
+    info!("Command: get_hourly_stats({}, hour={}, calendar_id={})", symbol, hour, calendar_id);
 
     if hour > 23 {
         return Err(CommandError {
@@ -177,7 +179,7 @@ pub async fn get_hourly_stats(
     }
 
     // Charge et analyse le symbole
-    let result = analyze_symbol(symbol, calendar_state, pair_state).await?;
+    let result = analyze_symbol(symbol, calendar_id, calendar_state, pair_state).await?;
 
     // Cherche l'heure demandée
     let stats = result
@@ -196,12 +198,13 @@ pub async fn get_hourly_stats(
 #[tauri::command]
 pub async fn get_best_hours(
     symbol: String,
+    calendar_id: i32,
     calendar_state: State<'_, CalendarState>,
     pair_state: State<'_, super::pair_data_commands::PairDataState>,
 ) -> Result<Vec<u8>, CommandError> {
-    info!("Command: get_best_hours({})", symbol);
+    info!("Command: get_best_hours({}, calendar_id={})", symbol, calendar_id);
 
-    let result = analyze_symbol(symbol, calendar_state, pair_state).await?;
+    let result = analyze_symbol(symbol, calendar_id, calendar_state, pair_state).await?;
     Ok(result.best_hours)
 }
 

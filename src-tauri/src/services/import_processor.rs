@@ -2,7 +2,6 @@
 // Conforme .clinerules : < 300L, pas d'unwrap()
 
 use crate::services::{clean_european_csv, PairDataConverter};
-use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Résultat du traitement d'un fichier
@@ -12,6 +11,7 @@ pub struct ProcessResult {
     pub lines_cleaned: usize,
     pub errors: usize,
     pub error_rate: f64,
+    pub cleaned_file_path: String, // Chemin du fichier nettoyé
 }
 
 /// Gère les doublons en ajoutant un suffixe de version (fonction utilitaire réutilisable)
@@ -71,10 +71,8 @@ pub fn process_file_with_cleaning(
     
     println!("  ✅ Importé: {} ({})", pair, timeframe);
     
-    // Étape 3 : Supprimer le fichier temporaire nettoyé
-    if let Err(e) = fs::remove_file(cleaned_path) {
-        eprintln!("  ⚠️  Impossible de supprimer le fichier temporaire: {}", e);
-    }
+    // NOTE: Ne pas supprimer le fichier nettoyé ici
+    // Il sera inséré en BD par import_clean_commands.rs, puis supprimé après
     
     Ok(ProcessResult {
         pair,
@@ -82,6 +80,7 @@ pub fn process_file_with_cleaning(
         lines_cleaned: cleaning_report.lines_cleaned,
         errors: cleaning_report.errors,
         error_rate,
+        cleaned_file_path: cleaned_path.to_string(), // Retourner le chemin du fichier nettoyé
     })
 }
 

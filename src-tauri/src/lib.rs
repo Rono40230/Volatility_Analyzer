@@ -64,6 +64,14 @@ pub fn run() {
     
     tracing::info!("✅ Table calendar_events vérifiée/créée");
 
+    // Crée la table calendar_imports si elle n'existe pas
+    if let Err(e) = db::ensure_calendar_imports_table(&calendar_pool) {
+        tracing::error!("❌ ERREUR: Impossible de créer la table calendar_imports: {}", e);
+        std::process::exit(1);
+    }
+    
+    tracing::info!("✅ Table calendar_imports vérifiée/créée");
+
     let calendar_state = calendar_commands::CalendarState {
         pool: Mutex::new(Some(calendar_pool)),
     };
@@ -150,6 +158,10 @@ pub fn run() {
             list_pair_csv_files,
             get_pair_data_summary,
             get_pair_metadata_from_db,  // NEW: métadonnées depuis BD
+            get_calendar_imports_from_db, // NEW: calendriers importés depuis BD
+            import_calendar_files, // NEW: importer calendriers
+            delete_pair_from_db, // NEW: supprimer paire de la BD
+            delete_calendar_from_db, // NEW: supprimer calendrier de la BD
             delete_calendar_file,
             delete_pair_files,
             // Config commands (Phase 7)
@@ -167,7 +179,7 @@ pub fn run() {
         ]);
 
     tracing::info!("✅ Tauri Builder configuré");
-    tracing::info!("📋 Commandes enregistrées: ping, load_symbols, analyze_symbol, get_hourly_stats, get_best_hours, get_upcoming_events, load_economic_events_from_csv, import_pair_data, analyze_sessions");
+    tracing::info!("📋 Commandes enregistrées: analyze_symbol, import_pair_data, import_and_clean_files, delete_pair_from_db, delete_calendar_from_db, et autres");
     tracing::info!("🔧 Lancement de l'application...");
 
     if let Err(e) = builder.run(tauri::generate_context!()) {
