@@ -2,11 +2,22 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use chrono::{DateTime, Utc};
+use tauri::State;
 use crate::services::pair_data_stats::{
     PairDataSummary, calculate_pair_summary,
     count_csv_lines, extract_date_range_from_path
 };
 use crate::services::calendar_file_stats::{count_csv_events, extract_calendar_date_range};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PairMetadataInfo {
+    pub symbol: String,
+    pub timeframe: String,
+    pub row_count: i32,
+    pub last_updated: String,
+    pub last_imported_file: String,
+    pub quality_score: f64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CalendarFileInfo {
@@ -177,4 +188,44 @@ pub async fn get_pair_data_summary() -> Result<PairDataSummary, String> {
     }).collect();
     
     Ok(calculate_pair_summary(stats_files))
+}
+
+/// Récupère les métadonnées des paires depuis pairs.db
+#[tauri::command]
+pub async fn get_pair_metadata_from_db(
+    pair_state: State<'_, super::pair_data_commands::PairDataState>,
+) -> Result<Vec<PairMetadataInfo>, String> {
+    use rusqlite::Connection;
+    
+    tracing::info!("📊 Getting pair metadata from pairs.db...");
+    
+    let data_dir = dirs::data_local_dir()
+        .ok_or("Failed to get data directory")?
+        .join("volatility-analyzer")
+        .join("pairs.db");
+    
+    let conn = Connection::open(&data_dir)
+        .map_err(|e| format!("Failed to open pairs.db: {}", e))?;
+    
+    let mut stmt = conn
+        .prepare("SELECT symbol, timeframe, row_count, last_updated, last_imported_file, quality_score FROM pair_metadata ORDER BY symbol, timeframe")
+        .map_err(|e| format!("Query failed: {}", e))?;
+    
+    let pairs = stmt
+        .query_map([], |row| {
+            Ok(PairMetadataInfo {
+                symbol: row.get(0)?,
+                timeframe: row.get(1)?,
+                row_count: row.get(2)?,
+                last_updated: row.get(3)?,
+                last_imported_file: row.get(4)?,
+                quality_score: row.get(5)?,
+            })
+        })
+        .map_err(|e| format!("Query execution failed: {}", e))?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Result collection failed: {}", e))?;
+    
+    tracing::info!("✅ Found {} pairs in database", pairs.len());
+    Ok(pairs)
 }

@@ -149,6 +149,7 @@ pub fn run() {
             list_calendar_files,
             list_pair_csv_files,
             get_pair_data_summary,
+            get_pair_metadata_from_db,  // NEW: métadonnées depuis BD
             delete_calendar_file,
             delete_pair_files,
             // Config commands (Phase 7)
