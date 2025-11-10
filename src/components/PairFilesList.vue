@@ -102,7 +102,7 @@ async function refreshFiles() {
   }
 }
 
-async function refreshFiles() {
+// Exposer la fonction pour les composants parents
 defineExpose({
   refreshFiles
 })
