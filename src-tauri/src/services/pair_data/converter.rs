@@ -57,6 +57,7 @@ impl PairDataConverter {
             .has_headers(true)
             .flexible(true)
             .trim(csv::Trim::All)
+            .delimiter(b';')  // Format européen: point-virgule
             .from_reader(content.as_bytes());
         
         // Lire les headers
