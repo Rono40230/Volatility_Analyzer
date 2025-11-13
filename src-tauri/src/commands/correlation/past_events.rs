@@ -68,8 +68,8 @@ pub async fn get_past_events(
     let events_iter = stmt
         .query_map([], |row| {
             Ok(EventType {
-                name: row.get(0)?,   // description
-                count: row.get(1)?,  // count
+                name: row.get(0)?,  // description
+                count: row.get(1)?, // count
             })
         })
         .map_err(|e| format!("Failed to query events: {}", e))?;

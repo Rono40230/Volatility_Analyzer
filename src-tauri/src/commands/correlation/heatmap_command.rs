@@ -9,11 +9,9 @@ use crate::commands::candle_index_commands::CandleIndexState;
 
 #[tauri::command]
 pub async fn get_correlation_heatmap(
-    months_back: Option<i32>,
+    calendar_id: Option<i32>,
     state: State<'_, CandleIndexState>,
 ) -> Result<HeatmapData, String> {
-    let months = months_back.unwrap_or(6);
-
     let data_dir = dirs::data_local_dir()
         .ok_or("Failed to get data directory")?
         .join("volatility-analyzer");
@@ -32,11 +30,11 @@ pub async fn get_correlation_heatmap(
         return Err("No pairs found in database".to_string());
     }
 
-    let event_types = get_event_types(&conn, months)?;
+    let event_types = get_event_types(&conn, calendar_id)?;
 
     if event_types.is_empty() {
         return Ok(HeatmapData {
-            period: format!("Derniers {} mois", months),
+            period: "Calendrier sélectionné".to_string(),
             pairs,
             event_types: vec![],
             data: std::collections::HashMap::new(),
@@ -65,7 +63,7 @@ pub async fn get_correlation_heatmap(
                 &conn,
                 &event_type.name,
                 pair,
-                months,
+                calendar_id,
                 candle_index,
             )?;
 
@@ -78,7 +76,7 @@ pub async fn get_correlation_heatmap(
     }
 
     Ok(HeatmapData {
-        period: format!("Derniers {} mois", months),
+        period: "Calendrier sélectionné".to_string(),
         pairs,
         event_types,
         data,

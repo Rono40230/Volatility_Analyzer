@@ -28,7 +28,6 @@ pub struct EventImpactResult {
     pub last_datetime: String, // Dernière date
     pub country: String,
     pub currency: String,
-    pub impact: String,
     pub event_count: i32, // Nombre d'occurrences de cet événement
     pub window_start: String,
     pub window_end: String,

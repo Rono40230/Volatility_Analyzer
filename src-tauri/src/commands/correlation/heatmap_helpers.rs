@@ -25,27 +25,32 @@ pub fn get_available_pairs(_conn: &Connection) -> Result<Vec<String>, String> {
     Ok(symbols)
 }
 
-pub fn get_event_types(conn: &Connection, months_back: i32) -> Result<Vec<EventTypeInfo>, String> {
-    let cutoff_date = chrono::Utc::now()
-        .checked_sub_months(chrono::Months::new(months_back as u32))
-        .ok_or("Failed to calculate cutoff date")?
-        .format("%Y-%m-%d")
-        .to_string();
-
-    let mut stmt = conn
-        .prepare(
+pub fn get_event_types(conn: &Connection, calendar_id: Option<i32>) -> Result<Vec<EventTypeInfo>, String> {
+    let query = if let Some(cal_id) = calendar_id {
+        format!(
             "SELECT description, COUNT(*) as count 
              FROM calendar_events 
-             WHERE date(event_time) >= ?1 
+             WHERE calendar_import_id = {} 
              GROUP BY description 
-             HAVING count >= 2
-             ORDER BY count DESC, description
-             LIMIT 20",
+             HAVING count >= 1
+             ORDER BY count DESC, description",
+            cal_id
         )
+    } else {
+        "SELECT description, COUNT(*) as count 
+         FROM calendar_events 
+         GROUP BY description 
+         HAVING count >= 1
+         ORDER BY count DESC, description"
+            .to_string()
+    };
+
+    let mut stmt = conn
+        .prepare(&query)
         .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
     let event_types = stmt
-        .query_map([&cutoff_date], |row| {
+        .query_map([], |row| {
             Ok(EventTypeInfo {
                 name: row.get(0)?,
                 count: row.get(1)?,
@@ -62,28 +67,36 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
     conn: &Connection,
     event_name: &str,
     pair: &str,
-    months_back: i32,
+    calendar_id: Option<i32>,
     candle_index: &crate::services::candle_index::CandleIndex,
 ) -> Result<f64, String> {
     use super::volatility_helpers::{calculate_volatilities_optimized, parse_sqlite_datetime};
 
-    let cutoff_date = chrono::Utc::now()
-        .checked_sub_months(chrono::Months::new(months_back as u32))
-        .ok_or("Failed to calculate cutoff date")?
-        .format("%Y-%m-%d")
-        .to_string();
-
-    let mut event_stmt = conn
-        .prepare(
+    let query = if let Some(cal_id) = calendar_id {
+        format!(
             "SELECT datetime(event_time) 
              FROM calendar_events 
-             WHERE description = ?1 AND date(event_time) >= ?2
+             WHERE description = '{}' AND calendar_import_id = {} 
              ORDER BY event_time",
+            event_name.replace("'", "''"),
+            cal_id
         )
+    } else {
+        format!(
+            "SELECT datetime(event_time) 
+             FROM calendar_events 
+             WHERE description = '{}' 
+             ORDER BY event_time",
+            event_name.replace("'", "''")
+        )
+    };
+
+    let mut event_stmt = conn
+        .prepare(&query)
         .map_err(|e| format!("Failed to prepare event statement: {}", e))?;
 
     let events: Vec<String> = event_stmt
-        .query_map([event_name, &cutoff_date], |row| row.get::<_, String>(0))
+        .query_map([], |row| row.get::<_, String>(0))
         .map_err(|e| format!("Failed to query events: {}", e))?
         .collect::<SqliteResult<Vec<String>>>()
         .map_err(|e| format!("Failed to collect events: {}", e))?;

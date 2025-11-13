@@ -15,7 +15,6 @@ pub struct PastEvent {
 pub struct EventType {
     pub name: String,
     pub count: i32,
-    pub impact: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,7 +27,7 @@ pub struct EventTypesByImpact {
 pub async fn get_past_events(
     _months_back: Option<i32>,
     calendar_id: Option<i32>,
-) -> Result<EventTypesByImpact, String> {
+) -> Result<Vec<EventType>, String> {
     let data_dir = dirs::data_local_dir()
         .ok_or("Failed to get data directory")?
         .join("volatility-analyzer");
@@ -42,43 +41,22 @@ pub async fn get_past_events(
     let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
     // Grouper par description (type d'événement) et compter les occurrences
-    // Normaliser les impacts: H/M/L/N → HIGH/MEDIUM/LOW/MEDIUM
     // Filtrer par calendar_id si fourni
     // Afficher tous les événements HIGH et MEDIUM (toute la période)
     let query = if let Some(cal_id) = calendar_id {
         format!(
-            "SELECT description, COUNT(*) as count, 
-                    CASE UPPER(impact)
-                        WHEN 'H' THEN 'HIGH'
-                        WHEN 'HIGH' THEN 'HIGH'
-                        WHEN 'M' THEN 'MEDIUM'
-                        WHEN 'MEDIUM' THEN 'MEDIUM'
-                        WHEN 'N' THEN 'MEDIUM'
-                        WHEN 'L' THEN 'LOW'
-                        WHEN 'LOW' THEN 'LOW'
-                        ELSE 'MEDIUM'
-                    END as normalized_impact
+            "SELECT description, COUNT(*) as count
              FROM calendar_events 
              WHERE (UPPER(impact) IN ('H', 'HIGH', 'M', 'MEDIUM', 'N')) AND calendar_import_id = {}
-             GROUP BY description, normalized_impact
+             GROUP BY description
              ORDER BY count DESC, description",
             cal_id
         )
     } else {
-        "SELECT description, COUNT(*) as count, 
-                CASE UPPER(impact)
-                    WHEN 'H' THEN 'HIGH'
-                    WHEN 'HIGH' THEN 'HIGH'
-                    WHEN 'M' THEN 'MEDIUM'
-                    WHEN 'MEDIUM' THEN 'MEDIUM'
-                    WHEN 'N' THEN 'MEDIUM'
-                    WHEN 'L' THEN 'LOW'
-                    WHEN 'LOW' THEN 'LOW'
-                    ELSE 'MEDIUM'
-                END as normalized_impact
+        "SELECT description, COUNT(*) as count
          FROM calendar_events 
          WHERE UPPER(impact) IN ('H', 'HIGH', 'M', 'MEDIUM', 'N')
-         GROUP BY description, normalized_impact
+         GROUP BY description
          ORDER BY count DESC, description"
             .to_string()
     };
@@ -90,9 +68,8 @@ pub async fn get_past_events(
     let events_iter = stmt
         .query_map([], |row| {
             Ok(EventType {
-                name: row.get(0)?,   // description
-                count: row.get(1)?,  // count
-                impact: row.get(2)?, // impact
+                name: row.get(0)?,  // description
+                count: row.get(1)?, // count
             })
         })
         .map_err(|e| format!("Failed to query events: {}", e))?;
@@ -101,17 +78,5 @@ pub async fn get_past_events(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| format!("Failed to collect events: {}", e))?;
 
-    // Séparer par impact
-    let high = all_events
-        .iter()
-        .filter(|e| e.impact == "HIGH")
-        .cloned()
-        .collect();
-    let medium = all_events
-        .iter()
-        .filter(|e| e.impact == "MEDIUM")
-        .cloned()
-        .collect();
-
-    Ok(EventTypesByImpact { high, medium })
+    Ok(all_events)
 }

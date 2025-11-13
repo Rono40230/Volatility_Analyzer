@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 interface HeatmapData {
@@ -49,19 +49,41 @@ interface HeatmapData {
   data: { [key: string]: { [key: string]: number } }
 }
 
+interface Props {
+  calendarId: number | null
+}
+
+const props = defineProps<Props>()
+
 const loadingHeatmap = ref(false)
 const heatmapData = ref<HeatmapData | null>(null)
 
-onMounted(async () => {
+async function loadHeatmap() {
+  if (!props.calendarId) {
+    heatmapData.value = null
+    return
+  }
+
   loadingHeatmap.value = true
   try {
-    heatmapData.value = await invoke<HeatmapData>('get_correlation_heatmap', { monthsBack: 6 })
+    heatmapData.value = await invoke<HeatmapData>('get_correlation_heatmap', { 
+      calendarId: props.calendarId 
+    })
   } catch (error) {
     console.error('Erreur heatmap:', error)
     heatmapData.value = null
   } finally {
     loadingHeatmap.value = false
   }
+}
+
+onMounted(() => {
+  loadHeatmap()
+})
+
+// Recharger si le calendrier change
+watch(() => props.calendarId, () => {
+  loadHeatmap()
 })
 
 function getHeatmapValue(eventType: string, pair: string): number {

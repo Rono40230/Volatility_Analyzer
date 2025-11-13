@@ -14,7 +14,7 @@
     <div class="content-area">
       <EventCorrelationByEvent v-if="viewMode === 'by-event'" :pastEvents="pastEvents" :calendarId="selectedCalendarId" />
       <EventCorrelationByPair v-if="viewMode === 'by-pair'" :availablePairs="availablePairs" />
-      <EventCorrelationHeatmap v-if="viewMode === 'heatmap'" />
+      <EventCorrelationHeatmap v-if="viewMode === 'heatmap'" :calendarId="selectedCalendarId" />
     </div>
   </div>
 </template>

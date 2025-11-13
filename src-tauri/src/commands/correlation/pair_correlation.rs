@@ -74,10 +74,7 @@ pub fn calculate_pair_event_correlation(
 
     let event_iter = stmt
         .query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, i32>(1)?,
-            ))
+            Ok((row.get::<_, String>(0)?, row.get::<_, i32>(1)?))
         })
         .map_err(|e| format!("Failed to query events: {}", e))?;
 
