@@ -154,10 +154,11 @@ pub fn run() {
             // Event correlation commands (Phase 3 ML)
             get_events_for_period,
             analyze_event_correlation,
-            get_correlation_heatmap,  // Heatmap événements × paires
-            get_event_impact_by_pair, // Impact d'un événement sur toutes les paires
-            get_past_events,          // Liste des événements passés pour dropdown
-            get_pair_event_history,   // Historique des événements pour une paire
+            get_correlation_heatmap,    // Heatmap événements × paires
+            get_event_impact_by_pair,   // Impact d'un événement sur toutes les paires
+            get_pair_event_correlation, // Impact de tous les événements sur une paire
+            get_past_events,            // Liste des événements passés pour dropdown
+            get_pair_event_history,     // Historique des événements pour une paire
             // Pair data import commands (Phase 4)
             import_pair_data,
             clean_csv_files,        // Nouveau: nettoyage CSV européens

@@ -26,10 +26,10 @@
 
   <!-- Résultats de corrélation par paire -->
   <div v-if="pairCorrelation && !loading" class="pair-correlation-results">
-    <!-- En-tête avec sélecteur -->
+    <!-- En-tête avec sélecteur INLINE -->
     <div class="pair-info-card">
       <div class="pair-header">
-        <h3>{{ selectedPair }} - Corrélation avec événements économiques</h3>
+        <h3>{{ selectedPair }}</h3>
         <select 
           v-model="selectedPair" 
           class="inline-select"
@@ -45,17 +45,25 @@
 
     <!-- Tableau des événements impactant cette paire -->
     <div class="correlation-table-container">
-      <h3>📊 Événements avec plus fort impact sur {{ selectedPair }}</h3>
-      
       <table class="correlation-table">
         <thead>
           <tr>
             <th>Rang</th>
             <th>Événement</th>
             <th>Impact annoncé</th>
-            <th>Volatilité observée</th>
-            <th>Score corrélation</th>
-            <th>Occurrences</th>
+            <th colspan="3" style="text-align: center;">Volatilité observée (pips)</th>
+            <th>Score</th>
+            <th>Occ.</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th>-30mn</th>
+            <th>+30mn</th>
+            <th>1h total</th>
+            <th></th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -70,7 +78,9 @@
             <td class="impact-badge" :class="`impact-${event.impact.toLowerCase()}`">
               {{ event.impact }}
             </td>
-            <td class="volatility">{{ event.volatility_formatted }}</td>
+            <td class="volatility">{{ event.volatility_before_fmt }}</td>
+            <td class="volatility">{{ event.volatility_after_fmt }}</td>
+            <td class="volatility-total">{{ event.volatility_total_fmt }}</td>
             <td class="correlation-score">
               <span class="score-value" :class="getScoreClass(event.correlation_score)">
                 {{ event.correlation_score.toFixed(1) }}%
@@ -98,6 +108,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useAnalysisStore } from '../stores/analysisStore'
 
 interface Props {
   availablePairs: string[]
@@ -107,8 +118,12 @@ interface EventCorrelation {
   name: string
   impact: string
   count: number
-  volatility: number
-  volatility_formatted: string
+  volatility_before: number
+  volatility_after: number
+  volatility_total: number
+  volatility_before_fmt: string
+  volatility_after_fmt: string
+  volatility_total_fmt: string
   correlation_score: number
 }
 
@@ -121,9 +136,19 @@ const props = withDefaults(defineProps<Props>(), {
   availablePairs: () => []
 })
 
-const selectedPair = ref<string>('')
+const store = useAnalysisStore()
 const loading = ref(false)
-const pairCorrelation = ref<PairCorrelationData | null>(null)
+
+// Utiliser l'état du store
+const selectedPair = computed({
+  get: () => store.selectedPair,
+  set: (value) => store.setPairSelection(value, store.selectedCalendarId),
+})
+
+const pairCorrelation = computed({
+  get: () => store.pairCorrelationData as PairCorrelationData | null,
+  set: (value) => store.setPairCorrelationData(value),
+})
 
 const topEvents = computed(() => {
   if (!pairCorrelation.value) return []
@@ -293,7 +318,7 @@ function getScoreClass(score: number): string {
 
 .pair-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   gap: 20px;
 }
@@ -302,7 +327,6 @@ function getScoreClass(score: number): string {
   color: #e2e8f0;
   font-size: 1.4em;
   margin: 0;
-  flex: 1;
 }
 
 .inline-select {
@@ -440,6 +464,14 @@ function getScoreClass(score: number): string {
 .volatility {
   color: #79c0ff;
   font-weight: 500;
+}
+
+.volatility-total {
+  color: #58a6ff;
+  font-weight: 600;
+  background: rgba(88, 166, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .correlation-score {

@@ -6,10 +6,10 @@ mod helpers;
 mod types;
 
 pub use calculator::{calculate_pair_impacts, generate_observations};
-pub use helpers::{currency_to_country, get_available_pairs, get_pip_value};
-pub use types::{EventImpactResult, PairImpactDetail};
+pub use helpers::{currency_to_country, get_available_pairs};
+pub use types::EventImpactResult;
 
-use super::volatility_helpers::{calculate_volatilities_optimized, parse_sqlite_datetime};
+use super::volatility_helpers::parse_sqlite_datetime;
 use crate::commands::candle_index_commands::CandleIndexState;
 use crate::commands::pair_data::PairDataState;
 use crate::services::DatabaseLoader;
