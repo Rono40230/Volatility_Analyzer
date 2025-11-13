@@ -38,12 +38,12 @@ pub async fn get_event_impact_by_pair(
 
     // Récupérer TOUTES les occurrences de cet événement depuis 2024-01-01
     let mut event_stmt = conn
-        .prepare("SELECT id, datetime(event_time), symbol, impact FROM calendar_events WHERE description = ?1 AND event_time >= '2024-01-01' ORDER BY event_time")
+        .prepare("SELECT id, datetime(event_time), symbol FROM calendar_events WHERE description = ?1 AND event_time >= '2024-01-01' ORDER BY event_time")
         .map_err(|e| format!("Failed to prepare event query: {}", e))?;
 
-    let events: Vec<(i32, String, String, String)> = event_stmt
+    let events: Vec<(i32, String, String)> = event_stmt
         .query_map([&event_type], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
         })
         .map_err(|e| format!("Failed to query events: {}", e))?
         .collect::<Result<Vec<_>, _>>()
@@ -54,7 +54,7 @@ pub async fn get_event_impact_by_pair(
     }
 
     // Récupérer info de la première occurrence
-    let (first_id, first_datetime, currency, impact) = &events[0];
+    let (first_id, first_datetime, currency) = &events[0];
     let country = currency_to_country(currency);
 
     let first_event_datetime = parse_sqlite_datetime(first_datetime)?;
@@ -63,7 +63,7 @@ pub async fn get_event_impact_by_pair(
         .format("%Y-%m-%d %H:%M")
         .to_string();
 
-    let (_, last_datetime, _, _) = &events[events.len() - 1];
+    let (_, last_datetime, _) = &events[events.len() - 1];
     let _last_event_datetime = parse_sqlite_datetime(last_datetime)?;
     let last_datetime_formatted = last_datetime.clone();
 
@@ -87,7 +87,7 @@ pub async fn get_event_impact_by_pair(
     // Préparer les datetimes des événements
     let event_datetimes: Result<Vec<DateTime<Utc>>, String> = events
         .iter()
-        .map(|(_, datetime_str, _, _)| {
+        .map(|(_, datetime_str, _)| {
             let naive_dt = parse_sqlite_datetime(datetime_str)?;
             Ok(Utc.from_utc_datetime(&naive_dt))
         })
@@ -109,7 +109,6 @@ pub async fn get_event_impact_by_pair(
         last_datetime: last_datetime_formatted,
         country,
         currency: currency.clone(),
-        impact: impact.clone(),
         event_count,
         window_start,
         window_end,

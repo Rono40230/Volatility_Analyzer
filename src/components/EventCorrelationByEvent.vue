@@ -4,38 +4,22 @@
     <p>Analyse de l'impact de l'événement...</p>
   </div>
 
-  <!-- Message de bienvenue avec dropdowns événement -->
+  <!-- Message de bienvenue avec dropdown événement -->
   <div v-if="!selectedEventId && !loadingEvent" class="welcome">
     <div class="welcome-icon">🎯</div>
     <h3>Analyse Rétrospective par Événement</h3>
     <div class="welcome-select-container">
-      <!-- Dropdown HIGH IMPACT -->
+      <!-- Dropdown UNIQUE pour tous les événements -->
       <div class="dropdown-group">
-        <label for="event-high">📍 Événements HIGH Impact :</label>
+        <label for="event-select">� Événements (HIGH & MEDIUM Impact) :</label>
         <select 
-          id="event-high" 
+          id="event-select" 
           v-model="selectedEventId" 
           class="welcome-symbol-select"
           @change="loadEventImpact"
         >
-          <option value="">Choisir un événement HIGH</option>
-          <option v-for="event in pastEventsHigh" :key="`high-${event.name}`" :value="event.name">
-            {{ event.name }} ({{ event.count }} occurrences)
-          </option>
-        </select>
-      </div>
-      
-      <!-- Dropdown MEDIUM IMPACT -->
-      <div class="dropdown-group">
-        <label for="event-medium">📌 Événements MEDIUM Impact :</label>
-        <select 
-          id="event-medium" 
-          v-model="selectedEventId" 
-          class="welcome-symbol-select"
-          @change="loadEventImpact"
-        >
-          <option value="">Choisir un événement MEDIUM</option>
-          <option v-for="event in pastEventsMedium" :key="`medium-${event.name}`" :value="event.name">
+          <option value="">Choisir un événement</option>
+          <option v-for="event in props.pastEvents" :key="`event-${event.name}`" :value="event.name">
             {{ event.name }} ({{ event.count }} occurrences)
           </option>
         </select>
@@ -59,21 +43,11 @@
             @change="loadEventImpact"
           >
             <option value="">Changer d'événement</option>
-            <optgroup label="HIGH Impact">
-              <option v-for="event in pastEventsHigh" :key="`high-${event.name}`" :value="event.name">
-                {{ event.name }}
-              </option>
-            </optgroup>
-            <optgroup label="MEDIUM Impact">
-              <option v-for="event in pastEventsMedium" :key="`medium-${event.name}`" :value="event.name">
-                {{ event.name }}
-              </option>
-            </optgroup>
+            <option v-for="event in props.pastEvents" :key="`event-${event.name}`" :value="event.name">
+              {{ event.name }}
+            </option>
           </select>
         </div>
-        <span class="event-badge" :class="`impact-${eventImpact.impact.toLowerCase()}`">
-          {{ eventImpact.impact }}
-        </span>
       </div>
     </div>
 
@@ -127,14 +101,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { useAnalysisStore } from '../stores/analysisStore'
 
 // Types
 interface PastEvent {
   name: string
   count: number
-  impact: string
 }
 
 interface PairImpact {
@@ -158,7 +132,6 @@ interface EventImpactResult {
   last_datetime: string
   country: string
   currency: string
-  impact: string
   event_count: number
   window_start: string
   window_end: string
@@ -168,14 +141,16 @@ interface EventImpactResult {
 
 // Props et Emits
 const props = defineProps<{
-  pastEventsHigh: PastEvent[]
-  pastEventsMedium: PastEvent[]
+  pastEvents: PastEvent[]
   calendarId: number | null
 }>()
 
 const emit = defineEmits<{
   'event-loaded': [EventImpactResult]
 }>()
+
+// Store pour persistance
+const store = useAnalysisStore()
 
 // État
 const selectedEventId = ref<string>('')
@@ -185,16 +160,22 @@ const loadingEvent = ref(false)
 // État du tri pour "Par Événement"
 const eventVolatilitySortOrder = ref<'asc' | 'desc'>('desc')
 
+// Au montage, restaurer l'état du store
+onMounted(() => {
+  if (store.eventCorrelationData?.eventImpact) {
+    eventImpact.value = store.eventCorrelationData.eventImpact
+    selectedEventId.value = store.selectedEvent
+  }
+})
+
 // Fonctions
 async function loadEventImpact() {
   if (!selectedEventId.value) return
   
   loadingEvent.value = true
   try {
-    // Trouver le count de l'événement sélectionné dans les listes
-    const selectedEvent = 
-      props.pastEventsHigh.find(e => e.name === selectedEventId.value) ||
-      props.pastEventsMedium.find(e => e.name === selectedEventId.value)
+    // Trouver le count de l'événement sélectionné dans la liste
+    const selectedEvent = props.pastEvents.find(e => e.name === selectedEventId.value)
     
     const eventCount = selectedEvent?.count || 0
     
@@ -203,6 +184,13 @@ async function loadEventImpact() {
       eventType: selectedEventId.value,
       eventCount: eventCount,
       calendarId: props.calendarId
+    })
+    
+    // Sauvegarder dans le store pour persistance
+    store.setEventSelection(selectedEventId.value, props.calendarId)
+    store.setEventCorrelationData({
+      event: selectedEventId.value,
+      eventImpact: eventImpact.value
     })
     
     emit('event-loaded', eventImpact.value)
@@ -297,11 +285,12 @@ function sortEventVolatility() {
 }
 
 .welcome-select-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 20px;
   margin-top: 30px;
-  max-width: 1000px;
+  max-width: 600px;
   width: 100%;
   margin-left: auto;
   margin-right: auto;
@@ -329,8 +318,9 @@ function sortEventVolatility() {
   color: #000000;
   cursor: pointer;
   transition: all 0.3s;
-  min-width: 350px;
+  min-width: 300px;
   max-width: 600px;
+  width: 100%;
 }
 
 .welcome-symbol-select option {

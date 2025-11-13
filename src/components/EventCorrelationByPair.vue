@@ -50,13 +50,11 @@
           <tr>
             <th>Rang</th>
             <th>Événement</th>
-            <th>Impact annoncé</th>
             <th colspan="3" style="text-align: center;">Volatilité observée (pips)</th>
             <th>Score</th>
             <th>Occ.</th>
           </tr>
           <tr>
-            <th></th>
             <th></th>
             <th></th>
             <th>-30mn</th>
@@ -75,9 +73,6 @@
               <span v-else class="rank-badge">#{{ index + 1 }}</span>
             </td>
             <td class="event-name">{{ event.name }}</td>
-            <td class="impact-badge" :class="`impact-${event.impact.toLowerCase()}`">
-              {{ event.impact }}
-            </td>
             <td class="volatility">{{ event.volatility_before_fmt }}</td>
             <td class="volatility">{{ event.volatility_after_fmt }}</td>
             <td class="volatility-total">{{ event.volatility_total_fmt }}</td>
@@ -116,7 +111,6 @@ interface Props {
 
 interface EventCorrelation {
   name: string
-  impact: string
   count: number
   volatility_before: number
   volatility_after: number
@@ -163,11 +157,6 @@ const observations = computed(() => {
   
   if (topEvent) {
     obs.push(`L'événement "${topEvent.name}" est le plus corrélé avec ${selectedPair.value} (score: ${topEvent.correlation_score.toFixed(1)}%).`)
-    
-    const highImpact = topEvents.value.filter(e => e.impact === 'HIGH')
-    if (highImpact.length > 0) {
-      obs.push(`${highImpact.length} événement(s) HIGH impact affectent significativement ${selectedPair.value}.`)
-    }
     
     const avgScore = topEvents.value.reduce((sum, e) => sum + e.correlation_score, 0) / topEvents.value.length
     if (avgScore > 60) {

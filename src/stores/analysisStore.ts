@@ -7,7 +7,6 @@ import { ref } from 'vue'
 
 export interface EventCorrelation {
   name: string
-  impact: string
   count: number
   volatility_before: number
   volatility_after: number
@@ -18,11 +17,40 @@ export interface EventCorrelation {
   correlation_score: number
 }
 
+export interface PairImpact {
+  symbol: string
+  event_volatility: number
+  baseline_volatility: number
+  event_volatility_formatted: string
+  baseline_volatility_formatted: string
+  points: number
+  points_formatted: string
+  price: number
+  price_formatted: string
+  multiplier: number
+  direction: string
+}
+
+export interface EventImpactResult {
+  event_id: number
+  event_name: string
+  datetime: string
+  last_datetime: string
+  country: string
+  currency: string
+  event_count: number
+  window_start: string
+  window_end: string
+  pair_impacts: PairImpact[]
+  observations: string[]
+}
+
 export interface AnalysisData {
   pair?: string
   events?: EventCorrelation[]
   event?: string
   pairs?: EventCorrelation[]
+  eventImpact?: EventImpactResult
   heatmapData?: unknown
 }
 

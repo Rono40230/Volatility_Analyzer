@@ -12,7 +12,7 @@
       />
     </div>
     <div class="content-area">
-      <EventCorrelationByEvent v-if="viewMode === 'by-event'" :pastEventsHigh="pastEventsHigh" :pastEventsMedium="pastEventsMedium" :calendarId="selectedCalendarId" />
+      <EventCorrelationByEvent v-if="viewMode === 'by-event'" :pastEvents="pastEvents" :calendarId="selectedCalendarId" />
       <EventCorrelationByPair v-if="viewMode === 'by-pair'" :availablePairs="availablePairs" />
       <EventCorrelationHeatmap v-if="viewMode === 'heatmap'" />
     </div>
@@ -32,13 +32,11 @@ import CalendarFileSelector from './CalendarFileSelector.vue'
 interface PastEvent {
   name: string
   count: number
-  impact: string
 }
 
 const store = useVolatilityStore()
 const viewMode = ref<'by-event' | 'by-pair' | 'heatmap'>('by-event')
-const pastEventsHigh = ref<PastEvent[]>([])
-const pastEventsMedium = ref<PastEvent[]>([])
+const pastEvents = ref<PastEvent[]>([])
 const availablePairs = ref<string[]>([])
 const selectedCalendarId = ref<number | null>(null)
 
@@ -74,23 +72,20 @@ async function handleCalendarSelected(filename: string) {
 
 async function loadPastEvents() {
   if (!selectedCalendarId.value) {
-    pastEventsHigh.value = []
-    pastEventsMedium.value = []
+    pastEvents.value = []
     return
   }
   
   try {
-    const result = await invoke<{ high: PastEvent[], medium: PastEvent[] }>('get_past_events', { 
+    const result = await invoke<PastEvent[]>('get_past_events', { 
       monthsBack: 6,
       calendarId: selectedCalendarId.value
     })
-    pastEventsHigh.value = result.high
-    pastEventsMedium.value = result.medium
-    console.log('📊 Événements chargés pour calendrier', selectedCalendarId.value, ':', pastEventsHigh.value.length, 'HIGH +', pastEventsMedium.value.length, 'MEDIUM')
+    pastEvents.value = result
+    console.log('📊 Événements chargés pour calendrier', selectedCalendarId.value, ':', pastEvents.value.length, 'événements')
   } catch (error) {
     console.error('Erreur:', error)
-    pastEventsHigh.value = []
-    pastEventsMedium.value = []
+    pastEvents.value = []
   }
 }
 
