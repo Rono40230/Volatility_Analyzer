@@ -73,6 +73,18 @@ async function loadHeatmap() {
       calendarId: props.calendarId,
       pairs: props.availablePairs
     })
+    console.log('📊 Heatmap data loaded:', heatmapData.value)
+    
+    // Debug: inspecter la structure data
+    if (heatmapData.value?.data) {
+      console.log('🔍 Data structure keys:', Object.keys(heatmapData.value.data))
+      for (const [eventType, pairData] of Object.entries(heatmapData.value.data)) {
+        console.log(`  📌 ${eventType}:`, pairData)
+        for (const [pair, value] of Object.entries(pairData as any)) {
+          console.log(`    ✓ ${pair}: ${value}`)
+        }
+      }
+    }
   } catch (error) {
     console.error('Erreur heatmap:', error)
     heatmapData.value = null
