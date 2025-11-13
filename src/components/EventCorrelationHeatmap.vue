@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, withDefaults } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 interface HeatmapData {
@@ -51,15 +51,18 @@ interface HeatmapData {
 
 interface Props {
   calendarId: number | null
+  availablePairs: string[]
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  availablePairs: () => []
+})
 
 const loadingHeatmap = ref(false)
 const heatmapData = ref<HeatmapData | null>(null)
 
 async function loadHeatmap() {
-  if (!props.calendarId) {
+  if (!props.calendarId || props.availablePairs.length === 0) {
     heatmapData.value = null
     return
   }
@@ -67,7 +70,8 @@ async function loadHeatmap() {
   loadingHeatmap.value = true
   try {
     heatmapData.value = await invoke<HeatmapData>('get_correlation_heatmap', { 
-      calendarId: props.calendarId 
+      calendarId: props.calendarId,
+      pairs: props.availablePairs
     })
   } catch (error) {
     console.error('Erreur heatmap:', error)

@@ -2,7 +2,7 @@ use rusqlite::Connection;
 use tauri::State;
 
 use super::heatmap_helpers::{
-    calculate_avg_volatility_for_event_pair_optimized, get_available_pairs, get_event_types,
+    calculate_avg_volatility_for_event_pair_optimized, get_event_types,
     HeatmapData,
 };
 use crate::commands::candle_index_commands::CandleIndexState;
@@ -10,6 +10,7 @@ use crate::commands::candle_index_commands::CandleIndexState;
 #[tauri::command]
 pub async fn get_correlation_heatmap(
     calendar_id: Option<i32>,
+    pairs: Vec<String>,
     state: State<'_, CandleIndexState>,
 ) -> Result<HeatmapData, String> {
     let data_dir = dirs::data_local_dir()
@@ -24,10 +25,8 @@ pub async fn get_correlation_heatmap(
 
     let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
-    let pairs = get_available_pairs(&conn)?;
-
     if pairs.is_empty() {
-        return Err("No pairs found in database".to_string());
+        return Err("No pairs provided".to_string());
     }
 
     let event_types = get_event_types(&conn, calendar_id)?;
