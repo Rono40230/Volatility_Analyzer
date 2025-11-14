@@ -1,7 +1,7 @@
 use super::helpers::get_pip_value;
 use super::types::PairImpactDetail;
-use crate::commands::correlation::volatility_helpers::calculate_volatilities_optimized;
 use crate::commands::correlation::data_availability::has_candles_for_event;
+use crate::commands::correlation::volatility_helpers::calculate_volatilities_optimized;
 use crate::services::candle_index::CandleIndex;
 use chrono::{DateTime, Utc};
 

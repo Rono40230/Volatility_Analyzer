@@ -64,16 +64,12 @@
             <th title="Variation moyenne en pips sur les 7 jours ouvrables précédant l'événement, à la même heure">Vol. Baseline</th>
             <th title="Ratio: volatilité event / volatilité baseline. Mesure l'amplification de la volatilité">Multiplicateur</th>
             <th title="Points de trading (1 point = 1/10 pip)">Points</th>
-            <th title="Valeur monétaire approximative du mouvement de volatilité">Prix</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(pair, index) in eventImpact.pair_impacts" :key="pair.symbol" :class="{ 'top-pair': index === 0 }">
             <td>
-              <span v-if="index === 0" class="rank-badge rank-1">🥇 #1</span>
-              <span v-else-if="index === 1" class="rank-badge rank-2">🥈 #2</span>
-              <span v-else-if="index === 2" class="rank-badge rank-3">🥉 #3</span>
-              <span v-else class="rank-badge">#{{ index + 1 }}</span>
+              #{{ index + 1 }}
             </td>
             <td class="pair-name">{{ pair.symbol }}</td>
             <td class="volatility">{{ pair.event_volatility_formatted }} pips</td>
@@ -84,7 +80,6 @@
               </span>
             </td>
             <td class="points">{{ pair.points_formatted }}</td>
-            <td class="price">{{ pair.price_formatted }}</td>
           </tr>
         </tbody>
       </table>
@@ -495,11 +490,6 @@ function sortEventVolatility() {
   color: #6ee7b7;
 }
 
-.price {
-  font-weight: 600;
-  color: #fbbf24;
-}
-
 .multiplier-value {
   font-weight: 700;
   padding: 4px 8px;
@@ -529,28 +519,6 @@ function sortEventVolatility() {
 .mult-low {
   background: #4a5568;
   color: #e2e8f0;
-}
-
-.rank-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.9em;
-}
-
-.rank-1 {
-  background: #ffd700;
-  color: #744210;
-}
-
-.rank-2 {
-  background: #c0c0c0;
-  color: #2d3748;
-}
-
-.rank-3 {
-  background: #cd7f32;
-  color: white;
 }
 
 .observations-card {

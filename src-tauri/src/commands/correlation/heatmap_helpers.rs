@@ -34,10 +34,13 @@ pub fn get_available_pairs(_conn: &Connection) -> Result<Vec<String>, String> {
     Ok(symbols)
 }
 
-pub fn get_event_types(conn: &Connection, calendar_id: Option<i32>) -> Result<Vec<EventTypeInfo>, String> {
+pub fn get_event_types(
+    conn: &Connection,
+    calendar_id: Option<i32>,
+) -> Result<Vec<EventTypeInfo>, String> {
     let query = if let Some(cal_id) = calendar_id {
         format!(
-            "SELECT description, COUNT(*) as count 
+            "SELECT description, COUNT(DISTINCT event_time) as count 
              FROM calendar_events 
              WHERE calendar_import_id = {} 
              GROUP BY description 
@@ -46,7 +49,7 @@ pub fn get_event_types(conn: &Connection, calendar_id: Option<i32>) -> Result<Ve
             cal_id
         )
     } else {
-        "SELECT description, COUNT(*) as count 
+        "SELECT description, COUNT(DISTINCT event_time) as count 
          FROM calendar_events 
          GROUP BY description 
          HAVING count >= 1
@@ -130,7 +133,7 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
         if !super::data_availability::has_candles_for_event(candle_index, pair, event_datetime) {
             continue;
         }
-        
+
         has_data_found = true;
 
         let metrics = calculate_volatilities_optimized(

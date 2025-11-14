@@ -49,9 +49,11 @@ pub fn calculate_pair_event_correlation(
         Connection::open(&pairs_db).map_err(|e| format!("Failed to open pairs.db: {}", e))?;
 
     // Requête pour récupérer les événements regroupés
+    // IMPORTANT: COUNT(DISTINCT event_time) déduplique les événements qui se produisent le même jour
+    // mais sous différentes devises (ex: Bank Holiday JPY + Bank Holiday USD = 1 événement, pas 2)
     let query = if let Some(cal_id) = calendar_id {
         format!(
-            "SELECT description, COUNT(*) as count 
+            "SELECT description, COUNT(DISTINCT event_time) as count 
              FROM calendar_events 
              WHERE calendar_import_id = {} 
              AND impact IN ('HIGH', 'MEDIUM')
@@ -60,7 +62,7 @@ pub fn calculate_pair_event_correlation(
             cal_id
         )
     } else {
-        "SELECT description, COUNT(*) as count 
+        "SELECT description, COUNT(DISTINCT event_time) as count 
          FROM calendar_events 
          WHERE impact IN ('HIGH', 'MEDIUM')
          GROUP BY description

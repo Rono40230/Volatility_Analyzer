@@ -2,6 +2,7 @@
 // Point d'entrée pour les commandes de corrélation événements × paires
 // Conforme .clinerules: < 100 lignes, exports seulement
 
+mod data_availability;
 mod event_impact;
 mod heatmap_command;
 mod heatmap_helpers;

@@ -3,15 +3,20 @@
 
 use rusqlite::Connection;
 
+use super::data_availability::has_candles_for_event;
+use super::volatility_helpers::parse_sqlite_datetime;
+use crate::services::candle_index::CandleIndex;
+
 /// Calcule la volatilité moyenne observée pour une paire lors d'un événement
-/// Retourne: (volatilité_30min_avant, volatilité_30min_après, volatilité_1h_totale)
+/// Retourne: (volatilité_30min_avant, volatilité_30min_après, volatilité_1h_totale, has_data)
 pub fn calculate_event_volatility_for_pair(
     conn_vol: &Connection,
     conn_pairs: &Connection,
     symbol: &str,
     event_name: &str,
     calendar_id: Option<i32>,
-) -> Result<(f64, f64, f64), String> {
+    candle_index: &CandleIndex,
+) -> Result<(f64, f64, f64, bool), String> {
     // Récupérer tous les event_times pour cet événement
     let cal_filter = if let Some(cal_id) = calendar_id {
         format!(" AND calendar_import_id = {}", cal_id)
@@ -37,15 +42,26 @@ pub fn calculate_event_volatility_for_pair(
         .map_err(|e| format!("Failed to collect event times: {}", e))?;
 
     if event_times.is_empty() {
-        return Ok((0.0, 0.0, 0.0));
+        return Ok((0.0, 0.0, 0.0, false));
     }
 
     let event_count = event_times.len();
     let mut volatilities_before = Vec::new();
     let mut volatilities_after = Vec::new();
     let mut volatilities_total = Vec::new();
+    let mut has_data_found = false;
 
     for event_time in event_times {
+        // Parse event_time et vérifier si des candles existent
+        let event_dt = parse_sqlite_datetime(&event_time)?;
+
+        if !has_candles_for_event(candle_index, symbol, event_dt) {
+            // Skip cet événement, pas de candles disponibles
+            continue;
+        }
+
+        has_data_found = true;
+
         // Volatilité 30min AVANT
         let query_before = "SELECT AVG(high - low) as avg_vol 
              FROM candle_data 
@@ -136,15 +152,16 @@ pub fn calculate_event_volatility_for_pair(
     };
 
     tracing::debug!(
-        "  📊 Event '{}': {} occ - before={:.2}, after={:.2}, total={:.2} pips",
+        "  📊 Event '{}': {} occ - before={:.2}, after={:.2}, total={:.2} pips (has_data={})",
         event_name,
         event_count,
         avg_before,
         avg_after,
-        avg_total
+        avg_total,
+        has_data_found
     );
 
-    Ok((avg_before, avg_after, avg_total))
+    Ok((avg_before, avg_after, avg_total, has_data_found))
 }
 
 /// Calcule le score de corrélation (0-100) basé sur les 3 volatilités

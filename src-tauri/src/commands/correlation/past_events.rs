@@ -43,11 +43,13 @@ pub async fn get_past_events(
     let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
     // Grouper par description (type d'événement) et compter les occurrences
+    // IMPORTANT: COUNT(DISTINCT event_time) déduplique les événements de même jour/heure
+    // mais différentes devises (ex: "Bank Holiday" du 1er janvier pour JPY, USD, EUR = 1 occurrence)
     // Filtrer par calendar_id si fourni
     // Afficher tous les événements HIGH et MEDIUM (toute la période)
     let query = if let Some(cal_id) = calendar_id {
         format!(
-            "SELECT description, COUNT(*) as count
+            "SELECT description, COUNT(DISTINCT event_time) as count
              FROM calendar_events 
              WHERE (UPPER(impact) IN ('H', 'HIGH', 'M', 'MEDIUM', 'N')) AND calendar_import_id = {}
              GROUP BY description
@@ -55,7 +57,7 @@ pub async fn get_past_events(
             cal_id
         )
     } else {
-        "SELECT description, COUNT(*) as count
+        "SELECT description, COUNT(DISTINCT event_time) as count
          FROM calendar_events 
          WHERE UPPER(impact) IN ('H', 'HIGH', 'M', 'MEDIUM', 'N')
          GROUP BY description

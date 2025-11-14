@@ -2,8 +2,7 @@ use rusqlite::Connection;
 use tauri::State;
 
 use super::heatmap_helpers::{
-    calculate_avg_volatility_for_event_pair_optimized, get_event_types,
-    HeatmapData,
+    calculate_avg_volatility_for_event_pair_optimized, get_event_types, HeatmapData,
 };
 use crate::commands::candle_index_commands::CandleIndexState;
 

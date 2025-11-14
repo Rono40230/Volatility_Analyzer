@@ -71,6 +71,11 @@ fn parse_format_new(path: &str) -> Result<Vec<ParsedEvent>, String> {
         let impact_raw = record.get(6).unwrap_or("").trim();
         let description = record.get(7).unwrap_or("").trim();
 
+        // FILTER: Exclude Bank Holidays (not economic events, just market closures)
+        if description.eq_ignore_ascii_case("Bank Holiday") {
+            continue;
+        }
+
         if year < 2000 || month < 1 || month > 12 || day < 1 || day > 31 {
             continue;
         }
@@ -113,6 +118,11 @@ fn parse_format_old(path: &str) -> Result<Vec<ParsedEvent>, String> {
         let currency = record.get(2).unwrap_or("").trim();
         let impact_raw = record.get(3).unwrap_or("").trim();
         let description = record.get(4).unwrap_or("").trim();
+
+        // FILTER: Exclude Bank Holidays (not economic events, just market closures)
+        if description.eq_ignore_ascii_case("Bank Holiday") {
+            continue;
+        }
 
         // Valider la date (YYYY/MM/DD → YYYY-MM-DD)
         let date_parts: Vec<&str> = date_str.split('/').collect();

@@ -54,12 +54,12 @@ pub fn calculate_event_volatility_for_pair(
     for event_time in event_times {
         // Parse event_time et vérifier si des candles existent
         let event_dt = parse_sqlite_datetime(&event_time)?;
-        
+
         if !has_candles_for_event(candle_index, symbol, event_dt) {
             // Skip cet événement, pas de candles disponibles
             continue;
         }
-        
+
         has_data_found = true;
 
         // Volatilité 30min AVANT

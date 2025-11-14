@@ -1,5 +1,6 @@
 use super::helpers::get_pip_value;
 use super::types::PairImpactDetail;
+use crate::commands::correlation::data_availability::has_candles_for_event;
 use crate::commands::correlation::volatility_helpers::calculate_volatilities_optimized;
 use crate::services::candle_index::CandleIndex;
 use chrono::{DateTime, Utc};
@@ -12,6 +13,9 @@ pub fn calculate_pair_impacts(
     let mut pair_impacts = Vec::new();
 
     for pair in pairs {
+        // Vérifier si des candles existent pour cette paire à cet instant
+        let has_data = has_candles_for_event(candle_index, pair, event_datetime.naive_utc());
+
         let metrics = calculate_volatilities_optimized(
             candle_index,
             pair,
@@ -53,6 +57,7 @@ pub fn calculate_pair_impacts(
             price_formatted: format!("{:.2}", price),
             multiplier,
             direction,
+            has_data: Some(has_data),
         });
     }
 

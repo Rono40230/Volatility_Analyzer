@@ -2,18 +2,16 @@ use rusqlite::Connection;
 use tauri::State;
 
 use super::heatmap_helpers::{
-    calculate_avg_volatility_for_event_pair_optimized, get_available_pairs, get_event_types,
-    HeatmapData,
+    calculate_avg_volatility_for_event_pair_optimized, get_event_types, HeatmapData,
 };
 use crate::commands::candle_index_commands::CandleIndexState;
 
 #[tauri::command]
 pub async fn get_correlation_heatmap(
-    months_back: Option<i32>,
+    calendar_id: Option<i32>,
+    pairs: Vec<String>,
     state: State<'_, CandleIndexState>,
 ) -> Result<HeatmapData, String> {
-    let months = months_back.unwrap_or(6);
-
     let data_dir = dirs::data_local_dir()
         .ok_or("Failed to get data directory")?
         .join("volatility-analyzer");
@@ -26,17 +24,15 @@ pub async fn get_correlation_heatmap(
 
     let conn = Connection::open(&db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
-    let pairs = get_available_pairs(&conn)?;
-
     if pairs.is_empty() {
-        return Err("No pairs found in database".to_string());
+        return Err("No pairs provided".to_string());
     }
 
-    let event_types = get_event_types(&conn, months)?;
+    let mut event_types = get_event_types(&conn, calendar_id)?;
 
     if event_types.is_empty() {
         return Ok(HeatmapData {
-            period: format!("Derniers {} mois", months),
+            period: "Calendrier sélectionné".to_string(),
             pairs,
             event_types: vec![],
             data: std::collections::HashMap::new(),
@@ -60,16 +56,21 @@ pub async fn get_correlation_heatmap(
     }
 
     for pair in &pairs {
-        for event_type in &event_types {
-            let avg_vol = calculate_avg_volatility_for_event_pair_optimized(
+        for event_type in &mut event_types {
+            let vol_result = calculate_avg_volatility_for_event_pair_optimized(
                 &conn,
                 &event_type.name,
                 pair,
-                months,
+                calendar_id,
                 candle_index,
             )?;
 
-            let avg_vol_rounded = (avg_vol * 10.0).round() / 10.0;
+            let avg_vol_rounded = (vol_result.value * 10.0).round() / 10.0;
+
+            // Marquer has_data au moins une fois si vrai
+            if vol_result.has_data {
+                event_type.has_data = Some(true);
+            }
 
             data.entry(event_type.name.clone())
                 .or_default()
@@ -78,7 +79,7 @@ pub async fn get_correlation_heatmap(
     }
 
     Ok(HeatmapData {
-        period: format!("Derniers {} mois", months),
+        period: "Calendrier sélectionné".to_string(),
         pairs,
         event_types,
         data,

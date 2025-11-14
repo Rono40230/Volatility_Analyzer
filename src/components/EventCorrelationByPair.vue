@@ -50,9 +50,40 @@
           <tr>
             <th>Rang</th>
             <th>Événement</th>
-            <th colspan="3" style="text-align: center;">Volatilité observée (pips)</th>
-            <th>Score</th>
-            <th>Occ.</th>
+            <th colspan="3" style="text-align: center;">
+              <MetricTooltip title="Volatilité observée">
+                <span style="cursor: help; border-bottom: 1px dotted #58a6ff;">Volatilité observée (pips)</span>
+                <template #definition>
+                  <div class="tooltip-section-title">Définition</div>
+                  <div class="tooltip-section-text">Amplitude en pips (mouvements de prix) observée avant et après l'événement économique.</div>
+                </template>
+                <template #usage>
+                  <div class="tooltip-section-title">Mesure</div>
+                  <div class="tooltip-section-text"><strong>-30mn:</strong> Volatilité durant les 30 minutes précédant l'événement | <strong>+30mn:</strong> Volatilité durant les 30 minutes suivant l'événement | <strong>1h total:</strong> Volatilité totale sur l'heure complète</div>
+                </template>
+                <template #scoring>
+                  <div class="tooltip-section-title">Interprétation</div>
+                  <div class="tooltip-section-text">Plus élevé = Plus de mouvement. Permet d'identifier si l'événement a réellement provoqué une augmentation de la volatilité par rapport à la baseline.</div>
+                </template>
+              </MetricTooltip>
+            </th>
+            <th>
+              <MetricTooltip title="Score de Corrélation">
+                <span style="cursor: help; border-bottom: 1px dotted #58a6ff;">Score</span>
+                <template #definition>
+                  <div class="tooltip-section-title">Définition</div>
+                  <div class="tooltip-section-text">Score composite (0-100%) mesurant l'impact de l'événement sur la volatilité de la paire. Combine volatilité moyenne, changement d'impact et récurrence.</div>
+                </template>
+                <template #usage>
+                  <div class="tooltip-section-title">Composants du Score</div>
+                  <div class="tooltip-section-text"><strong>Volatilité (max 60%):</strong> Amplitude moyenne observée | <strong>Impact (max 25%):</strong> Changement avant/après l'événement | <strong>Récurrence (max 15%):</strong> Nombre d'occurrences historiques</div>
+                </template>
+                <template #scoring>
+                  <div class="tooltip-section-title">Interprétation</div>
+                  <div class="tooltip-section-text">🟢 <strong>75-100%:</strong> Impact TRÈS ÉLEVÉ - Événement extrêmement corrélé | 🟠 <strong>50-75%:</strong> Impact MOYEN - Corrélation notable | 🔴 <strong>&lt;50%:</strong> Impact FAIBLE - Corrélation mineure</div>
+                </template>
+              </MetricTooltip>
+            </th>
           </tr>
           <tr>
             <th></th>
@@ -60,7 +91,6 @@
             <th>-30mn</th>
             <th>+30mn</th>
             <th>1h total</th>
-            <th></th>
             <th></th>
           </tr>
         </thead>
@@ -75,7 +105,6 @@
             <td class="event-name">
               {{ event.name }}
               <span v-if="event.has_data === false" class="no-data-badge">❌</span>
-              <span v-else-if="event.has_data === true" class="has-data-badge">✅</span>
             </td>
             <td class="volatility">{{ event.volatility_before_fmt }}</td>
             <td class="volatility">{{ event.volatility_after_fmt }}</td>
@@ -85,7 +114,6 @@
                 {{ event.correlation_score.toFixed(1) }}%
               </span>
             </td>
-            <td class="occurrences">{{ event.count }}x</td>
           </tr>
         </tbody>
       </table>
@@ -108,6 +136,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAnalysisStore } from '../stores/analysisStore'
+import MetricTooltip from './MetricTooltip.vue'
 
 interface Props {
   availablePairs: string[]
@@ -199,10 +228,9 @@ async function loadPairCorrelation() {
 }
 
 function getScoreClass(score: number): string {
-  if (score >= 75) return 'score-very-high'
-  if (score >= 50) return 'score-high'
-  if (score >= 25) return 'score-medium'
-  return 'score-low'
+  if (score >= 75) return 'score-green'
+  if (score >= 50) return 'score-orange'
+  return 'score-red'
 }
 </script>
 
@@ -439,14 +467,7 @@ function getScoreClass(score: number): string {
 }
 
 .has-data-badge {
-  display: inline-block;
-  margin-left: 8px;
-  font-size: 0.9em;
-  padding: 2px 6px;
-  background: #15803d;
-  color: #bbf7d0;
-  border-radius: 4px;
-  font-weight: bold;
+  display: none;
 }
 
 .impact-badge {
@@ -502,34 +523,22 @@ function getScoreClass(score: number): string {
   font-size: 1.05em;
 }
 
-.score-very-high {
-  background: rgba(31, 111, 235, 0.3);
-  color: #58a6ff;
-  border: 1px solid #58a6ff;
+.score-green {
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border: 1px solid #22c55e;
 }
 
-.score-high {
-  background: rgba(79, 195, 247, 0.2);
-  color: #4fc3f7;
-  border: 1px solid #4fc3f7;
+.score-orange {
+  background: rgba(249, 115, 22, 0.2);
+  color: #f97316;
+  border: 1px solid #f97316;
 }
 
-.score-medium {
-  background: rgba(217, 119, 6, 0.2);
-  color: #d97706;
-  border: 1px solid #d97706;
-}
-
-.score-low {
-  background: rgba(107, 114, 128, 0.2);
-  color: #6b7280;
-  border: 1px solid #6b7280;
-}
-
-.occurrences {
-  text-align: center;
-  color: #8b949e;
-  font-weight: 500;
+.score-red {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
 }
 
 .observations-card {

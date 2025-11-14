@@ -82,8 +82,8 @@ pub fn delete_calendar_from_db(calendar_id: i32) -> Result<String, String> {
     // Supprimer tous les événements de ce calendrier
     let events_deleted = tx
         .execute(
-            "DELETE FROM calendar_events WHERE symbol IN (SELECT DISTINCT symbol FROM calendar_events) AND symbol LIKE ?",
-            rusqlite::params![&calendar_name],
+            "DELETE FROM calendar_events WHERE calendar_import_id = ?",
+            rusqlite::params![calendar_id],
         )
         .map_err(|e| format!("Failed to delete calendar events: {}", e))?;
 

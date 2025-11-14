@@ -22,6 +22,8 @@ pub struct PairImpact {
     pub baseline_volatility: f64,
     pub multiplier: f64,
     pub direction: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_data: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

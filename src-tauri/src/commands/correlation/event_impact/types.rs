@@ -18,7 +18,7 @@ pub struct PairImpactDetail {
     pub multiplier: f64,
     pub direction: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub has_data: Option<bool>,                // true si candles existent pour cette paire à cet instant
+    pub has_data: Option<bool>, // true si candles existent pour cette paire à cet instant
 }
 
 /// Résultat complet de l'analyse d'impact

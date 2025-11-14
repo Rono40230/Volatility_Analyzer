@@ -9,6 +9,8 @@ pub struct PastEvent {
     pub country: String,
     pub currency: String,
     pub impact: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_data: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

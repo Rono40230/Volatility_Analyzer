@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use super::pair_correlation_helpers::{
     calculate_correlation_score, calculate_event_volatility_for_pair,
 };
+use crate::services::candle_index::CandleIndex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PairEventCorrelation {
@@ -19,6 +20,8 @@ pub struct PairEventCorrelation {
     pub volatility_after_fmt: String,
     pub volatility_total_fmt: String,
     pub correlation_score: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_data: Option<bool>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,6 +34,7 @@ pub struct PairCorrelationResult {
 pub fn calculate_pair_event_correlation(
     symbol: &str,
     calendar_id: Option<i32>,
+    candle_index: &CandleIndex,
 ) -> Result<PairCorrelationResult, String> {
     let data_dir = dirs::data_local_dir()
         .ok_or("Failed to get data directory")?
@@ -81,24 +85,26 @@ pub fn calculate_pair_event_correlation(
     for result in event_iter {
         let (event_name, count) = result.map_err(|e| format!("Row error: {}", e))?;
 
-        let (vol_before, vol_after, vol_total) = calculate_event_volatility_for_pair(
+        let (vol_before, vol_after, vol_total, has_data) = calculate_event_volatility_for_pair(
             &conn_vol,
             &conn_pairs,
             symbol,
             &event_name,
             calendar_id,
+            candle_index,
         )?;
 
         let correlation_score =
             calculate_correlation_score(vol_before, vol_after, vol_total, count);
 
         tracing::info!(
-            "  📌 Event: {} (count={}, before={:.2}, after={:.2}, total={:.2})",
+            "  📌 Event: {} (count={}, before={:.2}, after={:.2}, total={:.2}, has_data={})",
             event_name,
             count,
             vol_before,
             vol_after,
-            vol_total
+            vol_total,
+            has_data
         );
 
         events.push(PairEventCorrelation {
@@ -111,6 +117,7 @@ pub fn calculate_pair_event_correlation(
             volatility_after_fmt: format!("{:.2}", vol_after),
             volatility_total_fmt: format!("{:.2}", vol_total),
             correlation_score,
+            has_data: Some(has_data),
         });
     }
 
