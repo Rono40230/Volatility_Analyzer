@@ -1,0 +1,4 @@
+Lis SYSTEM_PROMPT.md et applique le système RÈGLES 16+17.
+Ensuite, je peux te demander ce que je veux.
+
+Ecrire "valide tout" pour valider les commits

@@ -7,6 +7,7 @@ pub mod candle;
 pub mod errors;
 pub mod event_metrics;
 pub mod hourly_stats;
+pub mod stats_15min;
 
 // Re-exports pour faciliter les imports
 pub use analysis_result::{
@@ -16,4 +17,5 @@ pub use calendar_event::CalendarEvent;
 pub use candle::Candle;
 pub use errors::{Result, VolatilityError};
 pub use event_metrics::EventMetrics;
-pub use hourly_stats::HourlyStats;
+pub use hourly_stats::{EventInHour, HourlyStats};
+pub use stats_15min::Stats15Min;

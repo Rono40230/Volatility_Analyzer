@@ -28,22 +28,35 @@
 
     <div class="confidence-section">
       <MetricTooltip title="Score de Confiance">
-        <h3>Score de Confiance</h3>
+        <h3>Score de Confiance 🎯</h3>
         <template #definition>
           <div class="tooltip-section-title">Définition</div>
-          <div class="tooltip-section-text">Niveau de confiance dans la recommandation de trading (%) calculé à partir de la qualité des données et de la stabilité des conditions.</div>
+          <div class="tooltip-section-text">Mesure 0-100 : à quel point tu peux CONFIER la stratégie STRADDLE scalping à cette paire pendant cette période. Plus le score est élevé, plus les conditions sont stables et prévisibles.</div>
         </template>
         <template #usage>
-          <div class="tooltip-section-title">Utilité pour le Trading</div>
-          <div class="tooltip-section-text">Permet de mesurer la fiabilité de la recommandation. Un score élevé (≥80%) indique des conditions stables et prédictibles.</div>
+          <div class="tooltip-section-title">Formule (max 100 points)</div>
+          <div class="tooltip-section-text">
+            <strong>ATR (30 pts)</strong> - Volatilité soutenue : >25 pips = 30 pts | 15-25 pips = 25 pts<br/>
+            <strong>Body Range (25 pts)</strong> - Directionnalité : >45% = 25 pts | 35-45% = 20 pts<br/>
+            <strong>Volatilité (25 pts)</strong> - Bonus mouvement : >30% = 25 pts | 20-30% = 20 pts<br/>
+            <strong>Noise Ratio (10 pts)</strong> - Signal/bruit : <2.0 = 10 pts | <3.0 = 7 pts<br/>
+            <strong>Breakout % (10 pts)</strong> - Cassures : >15% = 10 pts | >10% = 7 pts<br/>
+            <strong>Bonus Données (5 pts)</strong> - Si >100k candles = 5 pts
+          </div>
         </template>
         <template #scoring>
           <div class="tooltip-section-title">Interprétation</div>
-          <div class="tooltip-section-text">≥80% = Très confiant | ≥65% = Confiant | ≥50% = Modéré | ≥35% = Prudent | &lt;35% = Ne pas trader</div>
+          <div class="tooltip-section-text">
+            <strong>80-100</strong> ✅ EXCELLENT - Scalpe agressivement<br/>
+            <strong>65-80</strong> 🟢 BON - Scalpe normalement<br/>
+            <strong>50-65</strong> 🟡 PRUDENT - Scalpe avec stop serrés<br/>
+            <strong>35-50</strong> 🟠 RISKY - Très prudent, breakouts only<br/>
+            <strong>0-35</strong> ❌ MAUVAIS - Ne pas trader
+          </div>
         </template>
       </MetricTooltip>
       <div class="confidence-bar" :style="{ width: props.result.confidence_score + '%' }"></div>
-      <span class="confidence-text">{{ props.result.confidence_score }}%</span>
+      <span class="confidence-text">{{ props.result.confidence_score.toFixed(0) }}/100</span>
     </div>
 
     <div class="metrics-grid">
@@ -251,13 +264,6 @@ interface HourlyStats {
   atr_mean: number
 }
 
-interface CorrelatedEvent {
-  event: any // CalendarEvent
-  volatility_hour: number
-  volatility_increase: number
-  correlation_score: number
-}
-
 interface AnalysisResult {
   symbol: string
   period_start: string
@@ -269,7 +275,6 @@ interface AnalysisResult {
   global_metrics: GlobalMetrics
   hourly_stats: HourlyStats[]
   best_hours: number[]
-  correlated_events: CorrelatedEvent[]
 }
 
 const props = defineProps<{

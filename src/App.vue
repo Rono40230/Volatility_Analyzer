@@ -134,6 +134,7 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') 
               <HourlyTable 
                 :stats="analysisResult.hourly_stats" 
                 :best-hours="analysisResult.best_hours"
+                :stats15min="analysisResult.stats_15min"
               />
             </template>
           </div>

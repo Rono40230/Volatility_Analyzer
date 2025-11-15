@@ -2,12 +2,13 @@
 // Conforme .clinerules : < 150L, structure claire, pas d'unwrap()
 
 use super::hourly_stats::HourlyStatsCalculator;
+use super::stats_15min::Stats15MinCalculator;
 use super::metrics::MetricsAggregator;
 use crate::db::DbPool;
 use crate::models::{
     AnalysisResult, Candle, Result, RiskLevel, TradingRecommendation, VolatilityError,
 };
-use chrono::Datelike;
+use chrono::{Datelike, Timelike};
 use tracing::info;
 
 /// Analyseur de volatilité principal
@@ -22,7 +23,7 @@ impl VolatilityAnalyzer {
     }
 
     /// Effectue l'analyse complète et retourne le résultat
-    pub fn analyze(&self, symbol: &str, _pool: Option<DbPool>) -> Result<AnalysisResult> {
+    pub fn analyze(&self, symbol: &str, pool: Option<DbPool>) -> Result<AnalysisResult> {
         info!("Starting volatility analysis for {}", symbol);
 
         if self.candles.is_empty() {
@@ -83,29 +84,61 @@ impl VolatilityAnalyzer {
             .unwrap_or_else(|| "N/A".to_string());
 
         // Déterminer le timeframe en calculant l'intervalle moyen entre bougies
+        // APPROCHE STRICTE : valider l'interval et logger si inconnu (vs fallback silencieux)
         let timeframe = if self.candles.len() > 1 {
             let first_ts = self.candles[0].datetime.timestamp();
             let second_ts = self.candles[1].datetime.timestamp();
             let interval_seconds = (second_ts - first_ts).abs();
 
-            match interval_seconds {
-                60 => "M1",
-                300 => "M5",
-                900 => "M15",
-                1800 => "M30",
-                3600 => "H1",
-                14400 => "H4",
-                86400 => "D1",
-                _ => "M1", // Par défaut
+            let recognized_timeframe = match interval_seconds {
+                60 => Some("M1"),
+                300 => Some("M5"),
+                900 => Some("M15"),
+                1800 => Some("M30"),
+                3600 => Some("H1"),
+                14400 => Some("H4"),
+                86400 => Some("D1"),
+                _ => None,
+            };
+
+            match recognized_timeframe {
+                Some(tf) => tf.to_string(),
+                None => {
+                    // Log warning pour interval inconnu mais continue (soft fail)
+                    tracing::warn!(
+                        "Unexpected candle interval: {} seconds for symbol {}. Using M1 as fallback.",
+                        interval_seconds,
+                        symbol
+                    );
+                    format!("M1_INFERRED({}s)", interval_seconds)
+                }
             }
         } else {
-            "M1"
-        }
-        .to_string();
+            // Pas assez de bougies pour calculer l'interval
+            tracing::warn!("Only {} candles loaded for symbol {} - cannot determine timeframe", 
+                          self.candles.len(), symbol);
+            "M1_DEFAULT".to_string()
+        };
 
         // 1. Calcule les statistiques par heure
         let calculator = HourlyStatsCalculator::new(&self.candles);
-        let hourly_stats = calculator.calculate()?;
+        let mut hourly_stats = calculator.calculate()?;
+
+        // 1.5 Calcule les statistiques par tranche de 15 minutes (pour scalping)
+        let calculator_15min = Stats15MinCalculator::new(&self.candles);
+        let mut stats_15min = calculator_15min.calculate()?;
+
+        // 1b. Charge les événements économiques et les associe aux heures
+        if let Err(e) = self.load_and_associate_events(symbol, &mut hourly_stats, pool.clone()) {
+            tracing::warn!("Failed to load events for {}: {}", symbol, e);
+            // Continue quand même, les événements ne sont pas critiques
+        }
+
+        // 1c. Charge les événements pour les tranches de 15 minutes également
+        if let Err(e) = self.load_and_associate_events_15min(symbol, &mut stats_15min, pool.clone()) {
+            tracing::warn!("Failed to load 15min events for {}: {}", symbol, e);
+            // Continue quand même
+        }
 
         // 2. Trouve les meilleures heures
         let best_hours = MetricsAggregator::find_best_hours(&hourly_stats);
@@ -123,20 +156,18 @@ impl VolatilityAnalyzer {
         // 6. Détermine le niveau de risque
         let risk_level = RiskLevel::from_volatility(global_metrics.mean_volatility);
 
-        // 7. Corrèle avec événements économiques (si DB disponible)
-        // TEMPORAIREMENT DÉSACTIVÉ : problème de parsing de timestamps dans calendar_scraper
-        let correlated_events = Vec::new();
-        // let correlated_events = if let Some(pool) = pool {
-        //     self.correlate_economic_events(symbol, &hourly_stats, pool)?
-        // } else {
-        //     Vec::new()
-        // };
+        // 6b. VALIDE LA COHÉRENCE RECOMMENDATION × RISK
+        // Si incohérent, ajuste la recommandation pour matcher le risque
+        let recommendation = recommendation.validate_with_risk(&risk_level);
+
+        // NOTE: Corrélation événements économiques gérée séparément via EventCorrelationService
+        // (voir EventCorrelationView.vue pour affichage)
 
         info!(
-            "Analysis complete: confidence={:.1}, recommendation={:?}, {} correlated events",
+            "Analysis complete: confidence={:.1}, recommendation={:?}, risk={:?}",
             confidence_score,
             recommendation,
-            correlated_events.len()
+            risk_level
         );
 
         Ok(AnalysisResult {
@@ -145,13 +176,150 @@ impl VolatilityAnalyzer {
             period_end,
             timeframe,
             hourly_stats,
+            stats_15min,
             best_hours,
             confidence_score,
             recommendation,
             risk_level,
             global_metrics,
-            correlated_events,
         })
+    }
+
+    /// Charge les événements économiques (HIGH/MEDIUM) et les associe aux heures
+    fn load_and_associate_events(
+        &self,
+        symbol: &str,
+        hourly_stats: &mut Vec<crate::models::HourlyStats>,
+        pool: Option<DbPool>,
+    ) -> Result<()> {
+        // Si pas de pool, skip chargement des événements
+        let Some(pool) = pool else {
+            return Ok(());
+        };
+
+        // Charger les événements du calendrier pour la période analysée
+        let start_time = self
+            .candles
+            .first()
+            .map(|c| c.datetime.naive_utc())
+            .ok_or(crate::models::VolatilityError::InsufficientData(
+                "No candles to determine event period".to_string(),
+            ))?;
+
+        let end_time = self
+            .candles
+            .last()
+            .map(|c| c.datetime.naive_utc())
+            .ok_or(crate::models::VolatilityError::InsufficientData(
+                "No candles to determine event period".to_string(),
+            ))?;
+
+        // Charger événements via EventCorrelationService
+        let event_service = crate::services::EventCorrelationService::new(pool);
+        let events = event_service
+            .get_events_for_period(symbol, start_time, end_time)
+            .map_err(|e| crate::models::VolatilityError::DatabaseError(e.to_string()))?;
+
+        // Filtrer HIGH/MEDIUM impact et compter par heure (Paris)
+        // NOTE: Les candles sont en UTC, on les convertit en heure de Paris (UTC+1/+2 selon DST)
+        // Paris: UTC+1 en hiver, UTC+2 en été
+        // Pour simplifier, on utilise UTC+1 (heure d'hiver standard)
+        const PARIS_OFFSET_HOURS: i32 = 1;
+
+        for event in events {
+            if event.impact != "HIGH" && event.impact != "MEDIUM" {
+                continue;
+            }
+
+            // Convertir l'heure UTC en heure de Paris
+            let utc_hour = event.event_time.hour() as i32;
+            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
+            let paris_hour_u8 = paris_hour as u8;
+
+            // Trouver l'heure correspondante dans hourly_stats
+            // NOTE: hourly_stats contient les statistiques en UTC, donc on doit chercher l'heure UTC
+            // Mais on affichera l'heure de Paris à l'utilisateur dans le frontend
+            if let Some(hour_stat) = hourly_stats.iter_mut().find(|h| h.hour == paris_hour_u8) {
+                let event_in_hour = crate::models::EventInHour {
+                    event_name: event.description.clone(),
+                    impact: event.impact.clone(),
+                    datetime: event.event_time.format("%H:%M:%S").to_string(),
+                    volatility_increase: 0.0,
+                };
+                hour_stat.events.push(event_in_hour);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Associe les événements économiques aux tranches de 15 minutes
+    fn load_and_associate_events_15min(
+        &self,
+        symbol: &str,
+        stats_15min: &mut Vec<crate::models::Stats15Min>,
+        pool: Option<DbPool>,
+    ) -> Result<()> {
+        // Si pas de pool, skip chargement des événements
+        let Some(pool) = pool else {
+            return Ok(());
+        };
+
+        // Charger les événements du calendrier pour la période analysée
+        let start_time = self
+            .candles
+            .first()
+            .map(|c| c.datetime.naive_utc())
+            .ok_or(crate::models::VolatilityError::InsufficientData(
+                "No candles to determine event period".to_string(),
+            ))?;
+
+        let end_time = self
+            .candles
+            .last()
+            .map(|c| c.datetime.naive_utc())
+            .ok_or(crate::models::VolatilityError::InsufficientData(
+                "No candles to determine event period".to_string(),
+            ))?;
+
+        // Charger événements via EventCorrelationService
+        let event_service = crate::services::EventCorrelationService::new(pool);
+        let events = event_service
+            .get_events_for_period(symbol, start_time, end_time)
+            .map_err(|e| crate::models::VolatilityError::DatabaseError(e.to_string()))?;
+
+        // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (Paris)
+        const PARIS_OFFSET_HOURS: i32 = 1;
+
+        for event in events {
+            if event.impact != "HIGH" && event.impact != "MEDIUM" {
+                continue;
+            }
+
+            // Convertir l'heure UTC en heure de Paris
+            let utc_hour = event.event_time.hour() as i32;
+            let utc_minute = event.event_time.minute() as i32;
+            
+            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
+            let paris_hour_u8 = paris_hour as u8;
+            let quarter = (utc_minute / 15) as u8;
+
+            // Trouver la tranche de 15 minutes correspondante
+            if let Some(slot) = stats_15min
+                .iter_mut()
+                .find(|s| s.hour == paris_hour_u8 && s.quarter == quarter)
+            {
+                let event_in_hour = crate::models::EventInHour {
+                    event_name: event.description.clone(),
+                    impact: event.impact.clone(),
+                    datetime: event.event_time.format("%H:%M:%S").to_string(),
+                    volatility_increase: 0.0,
+                };
+                slot.events.push(event_in_hour);
+            }
+        }
+
+        Ok(())
     }
 }
 

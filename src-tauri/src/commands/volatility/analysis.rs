@@ -160,10 +160,9 @@ pub async fn analyze_symbol(
     })?;
 
     info!(
-        "Analysis complete for {}: confidence={:.1}, correlated_events={}",
+        "Analysis complete for {}: confidence={:.1}",
         symbol,
-        result.confidence_score,
-        result.correlated_events.len()
+        result.confidence_score
     );
 
     Ok(result)

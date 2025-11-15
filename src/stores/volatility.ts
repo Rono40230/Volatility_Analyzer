@@ -8,6 +8,13 @@ export interface SymbolInfo {
   file_path: string
 }
 
+export interface EventInHour {
+  event_name: string
+  impact: string
+  datetime: string
+  volatility_increase: number
+}
+
 export interface HourlyStats {
   hour: number
   candle_count: number
@@ -21,6 +28,24 @@ export interface HourlyStats {
   volume_imbalance_mean: number
   noise_ratio_mean: number
   breakout_percentage: number
+  events: EventInHour[]
+}
+
+export interface Stats15Min {
+  hour: number           // 0-23
+  quarter: number        // 0-3 (00-15min, 15-30min, 30-45min, 45-60min)
+  candle_count: number
+  atr_mean: number
+  atr_max: number
+  volatility_mean: number
+  range_mean: number
+  body_range_mean: number
+  shadow_ratio_mean: number
+  tick_quality_mean: number
+  volume_imbalance_mean: number
+  noise_ratio_mean: number
+  breakout_percentage: number
+  events: EventInHour[]
 }
 
 export interface GlobalMetrics {
@@ -59,6 +84,7 @@ export interface AnalysisResult {
   period_end: string
   timeframe: string
   hourly_stats: HourlyStats[]
+  stats_15min: Stats15Min[]      // Nouvelles stats pour scalping
   best_hours: number[]
   confidence_score: number
   recommendation: string

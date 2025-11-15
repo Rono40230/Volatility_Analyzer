@@ -35,3 +35,6 @@ Fichiers originaux/*.csv
 volatility.db
 src-tauri/volatility.db
 src-tauri/data/volatility.db
+
+# Impact Detection Snapshots (temporaires, ne pas versionner)
+.git/.snapshots/

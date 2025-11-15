@@ -77,3 +77,125 @@
 // ✅ Seul le code et les scripts comptent
 
 ```
+
+## 🔧 RÈGLE 11 : IGNORER ERREURS DE COMPILATION DUES AUX DÉPENDANCES
+// Les erreurs de compilation liées aux dépendances système MANQUANTES sont IGNORÉES :
+//   - cannot find -lwebkit2gtk-4.1
+//   - cannot find -ljavascriptcoregtk-4.1
+//   - missing GTK, Cairo, GLib, Soup libraries, etc.
+// ✅ L'IA peut ignorer ces erreurs et continuer
+// ✅ Ne pas bloquer le commit pour ces raisons
+// ❌ MAIS l'IA doit corriger TOUS les autres types d'erreurs (syntaxe, logique, types Rust)
+// 💡 Ces dépendances sont du responsabilité de l'environnement système, pas du code
+
+## 🧠 RÈGLE 16 : VALIDATION DE COMPRÉHENSION OBLIGATOIRE
+// AVANT DE GÉNÉRER TOUTE LIGNE DE CODE :
+// L'IA DOIT reformuler la demande et demander approbation explicite
+//
+// PROCESS OBLIGATOIRE (NON CONTOURNABLE) :
+//
+// 1️⃣  COMPRENDRE
+//   "Je comprends que tu veux : [reformuler en détail]"
+//
+// 2️⃣  CLARIFIER LES ZONES GRISES
+//   "Mais j'ai des questions :"
+//   - Quelle est la plage de dates pour cette analyse ?
+//   - Dois-je modifier la DB ou juste l'affichage ?
+//   - Dois-je garder la compatibilité avec le code existant ?
+//   - Y a-t-il des contraintes de performance ?
+//   - Cela affecte quels modules ? Lequel est critique ?
+//
+// 3️⃣  PROPOSER UNE APPROCHE
+//   "Mon plan :"
+//   1. Modifier [module X] pour faire [action Y]
+//   2. Ajouter tests pour [cas Z]
+//   3. Mettre à jour [interface] en conséquence
+//   4. Valider avec [vérification]
+//
+// 4️⃣  ATTENDRE APPROBATION EXPLICITE
+//   "Ça te convient ? Des ajustements ?"
+//   NE PAS CODER JUSQU'À APPROBATION
+//
+// ❌ INTERDIT :
+//   - Supposer des détails
+//   - Coder "au feeling"
+//   - Ignorer une ambiguïté
+//   - Avancer sans confirmation
+//
+// ✅ OBLIGATOIRE :
+//   - Clarifier CHAQUE ambiguïté
+//   - Résumer les changements prévus
+//   - Attendre validation avant ligne 1 de code
+//   - Proposer alternatives si doute
+//
+// 💡 PHILOSOPHIE :
+//   "Mieux vaut perdre 2 minutes en questions
+//    que 2 heures à corriger du code inutile"
+
+## 🚀 RÈGLE 17 : PHASE 1 & 2 - ACCUMULATION & VALIDATION D'IMPACT
+// WORKFLOW OBLIGATOIRE pour éviter la dette technique
+//
+// 🎯 OBJECTIF : Ne jamais créer de régression ou impact inespéré
+//
+// ════════════════════════════════════════════════════════════════
+// PHASE 1 : ACCUMULATION (Quand l'utilisateur demande des changements)
+// ════════════════════════════════════════════════════════════════
+//
+// 1️⃣  L'IA DOIT appliquer RÈGLE 16 (validation compréhension) AVANT de coder
+// 2️⃣  L'IA génère code
+// 3️⃣  L'IA lance cargo test → DOIT PASSER (100%)
+// 4️⃣  L'IA accumule les changements (fichiers modifiés réellement)
+// 5️⃣  L'IA NE COMMIT PAS
+// 6️⃣  L'IA attend instructions pour Phase 2
+//
+// ════════════════════════════════════════════════════════════════
+// PHASE 2 : VALIDATION D'IMPACT (Quand utilisateur dit "valide tout")
+// ════════════════════════════════════════════════════════════════
+//
+// L'IA DOIT exécuter :
+//   ./scripts/impact-detection/validate-phase2.sh
+//
+// Ce script fait :
+//   1. Vérifie l'impact : qui a changé (attendu ou pas)
+//   2. Détecte régressions : teste tout, compare avec baseline
+//   3. Génère rapport : impact + changements + décision
+//
+// SI ✅ APPROUVÉ :
+//   - L'IA commit + push automatiquement
+//   - Message commit inclut résumé impact
+//
+// SI ❌ BLOQUÉ :
+//   - Signale le problème exact (régression ? unwrap ? taille fichier ?)
+//   - Demande corrections
+//   - Re-teste en Phase 2
+//
+// ════════════════════════════════════════════════════════════════
+// INITIALISATION (Une seule fois au départ)
+// ════════════════════════════════════════════════════════════════
+//
+// Avant de commencer Phase 1 :
+//   ./scripts/impact-detection/init-impact-system.sh
+//
+// Cela prend un snapshot initial (baseline) du code.
+// Tous les changements seront comparés à ce snapshot.
+//
+// ════════════════════════════════════════════════════════════════
+// POINTS CLÉS
+// ════════════════════════════════════════════════════════════════
+//
+// ✅ OBLIGATOIRE :
+//   - Chaque Phase 1 test immédiatement (tests DOIVENT passer)
+//   - Phase 2 avant CHAQUE commit (pas d'exceptions)
+//   - Signaler précisément tout blocage
+//   - Inclure rapport complet dans commit message
+//
+// ❌ INTERDIT :
+//   - Committer sans Phase 2 validation
+//   - Coder si tests échouent en Phase 1
+//   - Ignorer ou contourner les régressions
+//   - Committer avec dépendances système manquantes (voir RÈGLE 11)
+//
+// 💡 PHILOSOPHIE :
+//   "Laisser la machine déterminer l'impact,
+//    l'utilisateur décide si c'est acceptable,
+//    pas de surprise dans le code."

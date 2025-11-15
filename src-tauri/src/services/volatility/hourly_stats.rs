@@ -17,19 +17,24 @@ impl<'a> HourlyStatsCalculator<'a> {
         Self { candles }
     }
 
-    /// Calcule les statistiques pour chaque heure UTC (0-23)
+    /// Calcule les statistiques pour chaque heure (en heure de Paris, UTC+1)
+    /// Les candles sont en UTC, on les groupe par heure de Paris pour une meilleure analyse pour les traders français
     pub(super) fn calculate(&self) -> Result<Vec<HourlyStats>> {
-        debug!("Calculating hourly statistics");
+        debug!("Calculating hourly statistics (Paris time)");
 
-        // Groupe les bougies par heure
+        const PARIS_OFFSET_HOURS: i32 = 1; // UTC+1 (hiver) - TODO: gérer DST pour l'été
+
+        // Groupe les bougies par heure de Paris
         let mut hourly_groups: HashMap<u8, Vec<&Candle>> = HashMap::new();
 
         for candle in self.candles {
-            let hour = candle.hour_utc() as u8;
-            hourly_groups.entry(hour).or_default().push(candle);
+            let utc_hour = candle.hour_utc() as i32;
+            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
+            let paris_hour_u8 = paris_hour as u8;
+            hourly_groups.entry(paris_hour_u8).or_default().push(candle);
         }
 
-        // Calcule les stats pour chaque heure
+        // Calcule les stats pour chaque heure de Paris
         let mut stats = Vec::new();
 
         for hour in 0..24 {
@@ -51,11 +56,12 @@ impl<'a> HourlyStatsCalculator<'a> {
                     volume_imbalance_mean: 0.0,
                     noise_ratio_mean: 0.0,
                     breakout_percentage: 0.0,
+                    events: Vec::new(),
                 });
             }
         }
 
-        debug!("Calculated stats for {} hours", stats.len());
+        debug!("Calculated stats for {} hours (Paris time)", stats.len());
         Ok(stats)
     }
 
@@ -106,6 +112,7 @@ impl<'a> HourlyStatsCalculator<'a> {
             volume_imbalance_mean,
             noise_ratio_mean,
             breakout_percentage,
+            events: Vec::new(), // Sera rempli après par l'analyseur
         })
     }
 }
