@@ -87,8 +87,11 @@
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="quarter in getQuartersForHour(stat.hour)" :key="`${stat.hour}-${quarter.quarter}`" class="scalping-row">
-                        <td class="time-cell">{{ String(stat.hour).padStart(2, '0') }}:{{ String(quarter.quarter * 15).padStart(2, '0') }}-{{ String(stat.hour).padStart(2, '0') }}:{{ String(Math.min(quarter.quarter * 15 + 15, 60)).padStart(2, '0') }}</td>
+                      <tr v-for="quarter in getQuartersForHour(stat.hour)" :key="`${stat.hour}-${quarter.quarter}`" class="scalping-row" :class="{ 'top3-slice': isInTop3Slice(stat.hour, quarter.quarter) }">
+                        <td class="time-cell">
+                          <span v-if="isInTop3Slice(stat.hour, quarter.quarter)" class="top3-star">⭐ {{ getTop3SliceRank(stat.hour, quarter.quarter) }}</span>
+                          {{ String(stat.hour).padStart(2, '0') }}:{{ String(quarter.quarter * 15).padStart(2, '0') }}-{{ String(stat.hour).padStart(2, '0') }}:{{ String(Math.min(quarter.quarter * 15 + 15, 60)).padStart(2, '0') }}
+                        </td>
                         <td>{{ formatNumber(quarter.atr_mean, 5) }}</td>
                         <td>{{ (quarter.volatility_mean * 100).toFixed(2) }}</td>
                         <td>{{ quarter.body_range_mean.toFixed(1) }}</td>
@@ -130,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { HourlyStats, EventInHour } from '../stores/volatility'
 import EventDetailsDrawer from './EventDetailsDrawer.vue'
 
@@ -145,6 +148,30 @@ const drawerOpen = ref(false)
 const selectedHour = ref<number | null>(null)
 const selectedEvents = ref<EventInHour[] | null>(null)
 const expandedHours = ref<number[]>([])
+const top3Slices = ref<any[]>([])
+
+// Calculer le TOP 3 au montage/changement des stats
+onMounted(() => {
+  if (props.stats15min && props.stats15min.length > 0) {
+    try {
+      // Besoin de globalMetrics pour analyzeTop3Slices
+      // On va créer une fonction locale pour identifier les TOP 3 slices
+      const scoredSlices = props.stats15min.map((slice: any) => ({
+        hour: slice.hour,
+        quarter: slice.quarter,
+        score: calculateSliceScore(slice)
+      }))
+      
+      // Trier par score décroissant et prendre les 3 meilleurs
+      top3Slices.value = scoredSlices
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 3)
+        .map((item: any) => ({ hour: item.hour, quarter: item.quarter }))
+    } catch (err) {
+      console.error('Erreur calcul TOP 3:', err)
+    }
+  }
+})
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
@@ -156,57 +183,6 @@ function formatNumber(num: number, decimals: number): string {
 
 function isBestHour(hour: number): boolean {
   return props.bestHours.includes(hour)
-}
-
-function getQualityScore(stat: HourlyStats): number {
-  // Calcule le score de potentiel STRADDLE (même logique que backend)
-  // Voir src-tauri/src/models/hourly_stats.rs::movement_potential_score_straddle()
-  if (stat.candle_count === 0) return 0
-  
-  let score = 0
-  
-  // 1. RANGE (60 pts max) - Dominante pour straddle
-  if (stat.range_mean > 0.0025) {
-    score += 60 // >25 pips = excellent
-  } else if (stat.range_mean > 0.0020) {
-    score += 50 // 20-25 pips = très bon
-  } else if (stat.range_mean > 0.0015) {
-    score += 40 // 15-20 pips = bon
-  } else if (stat.range_mean > 0.0010) {
-    score += 20 // 10-15 pips = acceptable
-  }
-  
-  // 2. ATR (25 pts max) - Volatilité soutenue
-  if (stat.atr_mean > 0.0020) {
-    score += 25 // >20 pips = excellent
-  } else if (stat.atr_mean > 0.0015) {
-    score += 20 // 15-20 pips = très bon
-  } else if (stat.atr_mean > 0.0010) {
-    score += 15 // 10-15 pips = bon
-  } else if (stat.atr_mean > 0.0005) {
-    score += 8 // 5-10 pips = acceptable
-  }
-  
-  // 3. BodyRange (15 pts max) - Directionnalité
-  if (stat.body_range_mean > 45.0) {
-    score += 15 // >45% = excellent
-  } else if (stat.body_range_mean > 35.0) {
-    score += 12 // 35-45% = bon
-  } else if (stat.body_range_mean > 25.0) {
-    score += 8 // 25-35% = acceptable
-  } else if (stat.body_range_mean > 15.0) {
-    score += 3 // 15-25% = limite
-  }
-  
-  return Math.min(score, 100)
-}
-
-function getQualityClass(stat: HourlyStats): string {
-  const score = getQualityScore(stat)
-  if (score >= 80) return 'excellent'
-  if (score >= 60) return 'good'
-  if (score >= 40) return 'fair'
-  return 'poor'
 }
 
 // ============================================
@@ -289,6 +265,57 @@ function getQuartersForHour(hour: number) {
     .filter(stat => stat.hour === hour)
     .sort((a, b) => a.quarter - b.quarter)
 }
+
+function calculateSliceScore(slice: any): number {
+  // Même logique que straddleAnalysis.ts::calculateStraddleScore
+  if (slice.candle_count === 0) return 0
+
+  let score = 0
+
+  // RANGE (60 pts max)
+  if (slice.range_mean > 0.0025) {
+    score += 60
+  } else if (slice.range_mean > 0.0020) {
+    score += 50
+  } else if (slice.range_mean > 0.0015) {
+    score += 40
+  } else if (slice.range_mean > 0.0010) {
+    score += 20
+  }
+
+  // ATR (25 pts max)
+  if (slice.atr_mean > 0.0020) {
+    score += 25
+  } else if (slice.atr_mean > 0.0015) {
+    score += 20
+  } else if (slice.atr_mean > 0.0010) {
+    score += 15
+  } else if (slice.atr_mean > 0.0005) {
+    score += 8
+  }
+
+  // BodyRange (15 pts max)
+  if (slice.body_range_mean > 45.0) {
+    score += 15
+  } else if (slice.body_range_mean > 35.0) {
+    score += 12
+  } else if (slice.body_range_mean > 25.0) {
+    score += 8
+  } else if (slice.body_range_mean > 15.0) {
+    score += 3
+  }
+
+  return Math.min(score, 100)
+}
+
+function isInTop3Slice(hour: number, quarter: number): boolean {
+  return top3Slices.value.some(item => item.hour === hour && item.quarter === quarter)
+}
+
+function getTop3SliceRank(hour: number, quarter: number): number {
+  const found = top3Slices.value.findIndex(item => item.hour === hour && item.quarter === quarter)
+  return found >= 0 ? found + 1 : 0
+}
 </script>
 
 <style scoped>
@@ -357,6 +384,21 @@ function getQuartersForHour(hour: number) {
 
 .scalping-row:hover {
   background: #161b22;
+}
+
+.scalping-row.top3-slice {
+  background: rgba(251, 191, 36, 0.1);
+  border-left: 4px solid #fbbf24;
+}
+
+.scalping-row.top3-slice:hover {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.top3-star {
+  color: #fbbf24;
+  font-weight: bold;
+  margin-right: 4px;
 }
 
 .time-cell {

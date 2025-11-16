@@ -268,38 +268,50 @@
       </div>
     </div>
 
-    <div class="color-legend">
-      <div class="legend-grid">
-        <div class="legend-item">
-          <div class="legend-color excellent"></div>
-          <div class="legend-text">
-            <span>Métrique très bonne, conditions optimales</span>
+    <div class="color-legend-container">
+      <div class="color-legend">
+        <div class="legend-grid">
+          <div class="legend-item">
+            <div class="legend-color excellent"></div>
+            <div class="legend-text">
+              <span>Métrique très bonne, conditions optimales</span>
+            </div>
           </div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color good"></div>
-          <div class="legend-text">
-            <span>Métrique satisfaisante, conditions acceptables</span>
+          <div class="legend-item">
+            <div class="legend-color good"></div>
+            <div class="legend-text">
+              <span>Métrique satisfaisante, conditions acceptables</span>
+            </div>
           </div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color acceptable"></div>
-          <div class="legend-text">
-            <span>Métrique à la limite, à surveiller</span>
+          <div class="legend-item">
+            <div class="legend-color acceptable"></div>
+            <div class="legend-text">
+              <span>Métrique à la limite, à surveiller</span>
+            </div>
           </div>
-        </div>
-        <div class="legend-item">
-          <div class="legend-color poor"></div>
-          <div class="legend-text">
-            <span>Métrique insuffisante, déconseillé</span>
+          <div class="legend-item">
+            <div class="legend-color poor"></div>
+            <div class="legend-text">
+              <span>Métrique insuffisante, déconseillé</span>
+            </div>
           </div>
         </div>
       </div>
+      <button class="analysis-btn" @click="openAnalysisModal" title="Ouvrir l'analyse détaillée des métriques">
+        📊 Analyse des métriques
+      </button>
     </div>
   </div>
   <div v-else class="loading">
     <p>Sélectionnez une paire pour analyser...</p>
   </div>
+
+  <!-- Analysis Modal -->
+  <MetricsAnalysisModal
+    :is-open="isAnalysisModalOpen"
+    :analysis-result="(props.result as any)"
+    @close="isAnalysisModalOpen = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -308,6 +320,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useVolatilityStore } from '../stores/volatility'
 import { useDataRefresh } from '../composables/useDataRefresh'
 import MetricTooltip from './MetricTooltip.vue'
+import MetricsAnalysisModal from './MetricsAnalysisModal.vue'
 
 interface GlobalMetrics {
   mean_atr: number
@@ -351,6 +364,7 @@ const emit = defineEmits<{
 const store = useVolatilityStore()
 const currentSymbol = computed(() => props.result?.symbol || '')
 const symbols = ref<Array<{ symbol: string; file_path: string }>>([])
+const isAnalysisModalOpen = ref(false)
 const { onPairDataRefresh } = useDataRefresh()
 
 const unsubscribe = onPairDataRefresh(() => {
@@ -423,6 +437,11 @@ function getRiskTooltip(risk: string): string {
     'LOW': 'Risque BAS - Volatilité < 5% avec conditions stables. Favorise les positions plus agressives.'
   }
   return tooltips[risk] || risk
+}
+
+// Fonction pour ouvrir la modal d'analyse
+function openAnalysisModal() {
+  isAnalysisModalOpen.value = true
 }
 
 const recommendationClass = computed(() => {
@@ -541,8 +560,48 @@ function getColorClass(metric: string, value: number): string {
   border-left-color: #ef4444;
 }
 
-/* Légende des couleurs */
-.color-legend { background: #1a202c; padding: 20px; border-radius: 8px; border: 1px solid #30363d; margin-top: 30px; }
+/* Légende des couleurs et bouton d'analyse */
+.color-legend-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  margin-top: 30px;
+}
+
+.color-legend {
+  flex: 1;
+  background: #1a202c;
+  padding: 20px;
+  border-radius: 8px;
+  border: 1px solid #30363d;
+}
+
+.analysis-btn {
+  background: linear-gradient(135deg, #64c8ff 0%, #3b82f6 100%);
+  color: #1a1a2e;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(100, 200, 255, 0.3);
+  font-size: 14px;
+}
+
+.analysis-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(100, 200, 255, 0.4);
+  background: linear-gradient(135deg, #4db8ff 0%, #2972e1 100%);
+}
+
+.analysis-btn:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 8px rgba(100, 200, 255, 0.3);
+}
+
 .legend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
 .legend-item { display: flex; gap: 10px; align-items: center; }
 .legend-color { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; }
@@ -552,6 +611,16 @@ function getColorClass(metric: string, value: number): string {
 .legend-color.poor { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
 .legend-text { flex: 1; }
 .legend-text span { color: #a0aec0; font-size: 0.85em; display: block; }
+
+@media (max-width: 768px) {
+  .color-legend-container {
+    flex-direction: column;
+  }
+
+  .analysis-btn {
+    width: 100%;
+  }
+}
 
 .loading { text-align: center; padding: 40px; color: #a0aec0; }
 </style>
