@@ -9,7 +9,7 @@ use crate::db::DbPool;
 use crate::models::{
     AnalysisResult, Candle, Result, RiskLevel, TradingRecommendation, VolatilityError,
 };
-use chrono::{Datelike, Timelike};
+use chrono::Datelike;
 use tracing::info;
 
 /// Analyseur de volatilité principal

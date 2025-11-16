@@ -207,7 +207,6 @@ pub fn create_pool(database_url: &str) -> Result<DbPool, Box<dyn std::error::Err
 ///     state.connections - state.idle_connections
 /// );
 /// ```
-
 /// Crée la table calendar_events si elle n'existe pas
 pub fn ensure_calendar_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = pool.get()?;

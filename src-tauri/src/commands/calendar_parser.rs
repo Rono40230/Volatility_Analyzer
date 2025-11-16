@@ -5,6 +5,7 @@ use csv::ReaderBuilder;
 use std::fs;
 use std::io::BufRead;
 
+#[allow(dead_code)]
 pub struct ParsedEvent {
     pub date: String,
     pub time: String,
@@ -14,6 +15,7 @@ pub struct ParsedEvent {
 }
 
 /// Détecte et analyse un fichier de calendrier
+#[allow(dead_code)]
 pub fn parse_calendar_file(path: &str) -> Result<Vec<ParsedEvent>, String> {
     let file_path = std::path::Path::new(path);
     if !file_path.exists() {
@@ -49,6 +51,7 @@ pub fn parse_calendar_file(path: &str) -> Result<Vec<ParsedEvent>, String> {
     }
 }
 
+#[allow(dead_code)]
 fn parse_format_new(path: &str) -> Result<Vec<ParsedEvent>, String> {
     let file = fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
     let reader = std::io::BufReader::new(file);
@@ -100,6 +103,7 @@ fn parse_format_new(path: &str) -> Result<Vec<ParsedEvent>, String> {
     Ok(events)
 }
 
+#[allow(dead_code)]
 fn parse_format_old(path: &str) -> Result<Vec<ParsedEvent>, String> {
     let file = fs::File::open(path).map_err(|e| format!("Failed to open file: {}", e))?;
     let reader = std::io::BufReader::new(file);
@@ -159,6 +163,7 @@ fn parse_format_old(path: &str) -> Result<Vec<ParsedEvent>, String> {
     Ok(events)
 }
 
+#[allow(dead_code)]
 fn normalize_impact(raw: &str) -> String {
     match raw.to_uppercase().as_str() {
         "H" | "HIGH" => "HIGH".to_string(),

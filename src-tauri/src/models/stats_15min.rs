@@ -24,6 +24,7 @@ pub struct Stats15Min {
 
 impl Stats15Min {
     /// Retourne le label de la tranche (ex: "00:00-00:15")
+    #[allow(dead_code)]
     pub fn time_label(&self) -> String {
         let start_min = self.quarter * 15;
         let end_min = start_min + 15;
@@ -34,6 +35,7 @@ impl Stats15Min {
     }
 
     /// Calcule un score de qualité global (0-100) pour scalping 15min
+    #[allow(dead_code)]
     pub fn quality_score(&self) -> f64 {
         if self.candle_count == 0 {
             return 0.0;
@@ -95,6 +97,7 @@ impl Stats15Min {
     }
 
     /// Retourne le rating textuel basé sur le score
+    #[allow(dead_code)]
     pub fn quality_rating(&self) -> &'static str {
         match self.quality_score() as u8 {
             80..=100 => "Excellent",

@@ -3,7 +3,6 @@
 
 use crate::db::DbPool;
 use crate::models::{EventInHour, HourlyStats, Result, Stats15Min, VolatilityError};
-use chrono::NaiveDateTime;
 use chrono::Timelike;
 
 /// Service de chargement des événements économiques
@@ -14,7 +13,7 @@ impl EventLoader {
     pub fn load_and_associate_events(
         candles: &[crate::models::Candle],
         symbol: &str,
-        hourly_stats: &mut Vec<HourlyStats>,
+        hourly_stats: &mut [HourlyStats],
         pool: Option<DbPool>,
     ) -> Result<()> {
         // Si pas de pool, skip chargement des événements
@@ -72,7 +71,7 @@ impl EventLoader {
     pub fn load_and_associate_events_15min(
         candles: &[crate::models::Candle],
         symbol: &str,
-        stats_15min: &mut Vec<Stats15Min>,
+        stats_15min: &mut [Stats15Min],
         pool: Option<DbPool>,
     ) -> Result<()> {
         // Si pas de pool, skip chargement des événements

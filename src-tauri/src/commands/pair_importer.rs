@@ -9,6 +9,7 @@ use std::path::Path;
 use tracing::{error, info};
 
 /// Traite un fichier individuel: parse CSV → INSERT en DB → supprime CSV source
+#[allow(dead_code)]
 pub fn process_single_file(
     source_path: &str,
     _pool: &DbPool,

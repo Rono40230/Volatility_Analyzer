@@ -4,6 +4,7 @@
 use crate::models::GlobalMetrics;
 
 /// Calculateur du score de confiance GLOBAL (0-100)
+#[allow(clippy::doc_lazy_continuation)]
 pub(super) struct ConfidenceScorer;
 
 impl ConfidenceScorer {
@@ -21,58 +22,58 @@ impl ConfidenceScorer {
     /// FORMULE (max 100 points) :
     ///
     /// 1. ATR (30 pts) - Volatilité soutenue
-    ///    >25 pips (0.00025) = 30 pts : volatilité excellente
-    ///    15-25 pips = 25 pts
-    ///    10-15 pips = 20 pts
-    ///    5-10 pips = 10 pts
-    ///    → POURQUOI ATR ? Filtre les spikes isolés, mesure volatilité CONSTANTE
+    ///    > 25 pips (0.00025) = 30 pts : volatilité excellente
+    ///    > 15-25 pips = 25 pts
+    ///    > 10-15 pips = 20 pts
+    ///    > 5-10 pips = 10 pts
+    ///    > → POURQUOI ATR ? Filtre les spikes isolés, mesure volatilité CONSTANTE
     ///
     /// 2. Body Range (25 pts) - Directionnalité des bougies
-    ///    >45% = 25 pts : mouvements forts, pas du bruit
-    ///    35-45% = 20 pts
-    ///    25-35% = 15 pts
-    ///    15-25% = 8 pts
-    ///    → POURQUOI BodyRange ? Signal/bruit ratio, clé pour scalping
+    ///    > 45% = 25 pts : mouvements forts, pas du bruit
+    ///    > 35-45% = 20 pts
+    ///    > 25-35% = 15 pts
+    ///    > 15-25% = 8 pts
+    ///    > → POURQUOI BodyRange ? Signal/bruit ratio, clé pour scalping
     ///
     /// 3. Volatilité % (25 pts) - BONUS si marché bouge bien
-    ///    >30% = 25 pts : crypto-like volatility
-    ///    20-30% = 20 pts
-    ///    10-20% = 15 pts
-    ///    5-10% = 8 pts
-    ///    → POURQUOI ce bonus ? Scalping a BESOIN de mouvement
+    ///    > 30% = 25 pts : crypto-like volatility
+    ///    > 20-30% = 20 pts
+    ///    > 10-20% = 15 pts
+    ///    > 5-10% = 8 pts
+    ///    > → POURQUOI ce bonus ? Scalping a BESOIN de mouvement
     ///
     /// 4. Noise Ratio (10 pts) - Ratio bruit/signal
-    ///    <2.0 = 10 pts : signal propre
-    ///    <3.0 = 7 pts
-    ///    <4.0 = 4 pts
-    ///    → POURQUOI Noise ? Élimine les false signals, confirme signal/bruit
+    ///    > <2.0 = 10 pts : signal propre
+    ///    > <3.0 = 7 pts
+    ///    > <4.0 = 4 pts
+    ///    > → POURQUOI Noise ? Élimine les false signals, confirme signal/bruit
     ///
     /// 5. Breakout % (10 pts) - % de bougies "significatives"
-    ///    >15% = 10 pts : beaucoup de vrais mouvements
-    ///    >10% = 7 pts
-    ///    >5% = 4 pts
-    ///    → POURQUOI Breakout ? Scalping veut des CASSURES, pas du sideways
+    ///    > 15% = 10 pts : beaucoup de vrais mouvements
+    ///    > 10% = 7 pts
+    ///    > 5% = 4 pts
+    ///    > → POURQUOI Breakout ? Scalping veut des CASSURES, pas du sideways
     ///
     /// 6. Bonus Données (5 pts) - Si assez de candles
-    ///    >100k candles = 5 pts
-    ///    >50k = 3 pts
-    ///    → POURQUOI ? Plus de données = plus fiable
+    ///    > 100k candles = 5 pts
+    ///    > 50k = 3 pts
+    ///    > → POURQUOI ? Plus de données = plus fiable
     ///
     /// INTERPRÉTATION :
-    /// - 80-100 : ✅ EXCELLENT - Scalpe agressivement
-    /// - 65-80  : 🟢 BON - Scalpe normalement
-    /// - 50-65  : 🟡 PRUDENT - Scalpe avec stop serrés
-    /// - 35-50  : 🟠 RISKY - Très prudent, breakouts only
-    /// - 0-35   : ❌ MAUVAIS - Ne pas trader
+    /// > - 80-100 : ✅ EXCELLENT - Scalpe agressivement
+    /// > - 65-80  : 🟢 BON - Scalpe normalement
+    /// > - 50-65  : 🟡 PRUDENT - Scalpe avec stop serrés
+    /// > - 35-50  : 🟠 RISKY - Très prudent, breakouts only
+    /// > - 0-35   : ❌ MAUVAIS - Ne pas trader
     ///
     /// EXEMPLE : EURUSD 10:00-11:00 UTC
-    /// - ATR 0.0003 → 30 pts (excellent volatilité)
-    /// - BodyRange 52% → 25 pts (très directif)
-    /// - Volatilité 0.25 → 25 pts (bonus mouvement)
-    /// - NoiseRatio 1.8 → 10 pts (signal propre)
-    /// - BreakoutPct 18% → 10 pts (beaucoup de cassures)
-    /// - Bonus → 5 pts (données suffisantes)
-    /// = TOTAL 105 → capped à 100 = "EXCELLENT, scalpe agressif"
+    /// > - ATR 0.0003 → 30 pts (excellent volatilité)
+    /// > - BodyRange 52% → 25 pts (très directif)
+    /// > - Volatilité 0.25 → 25 pts (bonus mouvement)
+    /// > - NoiseRatio 1.8 → 10 pts (signal propre)
+    /// > - BreakoutPct 18% → 10 pts (beaucoup de cassures)
+    /// > - Bonus → 5 pts (données suffisantes)
+    /// > = TOTAL 105 → capped à 100 = "EXCELLENT, scalpe agressif"
     pub(super) fn calculate_confidence_score(metrics: &GlobalMetrics) -> f64 {
         let mut score: f64 = 0.0;
 
