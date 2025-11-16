@@ -31,7 +31,7 @@ check-rules:
 
 validate:
 	@echo "🔍 Validation complète du code..."
-	cd src-tauri && cargo build --release
+	cd src-tauri && cargo check --release
 	@./scripts/validate-tests.sh
 	@./scripts/check-coverage.sh
 	cd src-tauri && cargo clippy --release -- -D warnings

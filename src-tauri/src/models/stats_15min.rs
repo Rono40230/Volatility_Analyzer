@@ -1,6 +1,6 @@
 // models/stats_15min.rs - Statistiques par 15 minutes (pour scalping)
-use serde::{Deserialize, Serialize};
 use crate::models::EventInHour;
+use serde::{Deserialize, Serialize};
 
 /// Statistiques de volatilité pour une tranche de 15 minutes spécifique
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,7 +27,10 @@ impl Stats15Min {
     pub fn time_label(&self) -> String {
         let start_min = self.quarter * 15;
         let end_min = start_min + 15;
-        format!("{:02}:{:02}-{:02}:{:02}", self.hour, start_min, self.hour, end_min)
+        format!(
+            "{:02}:{:02}-{:02}:{:02}",
+            self.hour, start_min, self.hour, end_min
+        )
     }
 
     /// Calcule un score de qualité global (0-100) pour scalping 15min

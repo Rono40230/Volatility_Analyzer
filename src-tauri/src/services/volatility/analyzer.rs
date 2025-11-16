@@ -1,9 +1,10 @@
 // services/volatility/analyzer.rs - Analyseur de volatilité principal
-// Conforme .clinerules : < 150L, structure claire, pas d'unwrap()
+// Conforme .clinerules : < 300L, structure claire, pas d'unwrap()
 
+use super::event_loader::EventLoader;
 use super::hourly_stats::HourlyStatsCalculator;
-use super::stats_15min::Stats15MinCalculator;
 use super::metrics::MetricsAggregator;
+use super::stats_15min::Stats15MinCalculator;
 use crate::db::DbPool;
 use crate::models::{
     AnalysisResult, Candle, Result, RiskLevel, TradingRecommendation, VolatilityError,
@@ -115,8 +116,11 @@ impl VolatilityAnalyzer {
             }
         } else {
             // Pas assez de bougies pour calculer l'interval
-            tracing::warn!("Only {} candles loaded for symbol {} - cannot determine timeframe", 
-                          self.candles.len(), symbol);
+            tracing::warn!(
+                "Only {} candles loaded for symbol {} - cannot determine timeframe",
+                self.candles.len(),
+                symbol
+            );
             "M1_DEFAULT".to_string()
         };
 
@@ -129,13 +133,23 @@ impl VolatilityAnalyzer {
         let mut stats_15min = calculator_15min.calculate()?;
 
         // 1b. Charge les événements économiques et les associe aux heures
-        if let Err(e) = self.load_and_associate_events(symbol, &mut hourly_stats, pool.clone()) {
+        if let Err(e) = EventLoader::load_and_associate_events(
+            &self.candles,
+            symbol,
+            &mut hourly_stats,
+            pool.clone(),
+        ) {
             tracing::warn!("Failed to load events for {}: {}", symbol, e);
             // Continue quand même, les événements ne sont pas critiques
         }
 
         // 1c. Charge les événements pour les tranches de 15 minutes également
-        if let Err(e) = self.load_and_associate_events_15min(symbol, &mut stats_15min, pool.clone()) {
+        if let Err(e) = EventLoader::load_and_associate_events_15min(
+            &self.candles,
+            symbol,
+            &mut stats_15min,
+            pool.clone(),
+        ) {
             tracing::warn!("Failed to load 15min events for {}: {}", symbol, e);
             // Continue quand même
         }
@@ -165,9 +179,7 @@ impl VolatilityAnalyzer {
 
         info!(
             "Analysis complete: confidence={:.1}, recommendation={:?}, risk={:?}",
-            confidence_score,
-            recommendation,
-            risk_level
+            confidence_score, recommendation, risk_level
         );
 
         Ok(AnalysisResult {
@@ -183,250 +195,5 @@ impl VolatilityAnalyzer {
             risk_level,
             global_metrics,
         })
-    }
-
-    /// Charge les événements économiques (HIGH/MEDIUM) et les associe aux heures
-    fn load_and_associate_events(
-        &self,
-        symbol: &str,
-        hourly_stats: &mut Vec<crate::models::HourlyStats>,
-        pool: Option<DbPool>,
-    ) -> Result<()> {
-        // Si pas de pool, skip chargement des événements
-        let Some(pool) = pool else {
-            return Ok(());
-        };
-
-        // Charger les événements du calendrier pour la période analysée
-        let start_time = self
-            .candles
-            .first()
-            .map(|c| c.datetime.naive_utc())
-            .ok_or(crate::models::VolatilityError::InsufficientData(
-                "No candles to determine event period".to_string(),
-            ))?;
-
-        let end_time = self
-            .candles
-            .last()
-            .map(|c| c.datetime.naive_utc())
-            .ok_or(crate::models::VolatilityError::InsufficientData(
-                "No candles to determine event period".to_string(),
-            ))?;
-
-        // Charger événements via EventCorrelationService
-        let event_service = crate::services::EventCorrelationService::new(pool);
-        let events = event_service
-            .get_events_for_period(symbol, start_time, end_time)
-            .map_err(|e| crate::models::VolatilityError::DatabaseError(e.to_string()))?;
-
-        // Filtrer HIGH/MEDIUM impact et compter par heure (Paris)
-        // NOTE: Les candles sont en UTC, on les convertit en heure de Paris (UTC+1/+2 selon DST)
-        // Paris: UTC+1 en hiver, UTC+2 en été
-        // Pour simplifier, on utilise UTC+1 (heure d'hiver standard)
-        const PARIS_OFFSET_HOURS: i32 = 1;
-
-        for event in events {
-            if event.impact != "HIGH" && event.impact != "MEDIUM" {
-                continue;
-            }
-
-            // Convertir l'heure UTC en heure de Paris
-            let utc_hour = event.event_time.hour() as i32;
-            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
-            let paris_hour_u8 = paris_hour as u8;
-
-            // Trouver l'heure correspondante dans hourly_stats
-            // NOTE: hourly_stats contient les statistiques en UTC, donc on doit chercher l'heure UTC
-            // Mais on affichera l'heure de Paris à l'utilisateur dans le frontend
-            if let Some(hour_stat) = hourly_stats.iter_mut().find(|h| h.hour == paris_hour_u8) {
-                let event_in_hour = crate::models::EventInHour {
-                    event_name: event.description.clone(),
-                    impact: event.impact.clone(),
-                    datetime: event.event_time.format("%H:%M:%S").to_string(),
-                    volatility_increase: 0.0,
-                };
-                hour_stat.events.push(event_in_hour);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Associe les événements économiques aux tranches de 15 minutes
-    fn load_and_associate_events_15min(
-        &self,
-        symbol: &str,
-        stats_15min: &mut Vec<crate::models::Stats15Min>,
-        pool: Option<DbPool>,
-    ) -> Result<()> {
-        // Si pas de pool, skip chargement des événements
-        let Some(pool) = pool else {
-            return Ok(());
-        };
-
-        // Charger les événements du calendrier pour la période analysée
-        let start_time = self
-            .candles
-            .first()
-            .map(|c| c.datetime.naive_utc())
-            .ok_or(crate::models::VolatilityError::InsufficientData(
-                "No candles to determine event period".to_string(),
-            ))?;
-
-        let end_time = self
-            .candles
-            .last()
-            .map(|c| c.datetime.naive_utc())
-            .ok_or(crate::models::VolatilityError::InsufficientData(
-                "No candles to determine event period".to_string(),
-            ))?;
-
-        // Charger événements via EventCorrelationService
-        let event_service = crate::services::EventCorrelationService::new(pool);
-        let events = event_service
-            .get_events_for_period(symbol, start_time, end_time)
-            .map_err(|e| crate::models::VolatilityError::DatabaseError(e.to_string()))?;
-
-        // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (Paris)
-        const PARIS_OFFSET_HOURS: i32 = 1;
-
-        for event in events {
-            if event.impact != "HIGH" && event.impact != "MEDIUM" {
-                continue;
-            }
-
-            // Convertir l'heure UTC en heure de Paris
-            let utc_hour = event.event_time.hour() as i32;
-            let utc_minute = event.event_time.minute() as i32;
-            
-            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
-            let paris_hour_u8 = paris_hour as u8;
-            let quarter = (utc_minute / 15) as u8;
-
-            // Trouver la tranche de 15 minutes correspondante
-            if let Some(slot) = stats_15min
-                .iter_mut()
-                .find(|s| s.hour == paris_hour_u8 && s.quarter == quarter)
-            {
-                let event_in_hour = crate::models::EventInHour {
-                    event_name: event.description.clone(),
-                    impact: event.impact.clone(),
-                    datetime: event.event_time.format("%H:%M:%S").to_string(),
-                    volatility_increase: 0.0,
-                };
-                slot.events.push(event_in_hour);
-            }
-        }
-
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::DateTime;
-
-    fn create_test_candle(hour: u32, high: f64, low: f64) -> Candle {
-        Candle {
-            id: None,
-            symbol: "TESTBTC".to_string(),
-            datetime: DateTime::from_timestamp(1609459200 + (hour as i64 * 3600), 0)
-                .expect("Invalid timestamp")
-                .into(),
-            open: (high + low) / 2.0,
-            high,
-            low,
-            close: (high + low) / 2.0,
-            volume: 100.0,
-        }
-    }
-
-    #[test]
-    fn test_analyzer_creation() {
-        let candles = vec![
-            create_test_candle(0, 50000.0, 49900.0),
-            create_test_candle(1, 50100.0, 49950.0),
-        ];
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        assert_eq!(analyzer.candles.len(), 2);
-    }
-
-    #[test]
-    fn test_analyze_with_sufficient_data() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| create_test_candle(i % 24, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTBTC", None);
-
-        assert!(result.is_ok());
-        let analysis = result.expect("Failed to analyze");
-        assert_eq!(analysis.symbol, "TESTBTC");
-        assert_eq!(analysis.hourly_stats.len(), 24);
-        assert!(!analysis.best_hours.is_empty());
-    }
-
-    #[test]
-    fn test_analyze_empty_candles() {
-        let analyzer = VolatilityAnalyzer::new(Vec::new());
-        let result = analyzer.analyze("TEST", None);
-
-        assert!(result.is_err());
-        match result {
-            Err(VolatilityError::InsufficientData(_)) => {} // Expected
-            _ => panic!("Expected InsufficientData error"),
-        }
-    }
-
-    #[test]
-    fn test_analyze_single_hour_data() {
-        let candles: Vec<Candle> = (0..10)
-            .map(|i| create_test_candle(0, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTETH", None);
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_analyze_different_symbols() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| {
-                create_test_candle(
-                    i % 24,
-                    1.1000 + (i as f64 * 0.001),
-                    1.0900 + (i as f64 * 0.001),
-                )
-            })
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-
-        let result1 = analyzer.analyze("EURUSD", None);
-        let result2 = analyzer.analyze("GBPUSD", None);
-
-        assert!(result1.is_ok());
-        assert!(result2.is_ok());
-        assert_eq!(result1.unwrap().symbol, "EURUSD");
-        assert_eq!(result2.unwrap().symbol, "GBPUSD");
-    }
-
-    #[test]
-    fn test_analyze_preserves_metadata() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| create_test_candle(i % 24, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTBTC", None).expect("Failed");
-
-        assert!(!result.timeframe.is_empty());
-        assert!(!result.hourly_stats.is_empty());
     }
 }

@@ -161,8 +161,7 @@ pub async fn analyze_symbol(
 
     info!(
         "Analysis complete for {}: confidence={:.1}",
-        symbol,
-        result.confidence_score
+        symbol, result.confidence_score
     );
 
     Ok(result)

@@ -1,13 +1,15 @@
 // services/volatility/analyzer.rs - Analyseur de volatilité principal
-// Conforme .clinerules : < 150L, structure claire, pas d'unwrap()
+// Conforme .clinerules : < 300L, structure claire, pas d'unwrap()
 
+use super::event_loader::EventLoader;
 use super::hourly_stats::HourlyStatsCalculator;
 use super::metrics::MetricsAggregator;
+use super::stats_15min::Stats15MinCalculator;
 use crate::db::DbPool;
 use crate::models::{
     AnalysisResult, Candle, Result, RiskLevel, TradingRecommendation, VolatilityError,
 };
-use chrono::Datelike;
+use chrono::{Datelike, Timelike};
 use tracing::info;
 
 /// Analyseur de volatilité principal
@@ -22,7 +24,7 @@ impl VolatilityAnalyzer {
     }
 
     /// Effectue l'analyse complète et retourne le résultat
-    pub fn analyze(&self, symbol: &str, _pool: Option<DbPool>) -> Result<AnalysisResult> {
+    pub fn analyze(&self, symbol: &str, pool: Option<DbPool>) -> Result<AnalysisResult> {
         info!("Starting volatility analysis for {}", symbol);
 
         if self.candles.is_empty() {
@@ -83,29 +85,74 @@ impl VolatilityAnalyzer {
             .unwrap_or_else(|| "N/A".to_string());
 
         // Déterminer le timeframe en calculant l'intervalle moyen entre bougies
+        // APPROCHE STRICTE : valider l'interval et logger si inconnu (vs fallback silencieux)
         let timeframe = if self.candles.len() > 1 {
             let first_ts = self.candles[0].datetime.timestamp();
             let second_ts = self.candles[1].datetime.timestamp();
             let interval_seconds = (second_ts - first_ts).abs();
 
-            match interval_seconds {
-                60 => "M1",
-                300 => "M5",
-                900 => "M15",
-                1800 => "M30",
-                3600 => "H1",
-                14400 => "H4",
-                86400 => "D1",
-                _ => "M1", // Par défaut
+            let recognized_timeframe = match interval_seconds {
+                60 => Some("M1"),
+                300 => Some("M5"),
+                900 => Some("M15"),
+                1800 => Some("M30"),
+                3600 => Some("H1"),
+                14400 => Some("H4"),
+                86400 => Some("D1"),
+                _ => None,
+            };
+
+            match recognized_timeframe {
+                Some(tf) => tf.to_string(),
+                None => {
+                    // Log warning pour interval inconnu mais continue (soft fail)
+                    tracing::warn!(
+                        "Unexpected candle interval: {} seconds for symbol {}. Using M1 as fallback.",
+                        interval_seconds,
+                        symbol
+                    );
+                    format!("M1_INFERRED({}s)", interval_seconds)
+                }
             }
         } else {
-            "M1"
-        }
-        .to_string();
+            // Pas assez de bougies pour calculer l'interval
+            tracing::warn!(
+                "Only {} candles loaded for symbol {} - cannot determine timeframe",
+                self.candles.len(),
+                symbol
+            );
+            "M1_DEFAULT".to_string()
+        };
 
         // 1. Calcule les statistiques par heure
         let calculator = HourlyStatsCalculator::new(&self.candles);
-        let hourly_stats = calculator.calculate()?;
+        let mut hourly_stats = calculator.calculate()?;
+
+        // 1.5 Calcule les statistiques par tranche de 15 minutes (pour scalping)
+        let calculator_15min = Stats15MinCalculator::new(&self.candles);
+        let mut stats_15min = calculator_15min.calculate()?;
+
+        // 1b. Charge les événements économiques et les associe aux heures
+        if let Err(e) = EventLoader::load_and_associate_events(
+            &self.candles,
+            symbol,
+            &mut hourly_stats,
+            pool.clone(),
+        ) {
+            tracing::warn!("Failed to load events for {}: {}", symbol, e);
+            // Continue quand même, les événements ne sont pas critiques
+        }
+
+        // 1c. Charge les événements pour les tranches de 15 minutes également
+        if let Err(e) = EventLoader::load_and_associate_events_15min(
+            &self.candles,
+            symbol,
+            &mut stats_15min,
+            pool.clone(),
+        ) {
+            tracing::warn!("Failed to load 15min events for {}: {}", symbol, e);
+            // Continue quand même
+        }
 
         // 2. Trouve les meilleures heures
         let best_hours = MetricsAggregator::find_best_hours(&hourly_stats);
@@ -123,20 +170,16 @@ impl VolatilityAnalyzer {
         // 6. Détermine le niveau de risque
         let risk_level = RiskLevel::from_volatility(global_metrics.mean_volatility);
 
-        // 7. Corrèle avec événements économiques (si DB disponible)
-        // TEMPORAIREMENT DÉSACTIVÉ : problème de parsing de timestamps dans calendar_scraper
-        let correlated_events = Vec::new();
-        // let correlated_events = if let Some(pool) = pool {
-        //     self.correlate_economic_events(symbol, &hourly_stats, pool)?
-        // } else {
-        //     Vec::new()
-        // };
+        // 6b. VALIDE LA COHÉRENCE RECOMMENDATION × RISK
+        // Si incohérent, ajuste la recommandation pour matcher le risque
+        let recommendation = recommendation.validate_with_risk(&risk_level);
+
+        // NOTE: Corrélation événements économiques gérée séparément via EventCorrelationService
+        // (voir EventCorrelationView.vue pour affichage)
 
         info!(
-            "Analysis complete: confidence={:.1}, recommendation={:?}, {} correlated events",
-            confidence_score,
-            recommendation,
-            correlated_events.len()
+            "Analysis complete: confidence={:.1}, recommendation={:?}, risk={:?}",
+            confidence_score, recommendation, risk_level
         );
 
         Ok(AnalysisResult {
@@ -145,120 +188,12 @@ impl VolatilityAnalyzer {
             period_end,
             timeframe,
             hourly_stats,
+            stats_15min,
             best_hours,
             confidence_score,
             recommendation,
             risk_level,
             global_metrics,
-            correlated_events,
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use chrono::DateTime;
-
-    fn create_test_candle(hour: u32, high: f64, low: f64) -> Candle {
-        Candle {
-            id: None,
-            symbol: "TESTBTC".to_string(),
-            datetime: DateTime::from_timestamp(1609459200 + (hour as i64 * 3600), 0)
-                .expect("Invalid timestamp")
-                .into(),
-            open: (high + low) / 2.0,
-            high,
-            low,
-            close: (high + low) / 2.0,
-            volume: 100.0,
-        }
-    }
-
-    #[test]
-    fn test_analyzer_creation() {
-        let candles = vec![
-            create_test_candle(0, 50000.0, 49900.0),
-            create_test_candle(1, 50100.0, 49950.0),
-        ];
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        assert_eq!(analyzer.candles.len(), 2);
-    }
-
-    #[test]
-    fn test_analyze_with_sufficient_data() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| create_test_candle(i % 24, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTBTC", None);
-
-        assert!(result.is_ok());
-        let analysis = result.expect("Failed to analyze");
-        assert_eq!(analysis.symbol, "TESTBTC");
-        assert_eq!(analysis.hourly_stats.len(), 24);
-        assert!(!analysis.best_hours.is_empty());
-    }
-
-    #[test]
-    fn test_analyze_empty_candles() {
-        let analyzer = VolatilityAnalyzer::new(Vec::new());
-        let result = analyzer.analyze("TEST", None);
-
-        assert!(result.is_err());
-        match result {
-            Err(VolatilityError::InsufficientData(_)) => {} // Expected
-            _ => panic!("Expected InsufficientData error"),
-        }
-    }
-
-    #[test]
-    fn test_analyze_single_hour_data() {
-        let candles: Vec<Candle> = (0..10)
-            .map(|i| create_test_candle(0, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTETH", None);
-
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_analyze_different_symbols() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| {
-                create_test_candle(
-                    i % 24,
-                    1.1000 + (i as f64 * 0.001),
-                    1.0900 + (i as f64 * 0.001),
-                )
-            })
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-
-        let result1 = analyzer.analyze("EURUSD", None);
-        let result2 = analyzer.analyze("GBPUSD", None);
-
-        assert!(result1.is_ok());
-        assert!(result2.is_ok());
-        assert_eq!(result1.unwrap().symbol, "EURUSD");
-        assert_eq!(result2.unwrap().symbol, "GBPUSD");
-    }
-
-    #[test]
-    fn test_analyze_preserves_metadata() {
-        let candles: Vec<Candle> = (0..100)
-            .map(|i| create_test_candle(i % 24, 50000.0 + i as f64, 49900.0 + i as f64))
-            .collect();
-
-        let analyzer = VolatilityAnalyzer::new(candles);
-        let result = analyzer.analyze("TESTBTC", None).expect("Failed");
-
-        assert!(!result.timeframe.is_empty());
-        assert!(!result.hourly_stats.is_empty());
     }
 }

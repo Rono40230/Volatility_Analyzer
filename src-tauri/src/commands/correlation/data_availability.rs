@@ -55,7 +55,10 @@ mod tests {
         // Test avec données fictives minimales
         let index = CandleIndex::new();
         let event_dt =
-            NaiveDateTime::parse_from_str("2024-01-01 14:30:00", "%Y-%m-%d %H:%M:%S").unwrap();
+            match NaiveDateTime::parse_from_str("2024-01-01 14:30:00", "%Y-%m-%d %H:%M:%S") {
+                Ok(dt) => dt,
+                Err(_) => panic!("Invalid test datetime"),
+            };
 
         // Index vide → pas de candles
         let result = has_candles_for_event(&index, "ADAUSD", event_dt);

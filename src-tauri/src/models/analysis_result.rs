@@ -248,7 +248,7 @@ mod coherence_validation_tests {
     fn test_scalp_normal_all_risks_coherent() {
         // Valid for all risks: normal strategy is flexible
         let rec = TradingRecommendation::ScalpNormal;
-        
+
         assert_eq!(
             rec.clone().validate_with_risk(&RiskLevel::Low),
             TradingRecommendation::ScalpNormal
@@ -317,7 +317,7 @@ mod coherence_validation_tests {
     fn test_no_trade_all_risks_coherent() {
         // Valid for all risks: no trade recommendation is always valid
         let rec = TradingRecommendation::NoTrade;
-        
+
         assert_eq!(
             rec.clone().validate_with_risk(&RiskLevel::Low),
             TradingRecommendation::NoTrade
@@ -336,10 +336,10 @@ mod coherence_validation_tests {
     fn test_coherence_all_9_rules_exhaustive() {
         // Exhaustive test covering all 9 coherence rules in one place
         // This serves as a reference and safeguard against regressions
-        
+
         let mut valid_count = 0;
         let mut adjusted_count = 0;
-        
+
         let recommendations = [
             TradingRecommendation::ScalpAggressive,
             TradingRecommendation::ScalpNormal,
@@ -347,9 +347,9 @@ mod coherence_validation_tests {
             TradingRecommendation::VeryCautious,
             TradingRecommendation::NoTrade,
         ];
-        
+
         let risks = [RiskLevel::Low, RiskLevel::Medium, RiskLevel::High];
-        
+
         for rec in &recommendations {
             for risk in &risks {
                 let adjusted = rec.clone().validate_with_risk(risk);
@@ -360,7 +360,7 @@ mod coherence_validation_tests {
                 }
             }
         }
-        
+
         // Should have exactly 9 valid combinations and 3 adjusted combinations
         // across 5 recommendations × 3 risks = 15 total cases
         assert_eq!(valid_count + adjusted_count, 15);

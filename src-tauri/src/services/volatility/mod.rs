@@ -2,11 +2,14 @@
 // Conforme .clinerules : < 300L, structure modulaire
 
 mod analyzer;
+mod best_hours_finder;
+mod confidence_scorer;
 mod correlation;
+mod event_loader;
 mod hourly_stats;
 mod metrics;
-mod utils;
 mod stats_15min;
+mod utils;
 
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;

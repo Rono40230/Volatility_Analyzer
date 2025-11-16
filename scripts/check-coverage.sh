@@ -16,7 +16,7 @@ if ! command -v cargo-tarpaulin &> /dev/null; then
 fi
 
 # Exécuter tarpaulin et capturer la couverture
-COVERAGE_OUTPUT=$(cargo tarpaulin --out Xml --timeout 300 --exclude-files src-tauri/migrations/* 2>&1)
+COVERAGE_OUTPUT=$(cd src-tauri && cargo tarpaulin --out Xml --timeout 300 --exclude-files migrations/* 2>&1)
 
 if echo "$COVERAGE_OUTPUT" | grep -q "Coverage:"; then
     COVERAGE=$(echo "$COVERAGE_OUTPUT" | grep "Coverage:" | awk '{print $NF}' | sed 's/%//')

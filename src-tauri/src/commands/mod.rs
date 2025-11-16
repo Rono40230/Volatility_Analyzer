@@ -13,6 +13,7 @@ pub mod file_listing;
 pub mod import_clean;
 pub mod metadata;
 pub mod pair_data;
+pub mod pair_importer;
 pub mod session_commands;
 pub mod volatility;
 

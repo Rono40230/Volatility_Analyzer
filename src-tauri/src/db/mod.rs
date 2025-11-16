@@ -84,9 +84,9 @@ pub fn create_pool(database_url: &str) -> Result<DbPool, Box<dyn std::error::Err
         .connection_timeout(std::time::Duration::from_secs(5))
         .idle_timeout(Some(std::time::Duration::from_secs(60)))
         .build(manager)?;
-    
+
     tracing::debug!("✅ Pool créé avec config: max_size=5, min_idle=1, timeout=5s, idle=60s");
-    
+
     Ok(Arc::new(pool))
 }
 
@@ -151,9 +151,9 @@ pub fn create_pool(database_url: &str) -> Result<DbPool, Box<dyn std::error::Err
 /// ```ignore
 /// // ❌ NE PAS FAIRE - garde la connexion verrouillée trop longtemps
 /// pub fn bad_pattern(state: State<'_, CalendarState>) {
-///     let pool_guard = state.pool.lock().unwrap();
-///     let pool = pool_guard.as_ref().unwrap();
-///     let conn = pool.get().unwrap();
+///     let pool_guard = state.pool.lock().ok()?;
+///     let pool = pool_guard.as_ref().ok_or("None")?;
+///     let conn = pool.get().ok()?;
 ///     // ... fait du travail très long pendant longtemps ...
 ///     // Pool reste verrouillé, autres threads attendent!
 /// }
