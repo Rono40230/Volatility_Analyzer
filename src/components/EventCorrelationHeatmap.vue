@@ -7,11 +7,33 @@
   <div v-if="heatmapData && !loadingHeatmap" class="heatmap-container">
     <div class="heatmap-header">
       <div class="heatmap-scale">
-        <span class="scale-item"><span class="scale-color heat-very-high"></span>≥12 pips</span>
-        <span class="scale-item"><span class="scale-color heat-high"></span>9-11 pips</span>
+        <span class="scale-item"><span class="scale-color heat-very-low"></span>≥12 pips</span>
+        <span class="scale-item"><span class="scale-color heat-low"></span>9-11 pips</span>
         <span class="scale-item"><span class="scale-color heat-medium"></span>6-8 pips</span>
-        <span class="scale-item"><span class="scale-color heat-low"></span>3-5 pips</span>
-        <span class="scale-item"><span class="scale-color heat-very-low"></span>&lt;3 pips</span>
+        <span class="scale-item"><span class="scale-color heat-high"></span>3-5 pips</span>
+        <span class="scale-item"><span class="scale-color heat-very-high"></span>&lt;3 pips</span>
+      </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filters-container">
+      <div class="filter-group">
+        <label for="volatility-threshold">Volatilité minimale :</label>
+        <select id="volatility-threshold" v-model.number="minVolatilityThreshold" class="filter-select">
+          <option value="3">≥3 pips</option>
+          <option value="6">≥6 pips</option>
+          <option value="9">≥9 pips</option>
+          <option value="12">≥12 pips</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="max-events">Nombre d'événements max :</label>
+        <select id="max-events" v-model.number="maxEventsToDisplay" class="filter-select">
+          <option value="5">5 événements</option>
+          <option value="10">10 événements</option>
+          <option value="15">15 événements</option>
+          <option value="20">20 événements</option>
+        </select>
       </div>
     </div>
     <div class="heatmap-wrapper">
@@ -25,25 +47,14 @@
       <tbody>
         <tr v-for="eventType in getSortedEventTypes()" :key="eventType.name">
           <td class="event-type-cell" :class="{ 'no-data': eventType.has_data === false }">
-            <div class="event-type-name">{{ eventType.name }}</div>
+            <div class="event-type-name">{{ getFormattedEventName(eventType.name) }}</div>
           </td>
-          <td v-for="pair in heatmapData.pairs" :key="`${eventType.name}-${pair}`" :class="['heatmap-cell', getHeatmapClass(getHeatmapValue(eventType.name, pair))]">
-            <span class="cell-value">{{ getHeatmapValue(eventType.name, pair) }}</span>
+          <td v-for="pair in heatmapData.pairs" :key="`${eventType.name}-${pair}`" :class="['heatmap-cell', getHeatmapValue(eventType.name, pair) >= minVolatilityThreshold ? getHeatmapClass(getHeatmapValue(eventType.name, pair)) : 'empty-cell']">
+            <span v-if="getHeatmapValue(eventType.name, pair) >= minVolatilityThreshold" class="cell-value">{{ getHeatmapValue(eventType.name, pair) }}</span>
           </td>
         </tr>
       </tbody>
       </table>
-    </div>
-
-    <div class="heatmap-legend">
-      <div class="legend-title">Légende :</div>
-      <div class="legend-items">
-        <div class="legend-item"><div class="legend-color heat-very-high"></div><span>≥12 pips</span></div>
-        <div class="legend-item"><div class="legend-color heat-high"></div><span>9-11 pips</span></div>
-        <div class="legend-item"><div class="legend-color heat-medium"></div><span>6-8 pips</span></div>
-        <div class="legend-item"><div class="legend-color heat-low"></div><span>3-5 pips</span></div>
-        <div class="legend-item"><div class="legend-color heat-very-low"></div><span><3 pips</span></div>
-      </div>
     </div>
   </div>
 </template>
@@ -51,6 +62,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { getEventTranslation } from '../stores/eventTranslations'
 
 interface HeatmapData {
   period: string
@@ -68,6 +80,8 @@ const props = defineProps<Props>()
 
 const loadingHeatmap = ref(false)
 const heatmapData = ref<HeatmapData | null>(null)
+const minVolatilityThreshold = ref(3)  // Seuil minimum en pips: 3, 6, 9, 12
+const maxEventsToDisplay = ref(10)     // Nombre max: 5, 10, 15, 20
 
 async function loadHeatmap() {
   if (!props.calendarId || props.availablePairs.length === 0) {
@@ -126,19 +140,29 @@ function getSortedEventTypes() {
   if (!heatmapData.value) return []
   
   // Trier les événements par moyenne décroissante
-  return [...heatmapData.value.event_types].sort((a, b) => {
+  let sorted = [...heatmapData.value.event_types].sort((a, b) => {
     const avgA = getEventAverage(a.name)
     const avgB = getEventAverage(b.name)
     return avgB - avgA // Ordre décroissant
   })
+
+  // Limiter au nombre maximum d'événements (filtre par volatilité appliqué au niveau cellule)
+  sorted = sorted.slice(0, maxEventsToDisplay.value)
+
+  return sorted
 }
 
 function getHeatmapClass(value: number): string {
-  if (value >= 12) return 'heat-very-high'
-  if (value >= 9) return 'heat-high'
+  if (value >= 12) return 'heat-very-low'
+  if (value >= 9) return 'heat-low'
   if (value >= 6) return 'heat-medium'
-  if (value >= 3) return 'heat-low'
-  return 'heat-very-low'
+  if (value >= 3) return 'heat-high'
+  return 'heat-very-high'
+}
+
+function getFormattedEventName(eventName: string): string {
+  const translation = getEventTranslation(eventName)
+  return `${eventName} (${translation.fr}) ${translation.flag}`
 }
 </script>
 
@@ -208,6 +232,52 @@ function getHeatmapClass(value: number): string {
   height: 16px;
   border-radius: 3px;
   border: 1px solid #1a202c;
+}
+
+.filters-container {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  margin-bottom: 25px;
+  padding: 15px;
+  background: #2d3748;
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-group label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-select:hover {
+  border-color: #667eea;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.3);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 12px rgba(102, 126, 234, 0.5);
 }
 
 .heatmap-wrapper {
@@ -321,6 +391,17 @@ function getHeatmapClass(value: number): string {
   display: block;
 }
 
+.empty-cell {
+  background: #1a1f2e;
+  color: transparent;
+}
+
+.empty-cell:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: #4a5568;
+}
+
 .heat-very-high {
   background: #7f1d1d;
   color: #fca5a5;
@@ -337,13 +418,13 @@ function getHeatmapClass(value: number): string {
 }
 
 .heat-low {
-  background: #3b82f6;
+  background: #16a34a;
   color: white;
 }
 
 .heat-very-low {
-  background: #4a5568;
-  color: #e2e8f0;
+  background: #22c55e;
+  color: #1a202c;
 }
 
 .heatmap-legend {

@@ -186,6 +186,13 @@ pub fn run() {
             load_candles_for_metrics,
             get_available_symbols,
             clear_candles,
+            // Movement analysis commands (Phase 1.2)
+            analyze_movement_quality,
+            get_movement_qualities,
+            // Entry window analysis commands (Phase 1.3)
+            analyze_entry_window,
+            // Volatility duration commands (Phase 1.1)
+            analyze_volatility_duration,
             // Candle index commands (Performance optimization)
             init_candle_index,
             load_pair_candles,

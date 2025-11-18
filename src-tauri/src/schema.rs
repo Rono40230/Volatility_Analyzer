@@ -51,10 +51,27 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    event_movement_quality (id) {
+        id -> Nullable<Integer>,
+        symbol -> Text,
+        event_type -> Text,
+        directional_move_rate -> Float,
+        whipsaw_rate -> Float,
+        avg_pips_moved -> Float,
+        success_rate -> Float,
+        quality_score -> Float,
+        sample_size -> Integer,
+        created_at -> Text,
+        updated_at -> Text,
+    }
+}
+
 diesel::joinable!(predicted_events -> calendar_events (event_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     calendar_events,
     predicted_events,
     event_metrics,
+    event_movement_quality,
 );

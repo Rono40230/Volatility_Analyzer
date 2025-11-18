@@ -1,5 +1,5 @@
 <template>
-  <div class="tooltip-wrapper">
+  <div class="tooltip-wrapper" :data-direction="direction || 'bottom'">
     <div 
       class="tooltip-trigger"
       @mouseenter="showTooltip = true"
@@ -31,6 +31,7 @@ import { ref } from 'vue'
 
 defineProps<{
   title: string
+  direction?: 'bottom' | 'top'
 }>()
 
 const showTooltip = ref(false)
@@ -48,9 +49,6 @@ const showTooltip = ref(false)
 
 .tooltip-popup {
   position: absolute;
-  top: 110%;
-  left: 50%;
-  transform: translateX(-50%);
   background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
   border: 1px solid #667eea;
   border-radius: 8px;
@@ -60,18 +58,43 @@ const showTooltip = ref(false)
   max-width: 400px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(102, 126, 234, 0.3);
   backdrop-filter: blur(10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Position vers le bas (défaut) */
+.tooltip-popup {
+  top: 110%;
+}
+
+/* Position vers le haut */
+.tooltip-wrapper[data-direction="top"] .tooltip-popup {
+  bottom: 110%;
+  top: auto;
 }
 
 .tooltip-arrow {
   position: absolute;
-  top: -8px;
-  left: 50%;
-  transform: translateX(-50%);
   width: 0;
   height: 0;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Flèche vers le bas */
+.tooltip-arrow {
+  top: -8px;
   border-bottom: 8px solid #1a202c;
+}
+
+/* Flèche vers le haut */
+.tooltip-wrapper[data-direction="top"] .tooltip-arrow {
+  bottom: -8px;
+  top: auto;
+  border-bottom: none;
+  border-top: 8px solid #1a202c;
 }
 
 .tooltip-content {

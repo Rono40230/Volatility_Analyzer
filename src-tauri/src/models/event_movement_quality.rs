@@ -29,7 +29,7 @@ pub struct EventMovementQuality {
 }
 
 impl EventMovementQuality {
-    /// Crée une nouvelle instance avec tous les champs
+    /// Crée une nouvelle instance avec les paramètres essentiels
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         symbol: String,

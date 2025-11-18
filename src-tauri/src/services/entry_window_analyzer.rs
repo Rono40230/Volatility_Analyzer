@@ -5,11 +5,12 @@ use crate::models::{Candle, EntryOffsetMetrics, EntryWindowAnalysisResult, Resul
 use chrono::{DateTime, Duration, Utc};
 use tracing::info;
 
+#[allow(dead_code)]
 pub struct EntryWindowAnalyzer;
 
 impl EntryWindowAnalyzer {
     /// Analyse la performance d'entrée à différents offsets avant un événement
-    #[allow(clippy::too_many_arguments, dead_code)]
+    #[allow(dead_code)]
     pub fn analyze_entry_windows(
         candles: &[Candle],
         event_time: DateTime<Utc>,
@@ -55,19 +56,6 @@ impl EntryWindowAnalyzer {
             }
         }
 
-        let default_metrics = EntryOffsetMetrics {
-            minutes_before_event: -5,
-            sample_count: 0,
-            winning_entries: 0,
-            losing_entries: 0,
-            win_rate: 0.0,
-            avg_pips_gained: 0.0,
-            avg_pips_lost: 0.0,
-            max_pips_gained: 0.0,
-            max_pips_lost: 0.0,
-            profit_factor: 0.0,
-        };
-
         // Déterminer l'offset optimal
         let optimal = offset_metrics
             .iter()
@@ -77,7 +65,18 @@ impl EntryWindowAnalyzer {
                     .unwrap_or(std::cmp::Ordering::Equal)
             })
             .cloned()
-            .unwrap_or(default_metrics);
+            .unwrap_or(EntryOffsetMetrics {
+                minutes_before_event: -5,
+                sample_count: 0,
+                winning_entries: 0,
+                losing_entries: 0,
+                win_rate: 0.0,
+                avg_pips_gained: 0.0,
+                avg_pips_lost: 0.0,
+                max_pips_gained: 0.0,
+                max_pips_lost: 0.0,
+                profit_factor: 0.0,
+            });
 
         let result = EntryWindowAnalysisResult {
             symbol: symbol.to_string(),
@@ -98,7 +97,7 @@ impl EntryWindowAnalyzer {
         Ok(result)
     }
 
-    #[allow(clippy::too_many_arguments, dead_code)]
+    #[allow(dead_code)]
     fn calculate_offset_metrics(
         entry_price: f64,
         window_candles: &[&Candle],

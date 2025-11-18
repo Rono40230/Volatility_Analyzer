@@ -54,6 +54,9 @@ export interface TradingPlan {
   avgGainR: number
   maxDuration: number // minutes
   trailingStopActivation: string // "+0.5R"
+  trailingStopCoefficient: number // ATR multiplier (2.0 par défaut)
+  tradeDurationMinutes: number // Phase 1.1: Durée optimale du trade (120-300)
+  tradeExpiration: number // Phase 1.1: Identique à tradeDurationMinutes
 }
 
 /**
@@ -295,12 +298,31 @@ export function detectTraps(
 }
 
 /**
+ * Calcule le coefficient de trailing stop dynamique basé sur la volatilité relative
+ * Formule: 1.5 + (ATR_courant / ATR_moyen - 1) * 0.5
+ * Plage: [1.5, 2.5]
+ */
+function calculateDynamicTrailingStopCoefficient(
+  currentAtr: number,
+  averageAtr: number
+): number {
+  if (averageAtr === 0) return 2.0 // Fallback
+
+  const volatilityRatio = currentAtr / averageAtr
+  const coefficient = 1.5 + (volatilityRatio - 1) * 0.5
+
+  // Limiter entre 1.5 et 2.5
+  return Math.max(1.5, Math.min(2.5, coefficient))
+}
+
+/**
  * Calcule le plan d'action complet
  */
 export function calculateTradingPlan(
   slice: Stats15Min,
   goldenCombos: GoldenCombo[],
-  traps: DetectedTrap[]
+  traps: DetectedTrap[],
+  averageAtr: number = slice.atr_mean // Default: utiliser l'ATR courant
 ): TradingPlan {
   const atr = slice.atr_mean
   const tickQuality = slice.tick_quality_mean
@@ -373,6 +395,12 @@ export function calculateTradingPlan(
     avgGainR = bestCombo.avgGainR
   }
 
+  // Calculer le coefficient de trailing stop dynamique
+  const trailingStopCoefficient = calculateDynamicTrailingStopCoefficient(
+    atr,
+    averageAtr
+  )
+
   return {
     entryTime: '-2min (avant fermeture)',
     slPips: Math.round(slPips),
@@ -385,8 +413,11 @@ export function calculateTradingPlan(
     riskReward,
     winProbability,
     avgGainR,
-    maxDuration: 300, // 5h
-    trailingStopActivation: '+0.5R'
+    maxDuration: 300, // 5h (ancien paramètre, remplacé par tradeDurationMinutes)
+    trailingStopActivation: '+0.5R',
+    trailingStopCoefficient, // Dynamique basé sur volatilité relative
+    tradeDurationMinutes: 180, // Default: 3h (recalculé lors du binding avec BidiParameters)
+    tradeExpiration: 180 // Phase 1.1: Identique à tradeDurationMinutes
   }
 }
 
@@ -420,10 +451,22 @@ export function analyzeTop3Slices(
 ): SliceAnalysis[] {
   const topSlices = findTop3Slices(stats15min)
 
+  // Calculer l'ATR moyen sur toutes les tranches pour la volatilité relative
+  const averageAtr =
+    stats15min.length > 0
+      ? stats15min.reduce((sum, stat) => sum + stat.atr_mean, 0) /
+        stats15min.length
+      : 0
+
   return topSlices.map((slice, index) => {
     const goldenCombos = detectGoldenCombos(slice.stats)
     const traps = detectTraps(slice.stats)
-    const tradingPlan = calculateTradingPlan(slice.stats, goldenCombos, traps)
+    const tradingPlan = calculateTradingPlan(
+      slice.stats,
+      goldenCombos,
+      traps,
+      averageAtr
+    )
 
     return {
       rank: index + 1,
@@ -473,10 +516,11 @@ export function getTop3Rank(
  * Paramètres optimisés pour le robot Bidi
  * 🔐 RiskPercent est TOUJOURS 1.0 (constante immuable)
  * 
- * FOCUS: 3 paramètres opérationnels uniquement
+ * FOCUS: 4 paramètres opérationnels
  * - EventTime: Heure de déclenchement (à la minute près)
  * - StopLossLevelPercent: Distance SL en points concrets
  * - ATRMultiplier: Agressivité du trailing stop
+ * - TradeDurationMinutes: Durée optimale du trade basée sur la volatilité
  */
 export interface BidiParameters {
   // 📍 HEURE EXACTE DE DÉCLENCHEMENT
@@ -495,9 +539,13 @@ export interface BidiParameters {
   atrMultiplierProfile: string // "Agressif" | "Normal" | "Généreux" | "Très Généreux"
   atrMultiplierExplanation: string // Comportement du trailing
 
+  // ⏱️ DURÉE DU TRADE (Phase 1.1 - VolatilityDuration)
+  tradeDurationMinutes: number // Durée optimale en minutes (120-300)
+  tradeDurationExplanation: string // Pourquoi cette durée
+
   // 🔐 CONSTANTES (informel)
   riskPercent: 1.0
-  tradeExpiration: 300
+  tradeExpiration: number // Dynamique = tradeDurationMinutes
 }
 
 /**
@@ -583,6 +631,37 @@ export function calculateBidiParameters(
   const trailingStepPoints = Math.round(atrMultiplier * atrMean)
   const atrMultiplierExplanation = `À chaque tick, le TSL monte de ${trailingStepPoints}pts (irréversible). Profil: ${atrMultiplierProfile} (volatilité ${atrMean.toFixed(0)}pts)`
 
+  // ========================================
+  // 4️⃣ TRADE DURATION - Durée optimale basée sur volatilité
+  // ========================================
+  // Heuristique basée sur ATR et volatilité observée
+  // Volatilité haute = pic court (120-150min)
+  // Volatilité moyenne = pic modéré (150-210min)
+  // Volatilité faible = plateau long (210-270min)
+  let tradeDurationMinutes = 180 // Default: 3h
+  let tradeDurationExplanation = ''
+
+  if (atrMean > 50) {
+    // Volatilité très élevée = pic intense et court
+    tradeDurationMinutes = Math.min(150, Math.round(120 + (atrMean - 50) * 0.5))
+    tradeDurationExplanation = `Volatilité très élevée (${atrMean.toFixed(0)}pts) → Pic court ${tradeDurationMinutes}min. Fermer avant effondrement.`
+  } else if (atrMean > 40) {
+    // Volatilité bonne
+    tradeDurationMinutes = Math.min(170, Math.max(150, Math.round(140 + (atrMean - 40) * 1.0)))
+    tradeDurationExplanation = `Volatilité élevée (${atrMean.toFixed(0)}pts) → Pic clair ${tradeDurationMinutes}min.`
+  } else if (atrMean > 25) {
+    // Volatilité acceptable
+    tradeDurationMinutes = Math.min(210, Math.max(180, Math.round(180 + (atrMean - 25) * 0.5)))
+    tradeDurationExplanation = `Volatilité acceptable (${atrMean.toFixed(0)}pts) → Plateau modéré ${tradeDurationMinutes}min.`
+  } else {
+    // Volatilité faible = plateau prolongé
+    tradeDurationMinutes = 240
+    tradeDurationExplanation = `Volatilité faible (${atrMean.toFixed(0)}pts) → Plateau long ${tradeDurationMinutes}min.`
+  }
+
+  // Limiter entre 120 et 300 minutes
+  tradeDurationMinutes = Math.max(120, Math.min(300, tradeDurationMinutes))
+
   return {
     eventTime,
     eventTimeExplanation,
@@ -594,7 +673,9 @@ export function calculateBidiParameters(
     trailingStepPoints,
     atrMultiplierProfile,
     atrMultiplierExplanation,
+    tradeDurationMinutes,
+    tradeDurationExplanation,
     riskPercent: 1.0,
-    tradeExpiration: 300
+    tradeExpiration: tradeDurationMinutes
   }
 }
