@@ -8,13 +8,12 @@ import AnalysisPanel from './components/AnalysisPanel.vue'
 import HourlyTable from './components/HourlyTable.vue'
 import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
-import SessionAnalysisView from './components/SessionAnalysisView.vue'
 
 onMounted(async () => {
   console.log('🎯 Vue App.vue mounted - Application Vue initialisée');
   console.log('📱 activeTab:', activeTab.value);
   console.log('🌐 window.location:', window.location.href);
-  console.log('📦 Composants importés:', { SymbolSelector, AnalysisPanel, HourlyTable, ImportHub, EventCorrelationView, SessionAnalysisView });
+  console.log('📦 Composants importés:', { SymbolSelector, AnalysisPanel, HourlyTable, ImportHub, EventCorrelationView });
   
   // 🚀 OPTIMISATION: Initialiser l'index des candles au démarrage
   try {
@@ -32,7 +31,7 @@ onMounted(async () => {
 const store = useVolatilityStore()
 const { analysisResult, selectedSymbol, loading, error } = storeToRefs(store)
 
-const activeTab = ref<'volatility' | 'calendar' | 'correlation' | 'sessions'>('volatility')
+const activeTab = ref<'volatility' | 'calendar' | 'correlation'>('volatility')
 const selectedSymbolLocal = ref('')
 const activeCalendarId = ref<number | null>(null)
 
@@ -48,7 +47,7 @@ async function handleSymbolChange() {
   }
 }
 
-function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') {
+function switchTab(tab: 'volatility' | 'calendar' | 'correlation') {
   console.log('🔄 Changement d onglet:', tab);
   activeTab.value = tab
 }
@@ -70,13 +69,6 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') 
         @click="switchTab('correlation')"
       >
         📈 Volatilité par rapport aux événements économiques
-      </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'sessions' }"
-        @click="switchTab('sessions')"
-      >
-        📍 Volatilité par rapport aux ouvertures boursières
       </button>
       <div class="tab-spacer"></div>
       <button 
@@ -147,12 +139,6 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'sessions') 
 
       <template v-if="activeTab === 'correlation'">
         <EventCorrelationView />
-      </template>
-
-      <template v-if="activeTab === 'sessions'">
-        <div class="sessions-container">
-          <SessionAnalysisView />
-        </div>
       </template>
     </main>
 
