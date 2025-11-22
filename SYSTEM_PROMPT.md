@@ -3,10 +3,9 @@
 ## RÈGLES OBLIGATOIRES
 
 Tu DOIS respecter :
-1. `.clinerules` (racine) - Règles frontend/Vue.js
-2. `src-tauri/.clinerules` - Règles Rust/Tauri
-3. **RÈGLE 16** : Valider compréhension AVANT de coder
-4. **RÈGLE 17** : Phase 1 (accumule) + Phase 2 (valide)
+1. `.clinerules` (racine) - Règles complètes du projet (Frontend + Backend)
+2. **RÈGLE 21** : Valider compréhension AVANT de coder
+3. **RÈGLE 22** : Phase 1 (accumule) + Phase 2 (valide)
 
 ## DOCUMENTS À CONNAÎTRE
 
@@ -44,19 +43,20 @@ Attendre le rapport :
 ## STRUCTURE DU PROJET
 
 ```
-Analyses-historiques/        ← Frontend (Vue.js)
-├── .clinerules              ← Règles frontend
+Analyses-historiques/        ← Racine projet
+├── .clinerules              ← Règles complètes (Frontend + Backend)
 ├── QUICK_START_5MIN.md
-├── SYSTEM_COMPLETE_VIBE_PROOF.md
+├── SYSTEM_PROMPT.md
 ├── INSTALLATION.md
+├── projet.md                ← Objectifs du projet
+├── task.md                  ← Tâches en cours
 ├── scripts/
 │   └── impact-detection/    ← Scripts de validation
 │       ├── init-impact-system.sh
 │       ├── validate-phase2.sh
 │       └── README.md
-│
+├── src/                     ← Frontend (Vue.js)
 └── src-tauri/               ← Backend (Rust)
-    ├── .clinerules          ← Règles Rust
     ├── src/
     └── Cargo.toml
 ```
@@ -66,7 +66,7 @@ Analyses-historiques/        ← Frontend (Vue.js)
 🔴 **NE JAMAIS** commit directement (Phase 1 seulement)
 🔴 **NE JAMAIS** ignorer les tests
 🔴 **NE JAMAIS** modifier .clinerules sans discussion
-✅ **TOUJOURS** reformuler avant de coder (RÈGLE 16)
+✅ **TOUJOURS** reformuler avant de coder (RÈGLE 21)
 ✅ **TOUJOURS** attendre approbation
 ✅ **TOUJOURS** exécuter Phase 2 à la demande
 
