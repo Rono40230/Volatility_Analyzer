@@ -116,7 +116,7 @@
           </div>
         </template>
       </MetricTooltip>
-      <div class="confidence-bar" :style="{ width: props.result.confidence_score + '%' }"></div>
+      <div class="confidence-bar" :class="getConfidenceBarClass(props.result.confidence_score)" :style="{ width: props.result.confidence_score + '%' }"></div>
       <span class="confidence-text">{{ props.result.confidence_score.toFixed(0) }}/100</span>
     </div>
 
@@ -664,6 +664,16 @@ function formatTickQuality(tick: number): string {
 function getColorClass(metric: string, value: number): string {
   return `metric-${getMetricQuality(metric, value)}`
 }
+
+// Fonction pour obtenir la classe couleur de la barre de confiance
+function getConfidenceBarClass(score: number): string {
+  if (score >= 80) return 'confidence-excellent'
+  if (score >= 65) return 'confidence-good'
+  if (score >= 50) return 'confidence-acceptable'
+  if (score >= 35) return 'confidence-risky'
+  return 'confidence-poor'
+}
+}
 </script>
 
 <style scoped>
@@ -690,7 +700,15 @@ function getColorClass(metric: string, value: number): string {
 .badge.risk.high { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-color: #b91c1c; }
 .confidence-section { background: #1a202c; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
 .confidence-section h3 { margin: 0 0 15px 0; }
-.confidence-bar { height: 8px; background: #667eea; border-radius: 4px; margin-bottom: 8px; }
+.confidence-bar { height: 8px; background: #667eea; border-radius: 4px; margin-bottom: 8px; transition: background 0.3s ease; }
+
+/* Classes de couleur pour barre de confiance */
+.confidence-bar.confidence-excellent { background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); } /* 80+: Vert */
+.confidence-bar.confidence-good { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); } /* 65-79: Bleu */
+.confidence-bar.confidence-acceptable { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); } /* 50-64: Orange */
+.confidence-bar.confidence-risky { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); box-shadow: 0 0 8px rgba(239, 68, 68, 0.5); } /* 35-49: Rouge */
+.confidence-bar.confidence-poor { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); box-shadow: 0 0 8px rgba(107, 114, 128, 0.5); } /* <35: Gris */
+
 .confidence-text { color: #cbd5e0; font-size: 0.9em; }
 .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 30px; }
 .metric-card { background: #1a202c; padding: 15px; border-radius: 8px; border-left: 3px solid #667eea; }

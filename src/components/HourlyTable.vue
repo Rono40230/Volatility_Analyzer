@@ -301,9 +301,20 @@ function toggleExpand(hour: number) {
 
 function getQuartersForHour(hour: number) {
   if (!props.stats15min) return []
-  return props.stats15min
+  const quarters = props.stats15min
     .filter(stat => stat.hour === hour)
     .sort((a, b) => a.quarter - b.quarter)
+  
+  // AMÉLIORATION: Retourner UNIQUEMENT le meilleur créneau (TOP 1)
+  // Trier par score décroissant et retourner le premier
+  const scoredQuarters = quarters.map(q => ({
+    ...q,
+    score: calculateSliceScore(q)
+  }))
+  scoredQuarters.sort((a, b) => b.score - a.score)
+  
+  // Retourner seulement le meilleur créneau
+  return scoredQuarters.slice(0, 1)
 }
 
 function calculateSliceScore(slice: any): number {
