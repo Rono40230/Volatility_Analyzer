@@ -139,7 +139,33 @@ impl ConfidenceScorer {
             score += 3.0;
         }
 
-        score.min(100.0)
+        // 7. BONUS Tick Quality (8 pts max) - Liquidity = profitabilité scalping
+        // Tick Quality élevé = spreads serrés = profits meilleurs
+        if metrics.mean_tick_quality > 0.001 {
+            score += 8.0; // Excellente liquidité pour scalping
+        } else if metrics.mean_tick_quality > 0.0005 {
+            score += 4.0; // Acceptable
+        }
+
+        // 8. PÉNALITÉ: ATR élevé MAIS Noise élevé (contradiction)
+        // Volatilité chaotique = mauvais pour scalping propre
+        if metrics.mean_atr > 0.0002 && metrics.mean_noise_ratio > 3.0 {
+            score -= 15.0; // Volatilité mais signal chaotique = danger
+        }
+
+        // 9. PÉNALITÉ: BodyRange fort MAIS peu de Breakouts (indécision)
+        // Bougies directionnelles mais pas de cassures = signal faible
+        if metrics.mean_body_range > 40.0 && metrics.mean_breakout_percentage < 8.0 {
+            score -= 10.0; // Contrainte = trading moins net
+        }
+
+        // 10. PÉNALITÉ: Trop de fausses cassures (volatilité erratique)
+        // Breakout % très élevé + BodyRange faible = chaos, pas de direction
+        if metrics.mean_breakout_percentage > 25.0 && metrics.mean_body_range < 30.0 {
+            score -= 8.0; // Volatilité instable/chaotique = à éviter
+        }
+
+        score.min(100.0).max(0.0) // Clamp entre 0 et 100
     }
 }
 

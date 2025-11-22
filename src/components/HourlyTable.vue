@@ -17,6 +17,7 @@
             <th>True Range</th>
             <th>Volatilite %</th>
             <th>Body Range %</th>
+            <th>Direction Strength</th>
             <th>Tick Quality</th>
             <th>Noise Ratio</th>
             <th>Breakouts %</th>
@@ -51,6 +52,7 @@
                 {{ Math.abs(stat.body_range_mean).toFixed(2) }}%
                 <span style="font-size: 0.8em; opacity: 0.7;">{{ stat.body_range_mean >= 0 ? '↗' : '↘' }}</span>
               </td>
+              <td>{{ (stat.volume_imbalance_mean * 100).toFixed(2) }}%</td>
               <td>{{ formatTickQuality(stat.tick_quality_mean) }}</td>
               <td>{{ stat.noise_ratio_mean.toFixed(2) }}</td>
               <td>{{ stat.breakout_percentage.toFixed(2) }}%</td>
@@ -92,11 +94,13 @@
                           {{ String(stat.hour).padStart(2, '0') }}:{{ String(quarter.quarter * 15).padStart(2, '0') }}-{{ String(stat.hour).padStart(2, '0') }}:{{ String(Math.min(quarter.quarter * 15 + 15, 60)).padStart(2, '0') }}
                         </td>
                         <td>{{ formatATR(quarter.atr_mean) }}</td>
+                        <td>{{ formatATR(quarter.range_mean) }}</td>
                         <td>{{ (quarter.volatility_mean * 100).toFixed(2) }}%</td>
                         <td>
                           {{ Math.abs(quarter.body_range_mean).toFixed(2) }}%
                           <span style="font-size: 0.8em; opacity: 0.7;">{{ quarter.body_range_mean >= 0 ? '↗' : '↘' }}</span>
                         </td>
+                        <td>{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
                         <td>{{ formatTickQuality(quarter.tick_quality_mean) }}</td>
                         <td>{{ quarter.noise_ratio_mean.toFixed(2) }}</td>
                         <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>

@@ -234,10 +234,10 @@
           <template #usage>
             <div class="tooltip-section-title">📊 Interprétation Scalping</div>
             <div class="tooltip-section-text">
-              🟢 <strong>&gt;45%:</strong> Excellent - Bougies directionnelles, signal/bruit eleve<br>
+              🟢 <strong>&gt;45%:</strong> Excellent - Bougies directionnelles, signal/bruit élevé<br>
               🔵 <strong>35-45%:</strong> Bon - Assez directif pour scalpe normal<br>
-              🟠 <strong>15-35%:</strong> Moyen - Bougies indecises, bruit modere<br>
-              🔴 <strong>&lt;15%:</strong> Mauvais - Bougies indecises avec longues meches
+              🟠 <strong>15-35%:</strong> Moyen - Bougies indécises, bruit modéré<br>
+              🔴 <strong>≤15%:</strong> Mauvais - Bougies indécises avec longues mèches
             </div>
           </template>
           <template #scoring>
@@ -264,10 +264,10 @@
           <template #usage>
             <div class="tooltip-section-title">📊 Interprétation (Tous actifs)</div>
             <div class="tooltip-section-text">
-              🟢 <strong>&gt;0.1%:</strong> Excellent - Très liquide, spreads serrés<br>
-              🔵 <strong>0.05-0.1%:</strong> Bon - Liquide, spreads acceptables<br>
-              🟠 <strong>0.01-0.05%:</strong> Moyen - Spreads plus larges<br>
-              🔴 <strong>&lt;0.01%:</strong> Mauvais - Peu liquide, spreads prohibitifs
+              🟢 <strong>&gt;1.0%:</strong> Excellent - Très liquide, spreads serrés<br>
+              🔵 <strong>0.5-1.0%:</strong> Bon - Liquide, spreads acceptables<br>
+              🟠 <strong>0.1-0.5%:</strong> Moyen - Spreads plus larges<br>
+              🔴 <strong>≤0.1%:</strong> Mauvais - Peu liquide, spreads prohibitifs
             </div>
           </template>
           <template #scoring>
@@ -588,7 +588,7 @@ function getMetricQuality(metric: string, value: number): string {
       return 'poor'
     
     case 'bodyrange':
-      // Body Range en %
+      // Body Range normalisé en % (backend envoie en % 0-100, pas décimal)
       if (value > 45) return 'excellent'
       if (value > 35) return 'good'
       if (value > 15) return 'acceptable'
@@ -597,9 +597,9 @@ function getMetricQuality(metric: string, value: number): string {
     case 'tickquality':
       // Tick Quality normalisé en % du prix
       const tickPercent = value < 1 ? value * 100 : (value / getEstimatedPrice()) * 100
-      if (tickPercent > 0.1) return 'excellent' // >0.1% (10 pips pour 100k)
-      if (tickPercent > 0.05) return 'good'
-      if (tickPercent > 0.01) return 'acceptable'
+      if (tickPercent > 1.0) return 'excellent' // >1.0%
+      if (tickPercent > 0.5) return 'good'      // 0.5-1.0%
+      if (tickPercent > 0.1) return 'acceptable' // 0.1-0.5%
       return 'poor'
     
     case 'noiseratio':
