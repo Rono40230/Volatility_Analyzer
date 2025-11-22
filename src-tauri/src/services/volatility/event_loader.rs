@@ -79,6 +79,7 @@ impl EventLoader {
     ) -> Result<()> {
         // Si pas de pool, skip chargement des événements
         let Some(pool) = pool else {
+            tracing::warn!("⚠️ No database pool provided for 15min events");
             return Ok(());
         };
 
@@ -91,14 +92,26 @@ impl EventLoader {
             VolatilityError::InsufficientData("No candles to determine event period".to_string()),
         )?;
 
+        tracing::info!("🔍 EventLoader 15min starting for {} from {} to {}", symbol, start_time, end_time);
+        
+        // Log des slices disponibles
+        let slice_keys: Vec<String> = stats_15min.iter()
+            .map(|s| format!("{}:{}", s.hour, s.quarter))
+            .collect();
+        tracing::info!("📦 Available 15min slices: {} - First few: {:?}", stats_15min.len(), &slice_keys[..std::cmp::min(10, slice_keys.len())]);
+
         // Charger événements via EventCorrelationService
         let event_service = crate::services::EventCorrelationService::new(pool);
         let events = event_service
             .get_events_for_period(symbol, start_time, end_time)
             .map_err(|e| VolatilityError::DatabaseError(e.to_string()))?;
 
+        tracing::info!("🔍 EventLoader 15min: Loaded {} total events for {}", events.len(), symbol);
+
         // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (Paris)
         const PARIS_OFFSET_HOURS: i32 = 1;
+        let mut matched_count = 0;
+        let mut unmatched_count = 0;
 
         for event in events {
             if event.impact != "HIGH" && event.impact != "MEDIUM" {
@@ -110,8 +123,9 @@ impl EventLoader {
             let utc_minute = event.event_time.minute() as i32;
 
             let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
+            let paris_minute = utc_minute; // Les minutes ne changent pas avec timezone
             let paris_hour_u8 = paris_hour as u8;
-            let quarter = (utc_minute / 15) as u8;
+            let quarter = (paris_minute / 15) as u8;
 
             // Trouver la tranche de 15 minutes correspondante
             if let Some(slot) = stats_15min
@@ -125,7 +139,31 @@ impl EventLoader {
                     volatility_increase: 0.0,
                 };
                 slot.events.push(event_in_hour);
+                matched_count += 1;
+                if matched_count <= 5 {
+                    tracing::debug!("✅ Event matched: {} at {}:{} → Paris {}:{} (quarter {})", 
+                        event.description, utc_hour, utc_minute, paris_hour, paris_minute, quarter);
+                }
+            } else {
+                unmatched_count += 1;
+                if unmatched_count <= 5 {
+                    tracing::debug!("❌ Event NOT matched: {} at UTC {}:{} → Paris {}:{} (quarter {})", 
+                        event.description, utc_hour, utc_minute, paris_hour, paris_minute, quarter);
+                }
             }
+        }
+
+        tracing::info!("📊 EventLoader 15min result: {} matched, {} unmatched", matched_count, unmatched_count);
+        
+        // Log final: afficher les slices avec events
+        let slices_with_events: Vec<_> = stats_15min.iter()
+            .filter(|s| s.events.len() > 0)
+            .map(|s| format!("{}:{} ({})", s.hour, s.quarter, s.events.len()))
+            .collect();
+        if slices_with_events.len() > 0 {
+            tracing::info!("✅ Slices with events: {:?}", slices_with_events);
+        } else {
+            tracing::warn!("⚠️ NO slices have events after association!");
         }
 
         Ok(())

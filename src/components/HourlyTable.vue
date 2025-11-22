@@ -64,7 +64,7 @@
                   @click="selectHour(stat.hour, stat.events)"
                   :title="`${getDistinctEventCount(stat.events)} événement(s) HIGH`"
                 >
-                  {{ getDistinctEventCount(stat.events) }}
+                  {{ logHourEventCount(stat.hour, stat.events) }}
                 </button>
                 <span v-else class="no-event">—</span>
               </td>
@@ -72,22 +72,24 @@
 
             <!-- Accordion 15-minutes -->
             <tr v-if="expandedHours.includes(stat.hour) && props.stats15min" class="accordion-row">
-              <td :colspan="props.stats15min ? 11 : 10" class="accordion-cell">
+              <td :colspan="props.stats15min ? 14 : 10" class="accordion-cell">
                 <div class="scalping-details">
                   <table class="scalping-table">
                     <thead>
                       <tr>
                         <th>Tranche</th>
-                        <th>ATR</th>
-                        <th>Vol %</th>
-                        <th>Body %</th>
-                        <th>Quality</th>
-                        <th>Noise</th>
-                        <th>Breakout %</th>
+                        <th>ATR Moyen</th>
+                        <th>True Range</th>
+                        <th>Volatilité %</th>
+                        <th>Body Range %</th>
+                        <th>Direction Strength</th>
+                        <th>Tick Quality</th>
+                        <th>Noise Ratio</th>
+                        <th>Breakouts %</th>
                         <th title="TÂCHE 4: Minutes volatilité > 80% pic">Peak (min)</th>
                         <th title="TÂCHE 4: Minutes pour -50% volatilité">Half-Life (min)</th>
-                        <th title="TÂCHE 4: Durée optimale fermeture trade" class="trade-exp-header">Trade Exp (min)</th>
-                        <th>Evenements</th>
+                        <th title="TÂCHE 4: Durée optimale fermeture trade">Trade Exp (min)</th>
+                        <th>Événements</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -108,24 +110,23 @@
                         <td>{{ quarter.noise_ratio_mean.toFixed(2) }}</td>
                         <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
                         <td class="duration-cell" :title="`Peak duration: ${quarter.peak_duration_minutes ?? 'N/A'} min`">
-                          {{ quarter.peak_duration_minutes !== undefined ? quarter.peak_duration_minutes : '—' }}
+                          {{ quarter.peak_duration_minutes !== undefined ? quarter.peak_duration_minutes + ' min' : '—' }}
                         </td>
                         <td class="duration-cell" :title="`Half-life: ${quarter.volatility_half_life_minutes ?? 'N/A'} min`">
-                          {{ quarter.volatility_half_life_minutes !== undefined ? quarter.volatility_half_life_minutes : '—' }}
+                          {{ quarter.volatility_half_life_minutes !== undefined ? quarter.volatility_half_life_minutes + ' min' : '—' }}
                         </td>
                         <td class="trade-exp-cell" :class="{ 'warning': isTradeExpTooLong(quarter) }" :title="`Fermer trade après ${quarter.recommended_trade_expiration_minutes ?? 'N/A'} min`">
-                          {{ quarter.recommended_trade_expiration_minutes !== undefined ? quarter.recommended_trade_expiration_minutes : '—' }}
+                          {{ quarter.recommended_trade_expiration_minutes !== undefined ? quarter.recommended_trade_expiration_minutes + ' min' : '—' }}
                           <span v-if="isTradeExpTooLong(quarter)" class="warning-icon">⚠️</span>
                         </td>
                         <td class="events-cell">
                           <button
-                            v-if="getDistinctEventCount(quarter.events) > 0"
-                            class="event-badge-btn"
-                            :class="getEventBadgeClass(quarter.events)"
-                            @click="selectHour(stat.hour, quarter.events)"
+                            v-if="getEventsForQuarter(stat.events, stat.hour, quarter.quarter).length > 0"
+                            class="event-badge-btn high"
+                            @click="selectHour(stat.hour, getEventsForQuarter(stat.events, stat.hour, quarter.quarter))"
                             style="font-size: 0.8em; padding: 2px 6px;"
                           >
-                            {{ getDistinctEventCount(quarter.events) }}
+                            {{ getEventsForQuarter(stat.events, stat.hour, quarter.quarter).length }}
                           </button>
                           <span v-else class="no-event">—</span>
                         </td>
@@ -197,31 +198,7 @@ const top3Slices = ref<any[]>([])
 
 // Calculer le TOP 3 au montage/changement des stats
 onMounted(() => {
-  console.log('📊 HourlyTable mounted. Stats received:', props.stats.length)
-  
-  if (props.stats.length > 0) {
-    // Inspecter la première heure et quelques autres pour voir la structure events
-    const sampleHours = [0, 8, 12, 16]
-    sampleHours.forEach(h => {
-      const stat = props.stats.find(s => s.hour === h)
-      if (stat) {
-        console.log(`🔍 Hour ${h} events:`, stat.events)
-        if (stat.events) {
-           console.log(`   - Count: ${stat.events.length}`)
-           if (stat.events.length > 0) {
-             console.log(`   - First event:`, stat.events[0])
-           }
-        } else {
-           console.log(`   - Events field is UNDEFINED or NULL`)
-        }
-      }
-    })
-    
-    // Compter le nombre total d'heures avec événements
-    const hoursWithEvents = props.stats.filter(s => s.events && s.events.length > 0).length
-    console.log(`📈 Total hours with events: ${hoursWithEvents} / ${props.stats.length}`)
-  }
-  if (props.stats15min && props.stats15min.length > 0) {
+  if (props.stats.length > 0 && props.stats15min && props.stats15min.length > 0) {
     try {
       // Besoin de globalMetrics pour analyzeTop3Slices
       // On va créer une fonction locale pour identifier les TOP 3 slices
@@ -283,6 +260,11 @@ function normalizeImpact(impact: string): string {
   return 'UNKNOWN'
 }
 
+// Log le compte d'événements pour l'heure 0
+function logHourEventCount(hour: number, events: EventInHour[] | undefined): number {
+  return getDistinctEventCount(events)
+}
+
 
 
 
@@ -302,6 +284,57 @@ function getDistinctEventCount(events: EventInHour[] | undefined): number {
   return distinctPairs.size
 }
 
+// Compter le nombre total d'événements (pour afficher par quarter)
+function getTotalEventCount(events: EventInHour[] | undefined): number {
+  if (!events || events.length === 0) return 0
+  // Retourner simplement le nombre total d'événements
+  return events.length
+}
+
+// Extraire les événements HIGH DISTINCTS pour un quarter spécifique
+// Même logique que getDistinctEventCount mais filtrée par quarter
+function getEventsForQuarter(hourEvents: EventInHour[] | undefined, hour: number, quarter: number): EventInHour[] {
+  if (!hourEvents || hourEvents.length === 0) return []
+  
+  // D'abord : récupérer TOUTES les paires HIGH distinctes de l'heure
+  const allHighEvents = hourEvents.filter(e => normalizeImpact(e.impact) === 'HIGH')
+  const allDistinctPairs = new Set(allHighEvents.map(e => `${e.event_name}|HIGH`))
+  
+  // Répartir par quarter basé sur le datetime (format "HH:MM:SS")
+  const quarterStart = quarter * 15
+  const quarterEnd = quarterStart + 15
+  
+  // Pour chaque paire DISTINCTE, vérifier s'il existe au moins un événement dans ce quarter
+  const pairsInQuarter = new Set<string>()
+  
+  for (const pair of allDistinctPairs) {
+    // Chercher un événement avec cette paire qui tombe dans ce quarter
+    const eventInQuarter = allHighEvents.find(e => {
+      if (`${e.event_name}|HIGH` !== pair) return false
+      
+      const timeParts = e.datetime.split(':')
+      if (timeParts.length < 2) return false
+      const minute = parseInt(timeParts[1], 10)
+      return minute >= quarterStart && minute < quarterEnd
+    })
+    
+    if (eventInQuarter) {
+      pairsInQuarter.add(pair)
+    }
+  }
+  
+  // Retourner un tableau avec une seule instance de chaque paire qui est dans ce quarter
+  const result: EventInHour[] = []
+  for (const pair of pairsInQuarter) {
+    const event = allHighEvents.find(e => `${e.event_name}|HIGH` === pair)
+    if (event) {
+      result.push(event)
+    }
+  }
+  
+  return result
+}
+
 // Fonctions pour accordion 15-minutes
 function toggleExpand(hour: number) {
   const idx = expandedHours.value.indexOf(hour)
@@ -314,10 +347,37 @@ function toggleExpand(hour: number) {
 
 function getQuartersForHour(hour: number) {
   if (!props.stats15min) return []
-  // Retourner TOUS les quarters (0, 1, 2, 3) triés par ordre horaire
-  return props.stats15min
-    .filter(stat => stat.hour === hour)
-    .sort((a, b) => a.quarter - b.quarter)
+  
+  // Créer les 4 quarters (0-3) pour cette heure, en cherchant les stats s'ils existent
+  const quarters = []
+  for (let q = 0; q < 4; q++) {
+    const stat = props.stats15min.find(s => s.hour === hour && s.quarter === q)
+    if (stat) {
+      quarters.push(stat)
+    } else {
+      // Créer un quarter vide s'il n'existe pas dans stats_15min
+      quarters.push({
+        hour,
+        quarter: q,
+        candle_count: 0,
+        atr_mean: 0,
+        atr_max: 0,
+        volatility_mean: 0,
+        range_mean: 0,
+        body_range_mean: 0,
+        shadow_ratio_mean: 0,
+        tick_quality_mean: 0,
+        volume_imbalance_mean: 0,
+        noise_ratio_mean: 0,
+        breakout_percentage: 0,
+        events: [],
+        peak_duration_minutes: undefined,
+        volatility_half_life_minutes: undefined,
+        recommended_trade_expiration_minutes: undefined,
+      } as any)
+    }
+  }
+  return quarters
 }
 
 function calculateSliceScore(slice: any): number {
@@ -676,23 +736,19 @@ tbody tr:hover {
 
 .duration-cell {
   text-align: center;
-  color: #4b5563;
-  font-family: 'Courier New', monospace;
-  font-size: 0.9em;
+  color: #e6edf3;
+  font-size: 0.85em;
 }
 
 .trade-exp-cell {
   text-align: center;
-  font-weight: 600;
-  color: #059669;
-  background: rgba(16, 185, 129, 0.05);
-  border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  color: #e6edf3;
+  font-size: 0.85em;
 }
 
 .trade-exp-cell.warning {
   background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .trade-exp-cell.warning .warning-icon {
@@ -701,8 +757,11 @@ tbody tr:hover {
 }
 
 .scalping-row:hover .duration-cell {
-  color: #1f2937;
-  background: rgba(59, 130, 246, 0.05);
+  color: #e6edf3;
+}
+
+.scalping-row:hover .trade-exp-cell {
+  color: #e6edf3;
 }
 </style>
 

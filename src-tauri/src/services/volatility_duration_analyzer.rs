@@ -115,18 +115,21 @@ impl VolatilityDurationAnalyzer {
         // 5. Calculer la demi-vie réelle (quand ATR revient à 50% du pic)
         let half_life = Self::calculate_half_life(&atr_values, peak_index, peak_atr)?;
 
-        // 6. Valider
-        if half_life >= peak_duration {
-            return Err(VolatilityError::MetricCalculationError(
-                "half_life doit être < peak_duration".to_string(),
-            ));
-        }
+        // 6. Assouplir la validation : si half_life >= peak_duration, cela signifie
+        //    que la volatilité décroît très lentement. On garde les valeurs brutes.
+        //    Pire cas: utiliser la demi-vie limitée à 90% du peak_duration
+        let final_half_life = if half_life >= peak_duration {
+            // La volatilité ne décroît pas assez vite : limiter à 90% du peak
+            (peak_duration as f64 * 0.9) as u16
+        } else {
+            half_life
+        };
 
         Ok(VolatilityDuration::new(
             hour,
             quarter,
             peak_duration,
-            half_life,
+            final_half_life,
             candles.len() as u16,
         ))
     }

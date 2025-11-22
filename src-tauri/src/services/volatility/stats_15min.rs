@@ -151,13 +151,21 @@ impl<'a> Stats15MinCalculator<'a> {
 
         // TÂCHE 4: Analyse réelle de décroissance de volatilité
         let (peak_duration, half_life, trade_exp) = 
-            VolatilityDurationAnalyzer::analyze_from_candles(hour, quarter, &candles)
-                .map(|vd| (
-                    Some(vd.peak_duration_minutes),
-                    Some(vd.volatility_half_life_minutes),
-                    Some(vd.recommended_trade_expiration_minutes),
-                ))
-                .unwrap_or((None, None, None));
+            match VolatilityDurationAnalyzer::analyze_from_candles(hour, quarter, &candles) {
+                Ok(vd) => {
+                    debug!("✅ TÂCHE 4 OK: {}:{} peak={} half_life={} trade_exp={}", 
+                        hour, quarter, vd.peak_duration_minutes, vd.volatility_half_life_minutes, vd.recommended_trade_expiration_minutes);
+                    (
+                        Some(vd.peak_duration_minutes),
+                        Some(vd.volatility_half_life_minutes),
+                        Some(vd.recommended_trade_expiration_minutes),
+                    )
+                },
+                Err(e) => {
+                    debug!("⚠️ TÂCHE 4 ERREUR: {}:{} - {}", hour, quarter, e);
+                    (None, None, None)
+                }
+            };
 
         Ok(Stats15Min {
             hour,

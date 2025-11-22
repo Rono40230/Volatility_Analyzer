@@ -154,6 +154,18 @@ impl VolatilityAnalyzer {
             // Continue quand même
         }
 
+        // Log pour vérifier les événements des quarters
+        let total_15min_events: usize = stats_15min.iter().map(|s| s.events.len()).sum();
+        tracing::info!("📋 Stats15Min: {} slices, {} total events across all quarters", stats_15min.len(), total_15min_events);
+        
+        for (idx, slice) in stats_15min.iter().enumerate().take(10) {
+            if slice.events.len() > 0 {
+                tracing::info!("   Slice {}:{}  has {} events: {:?}", 
+                    slice.hour, slice.quarter, slice.events.len(),
+                    slice.events.iter().map(|e| &e.event_name).collect::<Vec<_>>());
+            }
+        }
+
         // 2. Trouve les meilleures heures
         let best_hours = MetricsAggregator::find_best_hours(&hourly_stats);
 
