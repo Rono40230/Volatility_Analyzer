@@ -11,31 +11,16 @@ use super::pair_correlation_helpers::{
 use crate::services::candle_index::CandleIndex;
 
 fn format_date_fr(date_str: &str) -> String {
-    // Format attendu dans la DB: YYYY-MM-DD HH:MM:SS
-    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
-        let day = dt.day();
-        let month = match dt.month() {
-            1 => "janvier", 2 => "février", 3 => "mars", 4 => "avril",
-            5 => "mai", 6 => "juin", 7 => "juillet", 8 => "août",
-            9 => "septembre", 10 => "octobre", 11 => "novembre", 12 => "décembre",
-            _ => "?",
-        };
-        let year = dt.year();
-        return format!("{} {} {}", day, month, year);
-    }
-    // Essai format ISO si le premier échoue
-    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_str) {
-        let day = dt.day();
-        let month = match dt.month() {
-            1 => "janvier", 2 => "février", 3 => "mars", 4 => "avril",
-            5 => "mai", 6 => "juin", 7 => "juillet", 8 => "août",
-            9 => "septembre", 10 => "octobre", 11 => "novembre", 12 => "décembre",
-            _ => "?",
-        };
-        let year = dt.year();
-        return format!("{} {} {}", day, month, year);
-    }
+    let months = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
     
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
+        let m = months.get((dt.month() as usize).saturating_sub(1)).unwrap_or(&"?");
+        return format!("{} {} {}", dt.day(), m, dt.year());
+    }
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_str) {
+        let m = months.get((dt.month() as usize).saturating_sub(1)).unwrap_or(&"?");
+        return format!("{} {} {}", dt.day(), m, dt.year());
+    }
     date_str.to_string()
 }
 

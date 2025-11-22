@@ -19,6 +19,13 @@ pub struct Stats15Min {
     pub noise_ratio_mean: f64,
     pub breakout_percentage: f64,
     pub events: Vec<EventInHour>,
+    // Analyse de décroissance de volatilité (TÂCHE 4)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peak_duration_minutes: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub volatility_half_life_minutes: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recommended_trade_expiration_minutes: Option<u16>,
 }
 
 impl Stats15Min {
@@ -129,6 +136,9 @@ mod tests {
             noise_ratio_mean: 0.0,
             breakout_percentage: 0.0,
             events: Vec::new(),
+            peak_duration_minutes: None,
+            volatility_half_life_minutes: None,
+            recommended_trade_expiration_minutes: None,
         };
         assert_eq!(stats.time_label(), "14:00-14:15");
 
@@ -157,6 +167,9 @@ mod tests {
             noise_ratio_mean: 1.8,
             breakout_percentage: 25.0,
             events: Vec::new(),
+            peak_duration_minutes: None,
+            volatility_half_life_minutes: None,
+            recommended_trade_expiration_minutes: None,
         };
 
         let score = stats.quality_score();
@@ -181,6 +194,9 @@ mod tests {
             noise_ratio_mean: 0.0,
             breakout_percentage: 0.0,
             events: Vec::new(),
+            peak_duration_minutes: None,
+            volatility_half_life_minutes: None,
+            recommended_trade_expiration_minutes: None,
         };
 
         assert_eq!(stats.quality_score(), 0.0);

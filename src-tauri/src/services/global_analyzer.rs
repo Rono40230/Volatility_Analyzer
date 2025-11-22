@@ -3,127 +3,13 @@ use crate::models::{
     AnalysisFilters, BestPair, EventImpact, GlobalAnalysisResult, GlobalStats, GoldenHour, TradableEventType, StraddleSuccessRate, OptimalTimeWindow,
 };
 use crate::services::ArchiveService;
-use serde::Deserialize;
+use super::global_analyzer_types::*;
+use super::global_analyzer_helpers::*;
 use std::collections::HashMap;
 use tracing::{info, warn};
 
 pub struct GlobalAnalyzer {
     archive_service: ArchiveService,
-}
-
-// Structure interne pour désérialiser uniquement ce dont on a besoin de manière très permissive
-#[derive(Debug, Deserialize)]
-struct AnalyzableGlobalMetrics {
-    #[serde(default)]
-    mean_volatility: f64,
-}
-
-#[derive(Debug, Deserialize)]
-struct AnalyzableArchiveData {
-    #[serde(default)]
-    symbol: String,
-    #[serde(default)]
-    best_hours: Vec<u8>,
-    #[serde(default)]
-    confidence_score: f64,
-    #[serde(default)]
-    global_metrics: Option<AnalyzableGlobalMetrics>,
-}
-
-// Wrapper pour gérer la structure réelle des archives stockées
-#[derive(Debug, Deserialize)]
-struct ArchiveWrapper {
-    #[serde(rename = "analysisResult")]
-    analysis_result: AnalyzableArchiveData,
-}
-
-// Structures pour désérialiser les archives de corrélation événement/paire
-#[derive(Debug, Deserialize)]
-struct EventImpactArchive {
-    #[serde(rename = "eventImpact")]
-    event_impact: EventImpactData,
-}
-
-#[derive(Debug, Deserialize)]
-struct EventImpactData {
-    event_name: String,
-    #[serde(default)]
-    country: String,
-    #[serde(default)]
-    currency: String,
-    #[serde(default)]
-    event_count: usize,
-    #[serde(default)]
-    pair_impacts: Vec<PairImpact>,
-}
-
-#[derive(Debug, Deserialize)]
-struct PairImpact {
-    symbol: String,
-    event_volatility: f64,
-    baseline_volatility: f64,
-}
-
-// Structures pour désérialiser les archives de corrélation paire/événement
-#[derive(Debug, Deserialize)]
-struct PairCorrelationArchive {
-    #[serde(rename = "pairCorrelation")]
-    pair_correlation: PairCorrelationData,
-}
-
-#[derive(Debug, Deserialize)]
-struct PairCorrelationData {
-    pair: String,
-    #[serde(default)]
-    events: Vec<PairEvent>,
-}
-
-#[derive(Debug, Deserialize)]
-struct PairEvent {
-    name: String,
-    count: usize,
-    #[serde(default)]
-    volatility_total: f64,
-    #[serde(default)]
-    volatility_before: f64,
-    #[serde(default)]
-    volatility_after: f64,
-}
-
-// Structure interne pour données pondérées
-struct WeightedArchiveData {
-    data: AnalyzableArchiveData,
-    weight: f64,
-    created_at: chrono::NaiveDateTime,
-}
-
-// Fonctions helper pour affinage statistique
-fn calculate_temporal_weight(archive_date: chrono::NaiveDateTime) -> f64 {
-    let now = chrono::Local::now().naive_local();
-    let age_days = (now - archive_date).num_days() as f64;
-    let age_months = age_days / 30.0;
-    
-    // Pondération décroissante : récent = poids élevé
-    if age_months < 3.0 {
-        1.0
-    } else if age_months < 6.0 {
-        0.7
-    } else {
-        0.4
-    }
-}
-
-fn is_outlier(value: f64, values: &[f64]) -> bool {
-    if values.len() < 3 {
-        return false;
-    }
-    
-    let mean: f64 = values.iter().sum::<f64>() / values.len() as f64;
-    let variance: f64 = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
-    let std_dev = variance.sqrt();
-    
-    // Outlier si > 3 écarts-types
-    (value - mean).abs() > 3.0 * std_dev
 }
 
 impl GlobalAnalyzer {

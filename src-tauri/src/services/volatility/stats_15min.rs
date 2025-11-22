@@ -3,7 +3,7 @@
 
 use super::utils::{max, mean};
 use crate::models::{Candle, Result, Stats15Min};
-use crate::services::MetricsCalculator;
+use crate::services::{MetricsCalculator, VolatilityDurationAnalyzer};
 use chrono::Timelike;
 use std::collections::HashMap;
 use tracing::debug;
@@ -70,6 +70,9 @@ impl<'a> Stats15MinCalculator<'a> {
                         noise_ratio_mean: 0.0,
                         breakout_percentage: 0.0,
                         events: Vec::new(),
+                        peak_duration_minutes: None,
+                        volatility_half_life_minutes: None,
+                        recommended_trade_expiration_minutes: None,
                     });
                 }
             }
@@ -107,6 +110,9 @@ impl<'a> Stats15MinCalculator<'a> {
                 noise_ratio_mean: 0.0,
                 breakout_percentage: 0.0,
                 events: Vec::new(),
+                peak_duration_minutes: None,
+                volatility_half_life_minutes: None,
+                recommended_trade_expiration_minutes: None,
             });
         }
 
@@ -143,6 +149,16 @@ impl<'a> Stats15MinCalculator<'a> {
         // Note: body_range_mean can be negative (directional indicator), so use absolute value
         let direction_strength = (body_range_mean.abs() * breakout_percentage) / 100.0;
 
+        // TÂCHE 4: Analyse réelle de décroissance de volatilité
+        let (peak_duration, half_life, trade_exp) = 
+            VolatilityDurationAnalyzer::analyze_from_candles(hour, quarter, &candles)
+                .map(|vd| (
+                    Some(vd.peak_duration_minutes),
+                    Some(vd.volatility_half_life_minutes),
+                    Some(vd.recommended_trade_expiration_minutes),
+                ))
+                .unwrap_or((None, None, None));
+
         Ok(Stats15Min {
             hour,
             quarter,
@@ -158,6 +174,9 @@ impl<'a> Stats15MinCalculator<'a> {
             noise_ratio_mean,
             breakout_percentage,
             events: Vec::new(),
+            peak_duration_minutes: peak_duration,
+            volatility_half_life_minutes: half_life,
+            recommended_trade_expiration_minutes: trade_exp,
         })
     }
 }

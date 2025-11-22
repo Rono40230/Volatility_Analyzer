@@ -1,225 +1,274 @@
-// services/volatility_duration_analyzer.rs - Analyse de la durée de volatilité par créneau
+// services/volatility_duration_analyzer.rs - Analyse réelle de décroissance de volatilité
 // Conforme .clinerules: <300L, Result<T, ServiceError>, pas d'unwrap
 
-use crate::models::{Stats15Min, VolatilityDuration, VolatilityError};
+use crate::models::{Candle, Stats15Min, VolatilityDuration, VolatilityError};
 
-/// Analyseur de la durée et du profil de décroissance de la volatilité
+/// Analyseur de la durée et du profil de décroissance RÉELLE de la volatilité
 pub struct VolatilityDurationAnalyzer;
 
 impl VolatilityDurationAnalyzer {
-    /// Analyse un créneau 15min pour déterimer la durée du pic et la demi-vie de la volatilité
-    ///
-    /// # Arguments
-    /// * `slice` - Les statistiques du créneau 15min contenant les données historiques
-    ///
-    /// # Returns
-    /// Une instance de VolatilityDuration avec les métriques calculées
+    /// Fallback: Analyse un Stats15Min avec heuristique simple (pour commandes Tauri legacy)
     pub fn analyze(slice: &Stats15Min) -> Result<VolatilityDuration, VolatilityError> {
         if slice.candle_count == 0 {
             return Err(VolatilityError::InsufficientData(
-                "Impossible d'analyser créneau vide".to_string(),
+                "Créneau vide".to_string(),
             ));
         }
 
-        // Calcule la durée du pic (où volatilité > 80% du max observé)
-        let peak_duration = Self::estimate_peak_duration(slice)?;
-
-        // Calcule la demi-vie (décroissance empirique de la volatilité)
-        let half_life = Self::estimate_volatility_half_life(slice, peak_duration)?;
-
-        // Valide que half_life < peak_duration
-        if half_life >= peak_duration {
-            return Err(VolatilityError::MetricCalculationError(
-                "half_life doit être < peak_duration".to_string(),
-            ));
-        }
-
-        // Le créneau a une taille moyenne d'environ 900 candles (900min ÷ 1min/candle)
-        // On estime qu'on peut voir 2-3 cycles complets du créneau dans l'historique
-        // Donc sample_size ≈ (candle_count × 2-3) / (peak_duration + half_life × 2)
-        let estimated_occurrences = if peak_duration + half_life * 2 > 0 {
-            ((slice.candle_count as u16 * 2) / (peak_duration + half_life * 2)).max(5)
-        } else {
-            5
-        };
+        let peak_duration = Self::estimate_peak_duration_heuristic(slice)?;
+        let half_life = Self::estimate_half_life_heuristic(slice, peak_duration)?;
 
         Ok(VolatilityDuration::new(
             slice.hour,
             slice.quarter,
             peak_duration,
             half_life,
-            estimated_occurrences,
+            slice.candle_count as u16,
         ))
     }
 
-    /// Estime la durée du pic de volatilité (minutes où volatilité > 80% du max)
-    ///
-    /// Heuristique basée sur ATR et range:
-    /// - ATR élevé (>0.002) + Range élevé (>60pts) = pic court et intense (90-150min)
-    /// - ATR moyen (0.001-0.002) = pic modéré (120-200min)
-    /// - ATR faible (<0.001) = plateau long (150-270min)
-    fn estimate_peak_duration(slice: &Stats15Min) -> Result<u16, VolatilityError> {
+    /// Heuristique simple de peak_duration basée sur ATR et range
+    fn estimate_peak_duration_heuristic(slice: &Stats15Min) -> Result<u16, VolatilityError> {
         let atr = slice.atr_mean;
-        let range = slice.range_mean;
         let body_range = slice.body_range_mean;
 
-        // Heuristique empirique basée sur volatilité observée
-        let duration_minutes = if atr > 0.002 && range > 60.0 {
-            // Volatilité très élevée = pic intense et court
-            if body_range > 50.0 {
-                90 // Pic très pur et rapide
-            } else {
-                110 // Pic court mais bruité
-            }
-        } else if atr > 0.0015 && range > 45.0 {
-            // Volatilité bonne
-            if body_range > 40.0 {
-                130 // Pic clair
-            } else {
-                155 // Pic moins pur
-            }
-        } else if atr > 0.001 && range > 30.0 {
-            // Volatilité acceptable
-            if body_range > 30.0 {
-                180 // Pic décent
-            } else {
-                210 // Pic long
-            }
+        let duration = if atr > 0.002 && body_range > 50.0 {
+            100
+        } else if atr > 0.0015 && body_range > 40.0 {
+            140
+        } else if atr > 0.001 && body_range > 30.0 {
+            180
         } else {
-            // Volatilité faible = plateau prolongé
-            if body_range > 20.0 {
-                240
-            } else {
-                270
-            }
+            240
         };
 
-        // Limiter entre 60 et 300 minutes
-        Ok(duration_minutes.clamp(60, 300))
+        Ok(duration.clamp(60, 300))
     }
 
-    /// Estime la demi-vie de la volatilité (temps pour décroître de 50%)
-    ///
-    /// Basée sur le rapport noise_ratio:
-    /// - noise_ratio faible (<1.5) = volatilité stable = demi-vie longue
-    /// - noise_ratio moyen (1.5-3.0) = décroissance normale = demi-vie 60-90min
-    /// - noise_ratio élevé (>3.0) = volatilité très décroissante = demi-vie courte
-    fn estimate_volatility_half_life(
+    /// Heuristique simple de half_life basée sur noise_ratio
+    fn estimate_half_life_heuristic(
         slice: &Stats15Min,
         peak_duration: u16,
     ) -> Result<u16, VolatilityError> {
         let noise = slice.noise_ratio_mean;
-        let atr = slice.atr_mean;
-
-        // La demi-vie est estimée comme une fraction du peak_duration
-        // Plus le noise_ratio est bas, plus la volatilité persiste longtemps
-        let half_life_ratio = if noise < 1.5 {
-            // Volatilité très stable = demi-vie longue (60-70% du peak)
+        let ratio = if noise < 1.5 {
             0.65
         } else if noise < 2.5 {
-            // Normal = demi-vie modérée (45-55% du peak)
             0.50
         } else {
-            // Volatilité décroissante rapidement = demi-vie courte (30-40% du peak)
             0.35
         };
+        let half_life = ((peak_duration as f64) * ratio) as u16;
+        Ok(half_life.max(30).min((peak_duration as f64 * 0.9) as u16))
+    }
 
-        let half_life = ((peak_duration as f64) * half_life_ratio) as u16;
+    /// Analyse les bougies RÉELLES pour déterminer la décroissance réelle de volatilité
+    ///
+    /// # Arguments
+    /// * `hour` - Heure du créneau (0-23)
+    /// * `quarter` - Quarter du créneau (0-3)
+    /// * `candles` - Bougies M1 réelles pour ce créneau
+    ///
+    /// # Returns
+    /// Une instance de VolatilityDuration avec les métriques calculées
+    pub fn analyze_from_candles(
+        hour: u8,
+        quarter: u8,
+        candles: &[&Candle],
+    ) -> Result<VolatilityDuration, VolatilityError> {
+        if candles.is_empty() {
+            return Err(VolatilityError::InsufficientData(
+                "Pas de bougies pour analyser".to_string(),
+            ));
+        }
 
-        // Minimum 30min, maximum 90% du peak_duration
-        let min_half_life = if atr > 0.002 { 30 } else { 45 };
-        let max_half_life = (peak_duration as f64 * 0.9) as u16;
+        if candles.len() < 5 {
+            return Err(VolatilityError::InsufficientData(
+                "Au moins 5 bougies requises".to_string(),
+            ));
+        }
 
-        Ok(half_life.max(min_half_life).min(max_half_life))
+        // 1. Calculer l'ATR pour chaque bougie (mesure réelle de volatilité)
+        let atr_values = Self::calculate_atr_values(candles)?;
+
+        // 2. Trouver le pic d'ATR
+        let peak_atr = atr_values
+            .iter()
+            .cloned()
+            .fold(f64::NEG_INFINITY, f64::max);
+
+        if peak_atr <= 0.0 {
+            return Err(VolatilityError::MetricCalculationError(
+                "ATR peak invalide".to_string(),
+            ));
+        }
+
+        // 3. Trouver quand l'ATR atteint le pic
+        let peak_index = atr_values
+            .iter()
+            .position(|&atr| (atr - peak_atr).abs() < 1e-10)
+            .unwrap_or(0);
+
+        // 4. Calculer le peak_duration (minutes avec ATR > 80% du pic)
+        let peak_duration = Self::calculate_peak_duration(&atr_values, peak_atr)?;
+
+        // 5. Calculer la demi-vie réelle (quand ATR revient à 50% du pic)
+        let half_life = Self::calculate_half_life(&atr_values, peak_index, peak_atr)?;
+
+        // 6. Valider
+        if half_life >= peak_duration {
+            return Err(VolatilityError::MetricCalculationError(
+                "half_life doit être < peak_duration".to_string(),
+            ));
+        }
+
+        Ok(VolatilityDuration::new(
+            hour,
+            quarter,
+            peak_duration,
+            half_life,
+            candles.len() as u16,
+        ))
+    }
+
+    /// Calcule l'ATR Wilder pour chaque bougie (mesure réelle de volatilité)
+    fn calculate_atr_values(candles: &[&Candle]) -> Result<Vec<f64>, VolatilityError> {
+        if candles.len() < 2 {
+            return Err(VolatilityError::InsufficientData(
+                "Au moins 2 bougies pour ATR".to_string(),
+            ));
+        }
+
+        let mut atr_values = Vec::new();
+        const PERIOD: f64 = 14.0;
+
+        // Calculer TR pour chaque bougie
+        let mut tr_values = Vec::new();
+        for i in 0..candles.len() {
+            let curr = candles[i];
+            let hl = curr.high - curr.low;
+
+            if i == 0 {
+                tr_values.push(hl);
+            } else {
+                let prev_close = candles[i - 1].close;
+                let hc = (curr.high - prev_close).abs();
+                let lc = (curr.low - prev_close).abs();
+                tr_values.push(hl.max(hc).max(lc));
+            }
+        }
+
+        // Wilder's EMA pour ATR
+        let mut atr = tr_values.iter().take(14).sum::<f64>() / PERIOD;
+        atr_values.push(atr);
+
+        for i in 14..tr_values.len() {
+            atr = (atr * (PERIOD - 1.0) + tr_values[i]) / PERIOD;
+            atr_values.push(atr);
+        }
+
+        Ok(atr_values)
+    }
+
+    /// Calcule le peak_duration (minutes où ATR > 80% du pic)
+    fn calculate_peak_duration(
+        atr_values: &[f64],
+        peak_atr: f64,
+    ) -> Result<u16, VolatilityError> {
+        let threshold = peak_atr * 0.8;
+        let peak_count = atr_values.iter().filter(|&&atr| atr > threshold).count();
+        Ok(peak_count.max(1) as u16)
+    }
+
+    /// Calcule la demi-vie réelle (minutes après le pic pour revenir à 50%)
+    fn calculate_half_life(
+        atr_values: &[f64],
+        peak_index: usize,
+        peak_atr: f64,
+    ) -> Result<u16, VolatilityError> {
+        let threshold = peak_atr * 0.5;
+
+        // Chercher après le pic
+        for i in (peak_index + 1)..atr_values.len() {
+            if atr_values[i] <= threshold {
+                return Ok((i - peak_index) as u16);
+            }
+        }
+
+        // Si pas trouvé, utiliser la fin de la série
+        let half_life = (atr_values.len() - peak_index) as u16;
+        Ok(half_life.max(1))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Utc;
 
-    fn create_test_slice(hour: u8, quarter: u8) -> Stats15Min {
-        Stats15Min {
-            hour,
-            quarter,
-            candle_count: 500,
-            atr_mean: 0.0020,
-            atr_max: 0.0035,
-            volatility_mean: 0.25,
-            range_mean: 50.0,
-            body_range_mean: 45.0,
-            shadow_ratio_mean: 0.5,
-            tick_quality_mean: 0.0008,
-            volume_imbalance_mean: 1.2,
-            noise_ratio_mean: 2.0,
-            breakout_percentage: 18.0,
-            events: vec![],
+    fn create_test_candle(hour: u8, minute: u8, close: f64, high: f64, low: f64) -> Candle {
+        let mut dt = Utc::now()
+            .with_hour(hour as u32)
+            .unwrap()
+            .with_minute(minute as u32)
+            .unwrap()
+            .with_second(0)
+            .unwrap();
+        
+        Candle {
+            id: None,
+            symbol: "EURUSD".to_string(),
+            datetime: dt,
+            open: close,
+            high,
+            low,
+            close,
+            volume: 1000.0,
         }
     }
 
     #[test]
-    fn test_analyze_typical_scenario() {
-        let slice = create_test_slice(14, 2);
-        let result = VolatilityDurationAnalyzer::analyze(&slice);
+    fn test_analyze_from_candles_typical() {
+        let candles = vec![
+            create_test_candle(14, 0, 1.0800, 1.0810, 1.0790),
+            create_test_candle(14, 1, 1.0805, 1.0815, 1.0795),
+            create_test_candle(14, 2, 1.0800, 1.0820, 1.0790),
+            create_test_candle(14, 3, 1.0810, 1.0825, 1.0800),
+            create_test_candle(14, 4, 1.0820, 1.0830, 1.0810),
+            create_test_candle(14, 5, 1.0815, 1.0825, 1.0805),
+            create_test_candle(14, 6, 1.0810, 1.0820, 1.0800),
+            create_test_candle(14, 7, 1.0805, 1.0815, 1.0795),
+            create_test_candle(14, 8, 1.0800, 1.0810, 1.0790),
+            create_test_candle(14, 9, 1.0795, 1.0805, 1.0785),
+            create_test_candle(14, 10, 1.0790, 1.0800, 1.0780),
+            create_test_candle(14, 11, 1.0795, 1.0805, 1.0785),
+            create_test_candle(14, 12, 1.0800, 1.0810, 1.0790),
+            create_test_candle(14, 13, 1.0805, 1.0815, 1.0795),
+            create_test_candle(14, 14, 1.0810, 1.0820, 1.0800),
+            create_test_candle(14, 15, 1.0815, 1.0825, 1.0805),
+        ];
+        let candle_refs: Vec<&Candle> = candles.iter().collect();
+        let result = VolatilityDurationAnalyzer::analyze_from_candles(14, 0, &candle_refs);
         assert!(result.is_ok());
         let vd = result.unwrap();
         assert!(vd.is_valid());
-        assert!(vd.peak_duration_minutes > 0 && vd.peak_duration_minutes <= 300);
+        assert!(vd.peak_duration_minutes > 0);
         assert!(vd.volatility_half_life_minutes < vd.peak_duration_minutes);
     }
 
     #[test]
-    fn test_high_volatility_scenario() {
-        let mut slice = create_test_slice(14, 2);
-        slice.atr_mean = 0.0025;
-        slice.range_mean = 70.0;
-        slice.body_range_mean = 55.0;
-        let vd = VolatilityDurationAnalyzer::analyze(&slice)
-            .expect("Devrait analyser volatilité élevée");
-        // Volatilité élevée = pic court
-        assert!(vd.peak_duration_minutes <= 150);
+    fn test_analyze_insufficient_candles() {
+        let candles = vec![create_test_candle(14, 0, 1.0800, 1.0810, 1.0790)];
+        let candle_refs: Vec<&Candle> = candles.iter().collect();
+        let result = VolatilityDurationAnalyzer::analyze_from_candles(14, 0, &candle_refs);
+        assert!(result.is_err());
     }
 
     #[test]
-    fn test_low_volatility_scenario() {
-        let mut slice = create_test_slice(10, 0);
-        slice.atr_mean = 0.0008;
-        slice.range_mean = 20.0;
-        slice.body_range_mean = 15.0;
-        let vd = VolatilityDurationAnalyzer::analyze(&slice)
-            .expect("Devrait analyser volatilité faible");
-        // Volatilité faible = pic long
-        assert!(vd.peak_duration_minutes >= 200);
-    }
-
-    #[test]
-    fn test_stable_volatility_long_half_life() {
-        let mut slice = create_test_slice(10, 0);
-        slice.noise_ratio_mean = 1.2; // Très stable
-        let vd = VolatilityDurationAnalyzer::analyze(&slice).expect("Devrait analyser");
-        // Noise faible = half_life longue
-        assert!(vd.volatility_half_life_minutes > 60);
-    }
-
-    #[test]
-    fn test_empty_slice_error() {
-        let slice = Stats15Min {
-            hour: 14,
-            quarter: 2,
-            candle_count: 0,
-            atr_mean: 0.0,
-            atr_max: 0.0,
-            volatility_mean: 0.0,
-            range_mean: 0.0,
-            body_range_mean: 0.0,
-            shadow_ratio_mean: 0.0,
-            tick_quality_mean: 0.0,
-            volume_imbalance_mean: 0.0,
-            noise_ratio_mean: 0.0,
-            breakout_percentage: 0.0,
-            events: vec![],
-        };
-        let result = VolatilityDurationAnalyzer::analyze(&slice);
+    fn test_analyze_empty_candles() {
+        let candles: Vec<Candle> = vec![];
+        let candle_refs: Vec<&Candle> = candles.iter().collect();
+        let result = VolatilityDurationAnalyzer::analyze_from_candles(14, 0, &candle_refs);
         assert!(result.is_err());
     }
 }

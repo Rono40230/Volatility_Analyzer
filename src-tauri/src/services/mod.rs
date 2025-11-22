@@ -16,6 +16,8 @@ pub mod event_correlation;
 pub mod event_duration_analyzer;
 pub mod event_metrics_aggregator;
 pub mod global_analyzer;
+pub mod global_analyzer_helpers;
+pub mod global_analyzer_types;
 pub mod import_processor;
 pub mod metrics;
 pub mod movement_analyzer;
