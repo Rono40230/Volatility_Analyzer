@@ -46,6 +46,10 @@ export interface Stats15Min {
   noise_ratio_mean: number
   breakout_percentage: number
   events: EventInHour[]
+  // TÂCHE 4: Analyse de décroissance de volatilité
+  peak_duration_minutes?: number
+  volatility_half_life_minutes?: number
+  recommended_trade_expiration_minutes?: number
 }
 
 export interface GlobalMetrics {

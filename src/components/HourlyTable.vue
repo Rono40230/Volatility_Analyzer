@@ -84,6 +84,9 @@
                         <th>Quality</th>
                         <th>Noise</th>
                         <th>Breakout %</th>
+                        <th title="TÂCHE 4: Minutes volatilité > 80% pic">Peak (min)</th>
+                        <th title="TÂCHE 4: Minutes pour -50% volatilité">Half-Life (min)</th>
+                        <th title="TÂCHE 4: Durée optimale fermeture trade" class="trade-exp-header">Trade Exp (min)</th>
                         <th>Evenements</th>
                       </tr>
                     </thead>
@@ -104,6 +107,16 @@
                         <td>{{ formatTickQuality(quarter.tick_quality_mean) }}</td>
                         <td>{{ quarter.noise_ratio_mean.toFixed(2) }}</td>
                         <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
+                        <td class="duration-cell" :title="`Peak duration: ${quarter.peak_duration_minutes ?? 'N/A'} min`">
+                          {{ quarter.peak_duration_minutes !== undefined ? quarter.peak_duration_minutes : '—' }}
+                        </td>
+                        <td class="duration-cell" :title="`Half-life: ${quarter.volatility_half_life_minutes ?? 'N/A'} min`">
+                          {{ quarter.volatility_half_life_minutes !== undefined ? quarter.volatility_half_life_minutes : '—' }}
+                        </td>
+                        <td class="trade-exp-cell" :class="{ 'warning': isTradeExpTooLong(quarter) }" :title="`Fermer trade après ${quarter.recommended_trade_expiration_minutes ?? 'N/A'} min`">
+                          {{ quarter.recommended_trade_expiration_minutes !== undefined ? quarter.recommended_trade_expiration_minutes : '—' }}
+                          <span v-if="isTradeExpTooLong(quarter)" class="warning-icon">⚠️</span>
+                        </td>
                         <td class="events-cell">
                           <button
                             v-if="getDistinctEventCount(quarter.events) > 0"
@@ -382,6 +395,11 @@ function getTop3SliceRank(hour: number, quarter: number): number {
 function hasTop3SlicesInHour(hour: number): boolean {
   return top3Slices.value.some(item => item.hour === hour)
 }
+
+// TÂCHE 4: Alerter si durée recommandée trop longue (>150 min = 2.5h)
+function isTradeExpTooLong(slice: Stats15Min): boolean {
+  return (slice.recommended_trade_expiration_minutes ?? 0) > 150
+}
 </script>
 
 <style scoped>
@@ -648,6 +666,43 @@ tbody tr:hover {
 .no-event {
   color: #6e7681;
   font-size: 1.2rem;
+}
+
+/* TÂCHE 4: Styles pour durées de volatilité */
+.trade-exp-header {
+  background: linear-gradient(135deg, rgba(249, 158, 11, 0.1), rgba(239, 68, 68, 0.1)) !important;
+  font-weight: 600;
+}
+
+.duration-cell {
+  text-align: center;
+  color: #4b5563;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.trade-exp-cell {
+  text-align: center;
+  font-weight: 600;
+  color: #059669;
+  background: rgba(16, 185, 129, 0.05);
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+.trade-exp-cell.warning {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+.trade-exp-cell.warning .warning-icon {
+  margin-left: 4px;
+  font-size: 0.9em;
+}
+
+.scalping-row:hover .duration-cell {
+  color: #1f2937;
+  background: rgba(59, 130, 246, 0.05);
 }
 </style>
 
