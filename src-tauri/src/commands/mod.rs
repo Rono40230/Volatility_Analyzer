@@ -50,6 +50,7 @@ pub use pair_data::import_pair_data;
 pub use session_commands::*;
 pub use volatility::{
     analyze_straddle_metrics, analyze_symbol, calculate_offset_optimal, calculate_whipsaw_freq,
-    calculate_win_rate, get_best_hours, get_hourly_stats, load_symbols, ping,
+    calculate_win_rate, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
+    load_candles_for_hour, load_symbols, ping,
 };
 pub use volatility_duration_commands::analyze_volatility_duration;

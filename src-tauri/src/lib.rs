@@ -156,6 +156,8 @@ pub fn run() {
             calculate_win_rate,
             calculate_whipsaw_freq,
             analyze_straddle_metrics, // NEW: Analyse complète avec VRAIES données
+            load_candles_for_hour,     // NEW: Charger 60 candles pour une heure
+            get_cached_candles_for_hour, // NEW: Récupérer candles en cache
             // Calendar commands (Phase 2 MVP)
             get_upcoming_events,
             load_economic_events_from_csv,
