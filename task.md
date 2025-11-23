@@ -31,9 +31,9 @@
 
 ### 🎯 TÂCHE 5: Ajouter Métriques Manquantes Critiques pour Straddle
 
-**STATUS**: 🟡 PARTIELLEMENT RÉALISÉE (Phase 1 ✅ + Phase 2 ✅ + Phase 3 🟠 TODO)
+**STATUS**: ✅ **COMPLÉTÉE 100%** (Push: f35b36c)
 
-#### Phase 1 ✅ COMPLÉTÉE: Backend Services (Commits: 1c22a29, 1bd0f52)
+#### Phase 1 ✅ COMPLÉTÉE: Backend Services
 
 **5.1 - Offset Optimal** ✅
 - Fichier: `src-tauri/src/services/volatility/offset_calculator.rs` (167L)
@@ -70,20 +70,37 @@
 - Display: 3 metric cards (Offset, Win Rate, Whipsaw) ✅
 - Watcher: Appel à `analyzeStraddleMetrics` ✅
 
-#### Phase 5 🟠 TODO: Charger VRAIES Candles
+#### Phase 5 ✅ COMPLÉTÉE: Charger VRAIES Candles (Commits: 8657f67, f35b36c)
 
-**Bloqueur**: Le watcher passe `emptyCandles[]` - besoin de charger depuis DB
+**Implémentation**:
+- Méthode `get_candles_for_hour()` ajoutée à `CandleIndex` ✅
+- Command Tauri: `get_candles_for_hour(symbol, date_str, hour)` ✅
+- Composable: `loadCandlesForHour()` - Charge depuis DB ✅
+- Watcher: Appel `analyzeStraddleMetrics(symbol, dateStr, hour)` ✅
+- **PLUS DE MOCK DATA** - VRAIES candles uniquement ✅
 
-**Options**:
-1. Créer command `load_candles_for_hour(symbol, year, month, day, hour)` 
-2. Charger via `load_pair_candles` + extraire l'heure
-3. Passer depuis analysisResult si disponible
+**Résultat**: 
+- 60 candles (1min) chargées pour l'heure spécifiée
+- P95 wicks calculé avec vraies données
+- Win rate simulé sur vraies conditions
+- Whipsaw frequency réel (pas théorique)
 
-**Prochaine itération**: Implémenter chargement candles réelles (2-3h)
-**Objectif**: Calculer la distance minimale pour éviter 95% des fausses mèches  
-**Fichiers à créer/modifier**:
-- `src-tauri/src/services/volatility/offset_calculator.rs` (nouveau)
-- `src/utils/straddleAnalysis.ts` - Ajouter affichage
+---
+
+## ✅ TÂCHE 5 RÉSUMÉ FINAL
+
+**Total**: 5 phases complétées
+**Commits**: 1c22a29, 1bd0f52, 8657f67, f35b36c
+**Status**: PUSH ✅ vers origin/main
+
+**Fichiers créés**: 5 nouveaux
+- `offset_calculator.rs` - P95 wicks + 10% marge
+- `win_rate_calculator.rs` - Backtest 15min
+- `whipsaw_detector.rs` - Détection dual breach
+- `straddle_analysis.rs` - Command aggregator
+- `straddle_metrics_types.rs` - Structs + helpers
+- `candle_index_commands.rs` - get_candles_for_hour
+- `useStraddleAnalysis.ts` - Frontend composable
 
 **Algorithme**:
 ```rust
@@ -102,20 +119,9 @@ pub fn calculate_optimal_offset(candles: &[Candle]) -> f64 {
     // 2. Calculer le percentile 95
     let mut sorted_wicks = wicks.clone();
     sorted_wicks.sort_by(|a, b| a.partial_cmp(b).unwrap());
-**Estimation**: 2-3 heures  
-**Validation**: Vérifier que offset calculé > ATR × 0.75 actuel
-
----
-
-#### 5.2 - Win Rate Simulé
-**Objectif**: Backtester des Straddles avec différents offsets pour calculer le win rate réel  
-**Status**: ✅ IMPLÉMENTÉ (voir `win_rate_calculator.rs`)
-
----
-
-#### 5.3 - Fréquence Whipsaw  
-**Objectif**: Mesurer le % de fois où les 2 ordres sont déclenchés (perte garantie)  
-**Status**: ✅ IMPLÉMENTÉ (voir `whipsaw_detector.rs`)
+    sorted_wicks[wicks.len() * 95 / 100]
+}
+```
 
 ---
 
