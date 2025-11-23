@@ -31,7 +31,55 @@
 
 ### 🎯 TÂCHE 5: Ajouter Métriques Manquantes Critiques pour Straddle
 
-#### 5.1 - Offset Optimal Calculé
+**STATUS**: 🟡 PARTIELLEMENT RÉALISÉE (Phase 1 ✅ + Phase 2 ✅ + Phase 3 🟠 TODO)
+
+#### Phase 1 ✅ COMPLÉTÉE: Backend Services (Commits: 1c22a29, 1bd0f52)
+
+**5.1 - Offset Optimal** ✅
+- Fichier: `src-tauri/src/services/volatility/offset_calculator.rs` (167L)
+- Implémentation: P95 percentile des wicks + 10% marge
+- Tests: Inclus + validés
+
+**5.2 - Win Rate Simulé** ✅  
+- Fichier: `src-tauri/src/services/volatility/win_rate_calculator.rs` (242L)
+- Implémentation: Backtest Straddle 15min simulation
+- Tests: Inclus + validés
+
+**5.3 - Whipsaw Detection** ✅
+- Fichier: `src-tauri/src/services/volatility/whipsaw_detector.rs` (254L)
+- Implémentation: Détection double déclenchement (dual breach)
+- Risk levels: Very Low/Low/Moderate/High/Very High avec colors
+- Tests: Inclus + validés
+
+#### Phase 2 ✅ COMPLÉTÉE: Tauri Commands (Commits: 1c22a29, 1bd0f52)
+
+- Command: `analyze_straddle_metrics(symbol, hour, candles)` ✅
+- Registrée dans `invoke_handler` ✅
+- Combine les 3 services en un seul call ✅
+
+#### Phase 3 ✅ COMPLÉTÉE: Frontend Composable (Commit: 1bd0f52)
+
+- Fichier: `src/composables/useStraddleAnalysis.ts` (90L)
+- Composable: `useStraddleAnalysis()` avec `analyzeStraddleMetrics()` ✅
+- Exports: States + Computed colors ✅
+
+#### Phase 4 ✅ COMPLÉTÉE: Frontend Integration (Commit: 1bd0f52)
+
+- Fichier: `src/components/MetricsAnalysisModal.vue` (2145L)
+- Sections UI: `.straddle-performance-section` ✅
+- Display: 3 metric cards (Offset, Win Rate, Whipsaw) ✅
+- Watcher: Appel à `analyzeStraddleMetrics` ✅
+
+#### Phase 5 🟠 TODO: Charger VRAIES Candles
+
+**Bloqueur**: Le watcher passe `emptyCandles[]` - besoin de charger depuis DB
+
+**Options**:
+1. Créer command `load_candles_for_hour(symbol, year, month, day, hour)` 
+2. Charger via `load_pair_candles` + extraire l'heure
+3. Passer depuis analysisResult si disponible
+
+**Prochaine itération**: Implémenter chargement candles réelles (2-3h)
 **Objectif**: Calculer la distance minimale pour éviter 95% des fausses mèches  
 **Fichiers à créer/modifier**:
 - `src-tauri/src/services/volatility/offset_calculator.rs` (nouveau)
@@ -54,14 +102,6 @@ pub fn calculate_optimal_offset(candles: &[Candle]) -> f64 {
     // 2. Calculer le percentile 95
     let mut sorted_wicks = wicks.clone();
     sorted_wicks.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    let p95_index = (sorted_wicks.len() as f64 * 0.95) as usize;
-    let offset_95 = sorted_wicks[p95_index];
-    
-    // 3. Ajouter marge de sécurité (10%)
-    offset_95 * 1.1
-}
-```
-
 **Estimation**: 2-3 heures  
 **Validation**: Vérifier que offset calculé > ATR × 0.75 actuel
 
@@ -69,101 +109,13 @@ pub fn calculate_optimal_offset(candles: &[Candle]) -> f64 {
 
 #### 5.2 - Win Rate Simulé
 **Objectif**: Backtester des Straddles avec différents offsets pour calculer le win rate réel  
-**Fichiers à créer/modifier**:
-- `src-tauri/src/services/volatility/win_rate_calculator.rs` (nouveau)
-- `src/components/MetricsAnalysisModal.vue` - Afficher win rate
-
-**Algorithme**:
-```rust
-pub fn simulate_straddle_win_rate(
-    candles: &[Candle],
-    event_times: &[NaiveDateTime],
-    offset_pips: f64,
-) -> f64 {
-    let mut wins = 0;
-    let mut total = 0;
-    
-    for event_time in event_times {
-        // Trouver la bougie au moment de l'événement
-        let entry_candle = find_candle_at(candles, event_time);
-        let entry_price = entry_candle.close;
-        
-        let buy_stop = entry_price + offset_pips;
-        let sell_stop = entry_price - offset_pips;
-        
-        // Analyser les 15 minutes suivantes
-        let next_15min = get_candles_after(candles, event_time, 15);
-        
-        // Vérifier déclenchement
-        let buy_triggered = next_15min.iter().any(|c| c.high >= buy_stop);
-        let sell_triggered = next_15min.iter().any(|c| c.low <= sell_stop);
-        
-        // Whipsaw = perte
-        if buy_triggered && sell_triggered {
-            total += 1;
-            continue;
-        }
-        
-        // Un seul déclenché = vérifier profit
-        if buy_triggered {
-            let max_profit = next_15min.iter().map(|c| c.high).max().unwrap() - buy_stop;
-            if max_profit > offset_pips { wins += 1; }
-            total += 1;
-        } else if sell_triggered {
-            let max_profit = sell_stop - next_15min.iter().map(|c| c.low).min().unwrap();
-            if max_profit > offset_pips { wins += 1; }
-            total += 1;
-        }
-    }
-    
-    if total == 0 { 0.0 } else { wins as f64 / total as f64 }
-}
-```
-
-**Estimation**: 4-5 heures  
-**Validation**: Win rate doit être entre 40-70% pour être réaliste
+**Status**: ✅ IMPLÉMENTÉ (voir `win_rate_calculator.rs`)
 
 ---
 
-#### 5.3 - Fréquence Whipsaw
+#### 5.3 - Fréquence Whipsaw  
 **Objectif**: Mesurer le % de fois où les 2 ordres sont déclenchés (perte garantie)  
-**Fichiers à créer/modifier**:
-- `src-tauri/src/services/volatility/whipsaw_detector.rs` (nouveau)
-
-**Algorithme**:
-```rust
-pub fn calculate_whipsaw_frequency(
-    candles: &[Candle],
-    event_times: &[NaiveDateTime],
-    offset_pips: f64,
-) -> f64 {
-    let mut whipsaw_count = 0;
-    let mut total = 0;
-    
-    for event_time in event_times {
-        let entry_candle = find_candle_at(candles, event_time);
-        let entry_price = entry_candle.close;
-        
-        let buy_stop = entry_price + offset_pips;
-        let sell_stop = entry_price - offset_pips;
-        
-        let next_15min = get_candles_after(candles, event_time, 15);
-        
-        let buy_triggered = next_15min.iter().any(|c| c.high >= buy_stop);
-        let sell_triggered = next_15min.iter().any(|c| c.low <= sell_stop);
-        
-        if buy_triggered && sell_triggered {
-            whipsaw_count += 1;
-        }
-        total += 1;
-    }
-    
-    if total == 0 { 0.0 } else { whipsaw_count as f64 / total as f64 }
-}
-```
-
-**Estimation**: 2 heures  
-**Validation**: Whipsaw < 20% = bon, > 40% = mauvais setup
+**Status**: ✅ IMPLÉMENTÉ (voir `whipsaw_detector.rs`)
 
 ---
 
