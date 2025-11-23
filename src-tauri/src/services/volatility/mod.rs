@@ -8,8 +8,14 @@ mod correlation;
 mod event_loader;
 mod hourly_stats;
 mod metrics;
+mod offset_calculator;
 mod stats_15min;
 mod utils;
+mod whipsaw_detector;
+mod win_rate_calculator;
 
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;
+pub use offset_calculator::{calculate_optimal_offset, OffsetStats};
+pub use whipsaw_detector::{calculate_whipsaw_frequency, WhipsawAnalysis, WhipsawRiskLevel};
+pub use win_rate_calculator::{simulate_straddle_win_rate, WinRateResult};

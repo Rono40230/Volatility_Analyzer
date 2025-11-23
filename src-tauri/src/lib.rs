@@ -152,6 +152,10 @@ pub fn run() {
             analyze_symbol,
             get_hourly_stats,
             get_best_hours,
+            calculate_offset_optimal,
+            calculate_win_rate,
+            calculate_whipsaw_freq,
+            analyze_straddle_metrics, // NEW: Analyse complète avec VRAIES données
             // Calendar commands (Phase 2 MVP)
             get_upcoming_events,
             load_economic_events_from_csv,

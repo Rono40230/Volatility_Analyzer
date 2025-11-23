@@ -553,6 +553,48 @@
 
               </div>
             </div>
+
+            <!-- Straddle Performance Metrics (TÂCHE 5) -->
+            <div class="straddle-performance-section">
+              <h4>📊 Performance Straddle Simulée</h4>
+              <div class="performance-grid">
+                <!-- Win Rate -->
+                <div class="performance-metric">
+                  <div class="metric-label">Win Rate</div>
+                  <div v-if="winRate" class="metric-display">
+                    <span class="metric-value" :style="{ color: winRateColor }">{{ winRate.win_rate_percentage.toFixed(1) }}%</span>
+                    <span class="metric-subtext">({{ winRate.wins }}/{{ winRate.total_trades }} trades)</span>
+                  </div>
+                  <div v-else class="metric-loading">
+                    <span>⏳ Calcul...</span>
+                  </div>
+                </div>
+
+                <!-- Whipsaw Frequency -->
+                <div class="performance-metric">
+                  <div class="metric-label">Fréquence Whipsaw</div>
+                  <div v-if="whipsawAnalysis" class="metric-display">
+                    <span class="metric-value" :style="{ color: whipsawAnalysis.risk_color }">{{ whipsawAnalysis.whipsaw_frequency_percentage.toFixed(1) }}%</span>
+                    <span class="metric-subtext">({{ whipsawAnalysis.risk_level }})</span>
+                  </div>
+                  <div v-else class="metric-loading">
+                    <span>⏳ Calcul...</span>
+                  </div>
+                </div>
+
+                <!-- Offset Optimal -->
+                <div class="performance-metric">
+                  <div class="metric-label">Offset Optimal</div>
+                  <div v-if="offsetOptimal" class="metric-display">
+                    <span class="metric-value">{{ offsetOptimal.offset_pips.toFixed(1) }} pips</span>
+                    <span class="metric-subtext">(P95: {{ offsetOptimal.percentile_95_wicks.toFixed(1) }})</span>
+                  </div>
+                  <div v-else class="metric-loading">
+                    <span>⏳ Calcul...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -584,7 +626,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive, onMounted } from 'vue'
+import { ref, watch, reactive, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { AnalysisResult } from '../stores/volatility'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
@@ -592,6 +634,7 @@ import { analyzeTop3Slices, calculateBidiParameters } from '../utils/straddleAna
 import type { BidiParameters } from '../utils/straddleAnalysis'
 import MetricTooltip from './MetricTooltip.vue'
 import ArchiveModal from './ArchiveModal.vue'
+import { useStraddleAnalysis, type OptimalOffset, type WinRateMetric, type WhipsawMetric } from '../composables/useStraddleAnalysis'
 
 interface Props {
   isOpen: boolean
@@ -655,7 +698,17 @@ const analysisData = ref<any>(null)
 const sliceAnalyses = ref<SliceAnalysis[] | null>(null)
 const movementQualities = ref<Record<string, MovementQuality>>({})
 const volatilityDuration = ref<VolatilityDuration | null>(null)
-const tradingPlan = ref<any>(null) // { tradeDurationMinutes, tradeExpiration, ... }
+const tradingPlan = ref<any>(null)
+
+// TÂCHE 5 - Straddle Analysis Metrics
+const { 
+  isLoading,
+  offsetOptimal, 
+  winRate, 
+  whipsawAnalysis,
+  analyzeStraddleMetrics,
+  winRateColor
+} = useStraddleAnalysis()
 const entryWindowAnalysis = reactive({
   symbol: '',
   event_type: '',
@@ -808,6 +861,46 @@ onMounted(() => {
     updateAnalysis()
   }
 })
+
+// TÂCHE 5 - Calculer les métriques Straddle quand les données changent
+watch(
+  () => sliceAnalyses.value,
+  async (newSlices) => {
+    if (newSlices && newSlices.length > 0 && props.analysisResult) {
+      console.log('🎯 TÂCHE 5: Analyse des métriques Straddle...')
+      
+      // Récupérer le meilleur slice (rank 1)
+      const bestSlice = newSlices[0]
+      if (!bestSlice || !bestSlice.slice || !bestSlice.slice.stats) {
+        console.warn('⚠️ Pas de slice ou stats disponibles')
+        return
+      }
+
+      try {
+        const symbol = props.analysisResult.symbol || 'EURUSD'
+        
+        // TODO: Charger les VRAIES 60 candles (1min) depuis la DB pour cette heure
+        // Pour l'instant, appel avec tableau vide pour tester la structure
+        const emptyCandles: any[] = []
+
+        // Appeler la nouvelle command Tauri avec VRAIES données
+        await analyzeStraddleMetrics(
+          symbol,
+          0, // hour - TODO: récupérer depuis bestSlice
+          emptyCandles // TODO: Charger depuis DB
+        )
+
+        console.log('✅ TÂCHE 5 Métriques calculées:')
+        console.log('   - Offset:', offsetOptimal.value?.offset_pips, 'pips')
+        console.log('   - Win Rate:', winRate.value?.win_rate_percentage, '%')
+        console.log('   - Whipsaw:', whipsawAnalysis.value?.whipsaw_frequency_percentage, '%')
+      } catch (error) {
+        console.error('❌ Erreur calcul TÂCHE 5:', error)
+      }
+    }
+  },
+  { deep: true }
+)
 
 const close = () => {
   emit('close')
@@ -1961,6 +2054,74 @@ const getQualityRecommendation = (score: number): string => {
 .quality-loading {
   text-align: center;
   padding: 12px;
+  color: #64748b;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* Straddle Performance Section (TÂCHE 5) */
+.straddle-performance-section {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+  border-left: 3px solid #a855f7;
+  padding: 14px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.straddle-performance-section h4 {
+  color: #e9d5ff;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.performance-metric {
+  background: rgba(30, 30, 45, 0.6);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 6px;
+  padding: 12px;
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.metric-display {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metric-value {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.metric-subtext {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.metric-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
   color: #64748b;
   font-size: 12px;
   font-style: italic;
