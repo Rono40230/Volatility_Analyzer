@@ -1,157 +1,30 @@
 <template>
   <div class="import-hub">
     <div class="sections-container">
-      <section class="import-section">
-        <h3>📅 Calendriers Économique</h3>
-        <div
-          v-if="calendarsMetadata.length > 0"
-          class="info-box"
-        >
-          <div>Calendriers: {{ calendarsMetadata.length }}</div>
-          <div>Événements: {{ calendarsMetadata.reduce((s, c) => s + c.event_count, 0).toLocaleString() }}</div>
-        </div>
-        <div
-          v-else
-          class="info-box warning"
-        >
-          Aucun calendrier importé.
-        </div>
-        <div
-          v-if="calendarsMetadata.length > 0"
-          class="table-container"
-        >
-          <table class="data-table">
-            <thead>
-              <tr><th>Nom</th><th>Événements</th><th>Période</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="cal in calendarsMetadata"
-                :key="cal.id"
-                :class="{ 'active-row': isActiveCalendar(cal.id) }"
-              >
-                <td>
-                  <span
-                    v-if="isActiveCalendar(cal.id)"
-                    class="active-badge"
-                  >✅ Actif</span>
-                  <strong>{{ cal.name }}</strong>
-                </td>
-                <td>{{ cal.event_count.toLocaleString() }}</td>
-                <td>{{ formatCalendarPeriod(cal) }}</td>
-                <td class="actions-cell">
-                  <button
-                    v-if="!isActiveCalendar(cal.id)"
-                    class="btn-activate"
-                    title="Utiliser ce calendrier pour l'analyse"
-                    @click="setActiveCalendar(cal.id)"
-                  >
-                    Activer
-                  </button>
-                  <button
-                    class="btn-delete"
-                    @click="deleteCalendar(cal.id)"
-                  >
-                    🗑️ Supprimer
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <button
-          class="btn-import"
-          :disabled="loadingCalendars"
-          @click="importCalendars"
-        >
-          <span
-            v-if="loadingCalendars"
-            class="spinner"
-          >⏳</span>
-          <span v-else>📥</span>
-          Importer calendrier
-        </button>
-      </section>
+      <CalendarImportSection
+        :calendars-metadata="calendarsMetadata"
+        :loading="loadingCalendars"
+        :active-calendar-id="activeCalendarId"
+        @import="importCalendars"
+        @delete="deleteCalendar"
+        @set-active="setActiveCalendar"
+      />
 
-      <section class="import-section">
-        <h3>💱 Paires de Trading</h3>
-        <div
-          v-if="pairsMetadata.length > 0"
-          class="info-box"
-        >
-          <div>Paires: {{ pairsMetadata.length }}</div>
-          <div>Bougies: {{ pairsMetadata.reduce((s, p) => s + p.candle_count, 0).toLocaleString() }}</div>
-        </div>
-        <div
-          v-else
-          class="info-box warning"
-        >
-          Aucune paire importée.
-        </div>
-        <div
-          v-if="pairsMetadata.length > 0"
-          class="table-container"
-        >
-          <table class="data-table">
-            <thead>
-              <tr><th>Paire</th><th>Bougies</th><th>Période</th><th>Actions</th></tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="pair in pairsMetadata"
-                :key="pair.symbol"
-              >
-                <td><strong>{{ pair.symbol }}</strong></td>
-                <td>{{ pair.candle_count.toLocaleString() }}</td>
-                <td>{{ formatPeriod(pair) }}</td>
-                <td>
-                  <button
-                    class="btn-delete"
-                    @click="deletePair(pair.symbol)"
-                  >
-                    🗑️ Supprimer
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <button
-          class="btn-import"
-          :disabled="loadingPairs"
-          @click="importPairs"
-        >
-          <span
-            v-if="loadingPairs"
-            class="spinner"
-          >⏳</span>
-          <span v-else>📥</span>
-          Importer paires
-        </button>
-      </section>
+      <PairImportSection
+        :pairs-metadata="pairsMetadata"
+        :loading="loadingPairs"
+        @import="importPairs"
+        @delete="deletePair"
+      />
     </div>
 
-    <div
-      v-if="showDeleteConfirm"
-      class="modal-overlay"
-      @click.self="showDeleteConfirm = false"
-    >
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
       <div class="modal">
         <h3>Confirmation</h3>
         <p>{{ deleteMessage }}</p>
         <div class="modal-buttons">
-          <button
-            class="btn-confirm"
-            @click="confirmDelete"
-          >
-            ✅ Confirmer
-          </button>
-          <button
-            class="btn-cancel"
-            @click="showDeleteConfirm = false"
-          >
-            ❌ Annuler
-          </button>
+          <button class="btn-confirm" @click="confirmDelete">✅ Confirmer</button>
+          <button class="btn-cancel" @click="showDeleteConfirm = false">❌ Annuler</button>
         </div>
       </div>
     </div>
@@ -163,6 +36,8 @@ import { ref, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { useVolatilityStore } from '../stores/volatility'
+import CalendarImportSection from './CalendarImportSection.vue'
+import PairImportSection from './PairImportSection.vue'
 
 const store = useVolatilityStore()
 
@@ -176,24 +51,17 @@ const deleteType = ref<'calendar' | 'pair'>('calendar')
 const deleteId = ref(0)
 const deleteSymbol = ref('')
 const deleteTimeframe = ref('')
-
 const activeCalendarId = ref<number | null>(null)
 
 onMounted(async () => {
   await loadMetadata()
-  // Charger l'ID actif depuis localStorage
   const storedId = localStorage.getItem('activeCalendarId')
   if (storedId) {
     activeCalendarId.value = parseInt(storedId, 10)
   } else if (calendarsMetadata.value.length > 0) {
-    // Si aucun actif mais qu'il y en a un, on active le premier par défaut
     setActiveCalendar(calendarsMetadata.value[0].id)
   }
 })
-
-function isActiveCalendar(id: number): boolean {
-  return activeCalendarId.value === id
-}
 
 function setActiveCalendar(id: number) {
   activeCalendarId.value = id
@@ -207,62 +75,21 @@ async function loadMetadata() {
     calendarsMetadata.value = calendars || []
     pairsMetadata.value = pairs || []
   } catch (err) {
-    console.error('Erreur chargement métadonnées:', err)
+    // Erreur silencieuse
   }
-}
-
-function formatPeriod(pair: any): string {
-  if (!pair.start_date && !pair.end_date) return 'N/A'
-  
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return '?'
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-    } catch {
-      return dateString.substring(0, 10)
-    }
-  }
-  
-  const start = formatDate(pair.start_date)
-  const end = formatDate(pair.end_date)
-  return `du ${start} au ${end}`
-}
-
-function formatCalendarPeriod(calendar: any): string {
-  if (!calendar.start_date && !calendar.end_date) return 'N/A'
-  
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return '?'
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-    } catch {
-      return dateString.substring(0, 10)
-    }
-  }
-  
-  const start = formatDate(calendar.start_date)
-  const end = formatDate(calendar.end_date)
-  return `du ${start} au ${end}`
 }
 
 async function importCalendars() {
   loadingCalendars.value = true
   try {
-    const selected = await open({
-      multiple: true,
-      filters: [{ name: 'CSV', extensions: ['csv'] }]
-    })
-    
+    const selected = await open({ multiple: true, filters: [{ name: 'CSV', extensions: ['csv'] }] })
     if (!selected) return
-    
     const paths = Array.isArray(selected) ? selected : [selected]
     await invoke('import_calendar_files', { paths })
     await loadMetadata()
-    store.triggerDataRefresh() // Rafraîchir les données
+    store.triggerDataRefresh()
   } catch (err) {
-    console.error('Erreur import calendrier:', err)
+    // Erreur silencieuse
   } finally {
     loadingCalendars.value = false
   }
@@ -271,19 +98,14 @@ async function importCalendars() {
 async function importPairs() {
   loadingPairs.value = true
   try {
-    const selected = await open({
-      multiple: true,
-      filters: [{ name: 'CSV', extensions: ['csv'] }]
-    })
-    
+    const selected = await open({ multiple: true, filters: [{ name: 'CSV', extensions: ['csv'] }] })
     if (!selected) return
-    
     const paths = Array.isArray(selected) ? selected : [selected]
     await invoke('import_pair_data', { paths })
     await loadMetadata()
-    store.triggerDataRefresh() // Rafraîchir les données
+    store.triggerDataRefresh()
   } catch (err) {
-    console.error('Erreur import paires:', err)
+    // Erreur silencieuse
   } finally {
     loadingPairs.value = false
   }
@@ -299,7 +121,6 @@ function deleteCalendar(id: number) {
 function deletePair(symbol: string) {
   const pair = pairsMetadata.value.find(p => p.symbol === symbol)
   if (!pair) return
-  
   deleteType.value = 'pair'
   deleteId.value = pair.id
   deleteSymbol.value = pair.symbol
@@ -313,14 +134,11 @@ async function confirmDelete() {
     if (deleteType.value === 'calendar') {
       await invoke('delete_calendar_from_db', { calendarId: deleteId.value })
     } else {
-      await invoke('delete_pair_from_db', { 
-        symbol: deleteSymbol.value, 
-        timeframe: deleteTimeframe.value 
-      })
+      await invoke('delete_pair_from_db', { symbol: deleteSymbol.value, timeframe: deleteTimeframe.value })
     }
     await loadMetadata()
   } catch (err) {
-    console.error('Erreur suppression:', err)
+    // Erreur silencieuse
   } finally {
     showDeleteConfirm.value = false
   }
@@ -330,48 +148,6 @@ async function confirmDelete() {
 <style scoped>
 .import-hub { padding: 30px; }
 .sections-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
-.import-section { background: #1a202c; padding: 25px; border-radius: 12px; border: 1px solid #2d3748; }
-.import-section h3 { color: #e2e8f0; margin-top: 0; }
-.info-box { padding: 15px; background: #2d3748; border-radius: 8px; color: #e2e8f0; margin-bottom: 20px; }
-.info-box.warning { background: #7f3f1f; color: #fbbf24; }
-.table-container { overflow-x: auto; margin-bottom: 20px; }
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table th { background: #2d3748; padding: 12px; text-align: left; font-weight: 600; color: #e2e8f0; border-bottom: 2px solid #4a5568; }
-.data-table td { padding: 12px; border-bottom: 1px solid #2d3748; color: #e2e8f0; }
-.btn-import { 
-  display: block;
-  width: 100%;
-  padding: 12px 20px; 
-  background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
-  color: white; 
-  border: none; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  font-weight: 600;
-  margin-top: 15px;
-  transition: all 0.3s;
-  font-size: 1em;
-}
-.btn-import:hover {
-  background: linear-gradient(135deg, #1664d9 0%, #2d7ee5 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(31, 111, 235, 0.4);
-}
-.btn-import:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-.spinner {
-  display: inline-block;
-  animation: spin 1s linear infinite;
-  margin-right: 6px;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-.btn-delete { padding: 6px 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; }
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
 .modal { background: #1a202c; padding: 30px; border-radius: 12px; border: 1px solid #2d3748; max-width: 400px; }
 .modal h3 { color: #e2e8f0; }
@@ -379,19 +155,4 @@ async function confirmDelete() {
 .modal-buttons { display: flex; gap: 10px; margin-top: 20px; }
 .btn-confirm { flex: 1; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; }
 .btn-cancel { flex: 1; padding: 10px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer; }
-
-.active-row { background: rgba(34, 197, 94, 0.1); }
-.active-badge { 
-  display: inline-block; 
-  background: #22c55e; 
-  color: white; 
-  padding: 2px 6px; 
-  border-radius: 4px; 
-  font-size: 0.7em; 
-  margin-right: 6px; 
-  vertical-align: middle;
-}
-.actions-cell { display: flex; gap: 8px; }
-.btn-activate { padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; }
-.btn-activate:hover { background: #2563eb; }
 </style>
