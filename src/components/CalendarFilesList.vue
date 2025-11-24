@@ -196,6 +196,7 @@ async function deleteFile(filePath: string) {
     
     // Rafraîchir la liste
     await refreshFiles()
+    // eslint-disable-next-line no-alert
     alert(`✅ Fichier supprimé avec succès`)
   } catch (e) {
     error.value = `Erreur lors de la suppression: ${e}`

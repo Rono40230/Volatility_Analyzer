@@ -155,6 +155,7 @@ watch(() => props.show, (newVal) => {
 
 async function handleSave() {
   if (!archiveTitle.value.trim()) {
+    // eslint-disable-next-line no-alert
     alert('Veuillez saisir un nom pour l\'archive')
     return
   }
@@ -173,6 +174,7 @@ async function handleSave() {
     closeModal()
   } catch (error) {
     console.error('Erreur lors de l\'archivage:', error)
+    // eslint-disable-next-line no-alert
     alert('Erreur lors de l\'archivage: ' + error)
   } finally {
     saving.value = false
