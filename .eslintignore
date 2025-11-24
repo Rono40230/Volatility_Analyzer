@@ -1,0 +1,23 @@
+# Dépendances
+node_modules/
+dist/
+target/
+
+# Build Tauri
+src-tauri/target/
+src-tauri/Cargo.lock
+
+# Fichiers générés
+*.log
+*.cache
+
+# Configuration
+*.config.js
+*.config.ts
+vite.config.ts
+
+# Données statiques (traductions, schedules)
+src/utils/eventTranslations.ts
+src/utils/eventSchedules.ts
+src/stores/eventTranslations.ts
+src/stores/eventSchedules.ts
