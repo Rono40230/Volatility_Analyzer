@@ -98,6 +98,14 @@ MAX_STORE_DATA=500
 MAX_COMPOSABLE=150
 MAX_UTILS=200
 
+# ═══════════════════════════════════════════════════════════════
+# EXCLUSIONS (Fichiers de données statiques)
+# ═══════════════════════════════════════════════════════════════
+# Ces fichiers sont purement des données statiques (traductions, horaires)
+# et ne constituent pas du code logique à refactoriser.
+# Ils sont intentionnellement exclus du contrôle de taille.
+EXCLUDED_PATTERNS=("eventTranslations" "eventSchedules")
+
 # Composants Vue
 echo ""
 echo "🧩 Composants Vue (max $MAX_VUE_STANDARD lignes, modals/tables: $MAX_VUE_MODAL):"
@@ -167,6 +175,12 @@ echo ""
 echo "🛠️  Utils/Helpers (max $MAX_UTILS lignes):"
 while IFS= read -r file; do
     if [ -f "$file" ]; then
+        # Exclure les fichiers de données statiques (traductions, horaires)
+        # Ces fichiers sont purement des données et pas du code logique
+        if [[ "$file" == *"eventTranslations"* ]] || [[ "$file" == *"eventSchedules"* ]]; then
+            continue
+        fi
+        
         lines=$(wc -l < "$file")
         if [ "$lines" -gt "$MAX_UTILS" ]; then
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_UTILS)${NC}"
