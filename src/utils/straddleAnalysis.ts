@@ -1,9 +1,9 @@
 // Re-exports consolidés pour straddleAnalysis
-export { calculateStraddleScore, detectGoldenCombos, detectTraps, calculateTradingPlan } from './straddleCalculators'
+export { calculateStraddleScore, detectGoldenCombos, detectTraps, calculateTradingPlan, calculateTradeDuration } from './straddleCalculators'
 export type { Slice15minWithScore, GoldenCombo, DetectedTrap, TradingPlan, SliceAnalysis, BidiParameters } from './straddleTypes'
 import type { Stats15Min } from '../stores/volatility'
 import type { Slice15minWithScore, SliceAnalysis, BidiParameters } from './straddleTypes'
-import { calculateStraddleScore, calculateTradingPlan } from './straddleCalculators'
+import { calculateStraddleScore, calculateTradingPlan, calculateTradeDuration } from './straddleCalculators'
 
 export function findTop3Slices(stats15min: Stats15Min[]): Slice15minWithScore[] {
   return stats15min.map(stat => ({
@@ -33,13 +33,16 @@ export function getTop3Rank(slice: Slice15minWithScore, top3Slices: Slice15minWi
 }
 
 export function calculateBidiParameters(bestSlice: Stats15Min, allSlices: Stats15Min[]): BidiParameters {
+  const primaryEvent = bestSlice.events?.[0]?.event_name ?? 'AUTRE'
+  const tradeDurationMinutes = calculateTradeDuration(bestSlice.atr_mean, primaryEvent, bestSlice.hour)
+  
   return {
     entryTime: '—',
     slPips: Math.round((bestSlice.atr_mean * 1.5) * 10000),
     tpPips: Math.round((bestSlice.atr_mean * 2.5) * 10000),
     winRate: 0.55,
     avgGain: 0.35,
-    tradeExpiration: 180,
+    tradeExpiration: tradeDurationMinutes,
     bestHourReliability: 65
   }
 }

@@ -3,13 +3,27 @@
 
   <div v-if="heatmapData && !loadingHeatmap" class="heatmap-container">
     <HeatmapHeader />
-    <HeatmapFilters :min-volatility="minVolatilityThreshold" :max-events="maxEventsToDisplay" @update:min-volatility="minVolatilityThreshold = $event" @update:max-events="maxEventsToDisplay = $event" />
-    <HeatmapTable :pairs="heatmapData.pairs" :sorted-event-types="sortedEventTypes" :min-volatility="minVolatilityThreshold" :get-heatmap-value="getHeatmapValue" :get-heatmap-class="getHeatmapClass" :get-formatted-event-name="getFormattedEventName" />
+    <HeatmapFilters 
+      :min-volatility="minVolatilityThreshold" 
+      :max-events="maxEventsToDisplay" 
+      :available-event-types="availableEventTypes"
+      @update:min-volatility="minVolatilityThreshold = $event" 
+      @update:max-events="maxEventsToDisplay = $event"
+      @update:selected-event-type="selectedEventType = $event"
+    />
+    <HeatmapTable 
+      :pairs="heatmapData.pairs" 
+      :sorted-event-types="filteredEventTypes" 
+      :min-volatility="minVolatilityThreshold" 
+      :get-heatmap-value="getHeatmapValue" 
+      :get-heatmap-class="getHeatmapClass" 
+      :get-formatted-event-name="getFormattedEventName" 
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useEventCorrelationHeatmap } from '../composables/useEventCorrelationHeatmap'
 import HeatmapHeader from './HeatmapHeader.vue'
 import HeatmapFilters from './HeatmapFilters.vue'
@@ -21,6 +35,21 @@ const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?
 })
 
 const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.availablePairs, props.isArchiveMode, props.archiveData)
+
+const selectedEventType = ref('')
+
+// Available event types for dropdown
+const availableEventTypes = computed(() => {
+  return sortedEventTypes.value?.map(et => et.name) ?? []
+})
+
+// Filter event types based on selected filter
+const filteredEventTypes = computed(() => {
+  if (!selectedEventType.value) {
+    return sortedEventTypes.value
+  }
+  return sortedEventTypes.value.filter(et => et.name === selectedEventType.value)
+})
 
 onMounted(() => {
   if (!props.isArchiveMode) {

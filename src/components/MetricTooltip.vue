@@ -29,6 +29,7 @@
             <slot name="definition" />
             <slot name="usage" />
             <slot name="scoring" />
+            <slot name="realUseCases" />
           </div>
         </div>
         <div class="tooltip-arrow" />

@@ -11,6 +11,14 @@
             <BidiParametersSection :slice-analyses="sliceAnalyses" :entry-window-analysis="entryWindowAnalysis" :analysis="analysis" />
             <ObservationsSection :analysis="analysis" :analysis-data="analysisData" :movement-qualities="movementQualities" :volatility-duration="volatilityDuration" />
             <StraddlePerformanceSection :win-rate="winRate" :whipsaw-analysis="whipsawAnalysis" :offset-optimal="offsetOptimal" :win-rate-color="winRateColor" />
+            <VolatilityDecayChart 
+              v-if="tradingPlan && volatilityDuration"
+              :peak-volatility="(tradingPlan.atrPercentage ?? 2.5) / 100"
+              :half-life-minutes="volatilityDuration.volatility_half_life_minutes ?? 120"
+              :recommended-duration="tradingPlan.tradeDurationMinutes ?? 180"
+              :start-hour="bestSliceHour"
+              :start-minute="0"
+            />
           </BestSliceCard>
         </div>
         <div v-if="!sliceAnalyses || sliceAnalyses.length === 0" class="no-data"><p>Aucune donnée disponible pour l'analyse</p></div>
@@ -22,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import ArchiveModal from './ArchiveModal.vue'
 import { useStraddleAnalysis } from '../composables/useStraddleAnalysis'
@@ -34,6 +42,7 @@ import VolatilityDurationSection from './metrics/VolatilityDurationSection.vue'
 import BidiParametersSection from './metrics/BidiParametersSection.vue'
 import ObservationsSection from './metrics/ObservationsSection.vue'
 import StraddlePerformanceSection from './metrics/StraddlePerformanceSection.vue'
+import VolatilityDecayChart from './VolatilityDecayChart.vue'
 
 interface Props {
   isOpen: boolean
@@ -46,75 +55,37 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const { 
-  analysisData, sliceAnalyses, movementQualities, 
-  volatilityDuration, tradingPlan, entryWindowAnalysis, 
-  updateAnalysis 
-} = useMetricsAnalysisData()
-
+const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, updateAnalysis } = useMetricsAnalysisData()
 const { isLoading, offsetOptimal, winRate, whipsawAnalysis, analyzeStraddleMetrics, winRateColor } = useStraddleAnalysis()
 
-
-// Watcher pour analyser quand analysisResult change
-watch(
-  () => props.analysisResult,
-  (result) => {
-    if (result) updateAnalysis(result)
-  }
-)
-
-// Watcher pour déclencher l'analyse quand le modal s'ouvre
-watch(
-  () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && props.analysisResult) {
-      updateAnalysis(props.analysisResult)
-    }
-  }
-)
-
-onMounted(() => {
-  if (props.isOpen && props.analysisResult) {
-    updateAnalysis(props.analysisResult)
-  }
+const bestSliceHour = computed(() => {
+  if (!sliceAnalyses.value || sliceAnalyses.value.length === 0) return 13
+  const bestSlice = sliceAnalyses.value.find(a => a.rank === 1)
+  return bestSlice?.slice?.hour ?? 13
 })
 
-// TÂCHE 5 - Calculer les métriques Straddle quand les données changent
-watch(
-  () => sliceAnalyses.value,
-  async (newSlices) => {
-    if (newSlices && newSlices.length > 0 && props.analysisResult) {
-      
-      // Récupérer le meilleur slice (rank 1)
-      const bestSlice = newSlices[0]
-      if (!bestSlice || !bestSlice.slice || !bestSlice.slice.stats) {
-        return
-      }
+watch(() => props.analysisResult, (result) => { if (result) updateAnalysis(result) })
+watch(() => props.isOpen, (isOpen) => { if (isOpen && props.analysisResult) updateAnalysis(props.analysisResult) })
+onMounted(() => { if (props.isOpen && props.analysisResult) updateAnalysis(props.analysisResult) })
 
+watch(() => sliceAnalyses.value, async (newSlices) => {
+  if (newSlices?.length > 0 && props.analysisResult) {
+    const bestSlice = newSlices[0]
+    if (bestSlice?.slice?.stats) {
       try {
         const symbol = props.analysisResult.symbol || 'EURUSD'
-        
-        // Récupérer hour et quarter depuis le meilleur slice
         const hour = bestSlice.slice?.hour || 0
         const quarter = bestSlice.slice?.quarter || 0
-        
-
-        // Appeler la composable avec hour/quarter pour charger candles filtrées
         await analyzeStraddleMetrics(symbol, hour, quarter)
-
       } catch (error) {
-        // Erreur lors du calcul TÂCHE 5
+        // Straddle analysis error
       }
     }
-  },
-  { deep: true }
-)
+  }
+}, { deep: true })
 
-const close = () => {
-  emit('close')
-}
+const close = () => { emit('close') }
 
-// Variables pour l'archivage
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
@@ -122,15 +93,11 @@ const archiveDataJson = ref('')
 
 function openArchiveModal() {
   if (!props.analysisResult) return
-  
-  // Calculer la période depuis les données
   const result = props.analysisResult
-  
   if (result.period_start && result.period_end) {
     archivePeriodStart.value = result.period_start
     archivePeriodEnd.value = result.period_end
   } else {
-    // Fallback si les dates ne sont pas disponibles
     const now = new Date()
     const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
     archivePeriodStart.value = oneYearAgo.toISOString()

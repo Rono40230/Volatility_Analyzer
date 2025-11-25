@@ -18,26 +18,48 @@
         <option value="20">20 événements</option>
       </select>
     </div>
+    <div class="filter-group">
+      <label for="event-type">Type d'événement :</label>
+      <select id="event-type" v-model="selectedEventType" class="filter-select">
+        <option value="">Tous les événements</option>
+        <option v-for="event in availableEventTypes" :key="event" :value="event">
+          {{ event }}
+        </option>
+      </select>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 
-const props = defineProps<{ minVolatility: number; maxEvents: number }>()
-const emit = defineEmits<{ 'update:minVolatility': [val: number]; 'update:maxEvents': [val: number] }>()
+const props = defineProps<{ 
+  minVolatility: number
+  maxEvents: number
+  availableEventTypes?: string[]
+}>()
+
+const emit = defineEmits<{ 
+  'update:minVolatility': [val: number]
+  'update:maxEvents': [val: number]
+  'update:selectedEventType': [val: string]
+}>()
 
 const minVol = ref(props.minVolatility)
 const maxEvents = ref(props.maxEvents)
+const selectedEventType = ref('')
 
 watch(minVol, (v) => emit('update:minVolatility', v))
 watch(maxEvents, (v) => emit('update:maxEvents', v))
+watch(selectedEventType, (v) => emit('update:selectedEventType', v))
+
+const availableEventTypes = computed(() => props.availableEventTypes ?? [])
 </script>
 
 <style scoped>
-.filters-container { display: flex; gap: 30px; align-items: center; margin-bottom: 25px; padding: 15px; background: #2d3748; border-radius: 8px; }
+.filters-container { display: flex; gap: 30px; align-items: center; margin-bottom: 25px; padding: 15px; background: #2d3748; border-radius: 8px; flex-wrap: wrap; }
 .filter-group { display: flex; align-items: center; gap: 10px; }
-.filter-group label { color: #cbd5e0; font-size: 0.9em; font-weight: 500; }
-.filter-select { padding: 8px 12px; background: #1a202c; border: 1px solid #4a5568; border-radius: 6px; color: #e2e8f0; cursor: pointer; }
+.filter-group label { color: #cbd5e0; font-size: 0.9em; font-weight: 500; white-space: nowrap; }
+.filter-select { padding: 8px 12px; background: #1a202c; border: 1px solid #4a5568; border-radius: 6px; color: #e2e8f0; cursor: pointer; min-width: 150px; }
 .filter-select:hover { border-color: #667eea; }
 </style>
