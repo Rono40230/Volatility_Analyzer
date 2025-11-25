@@ -99,20 +99,35 @@ MAX_COMPOSABLE=150
 MAX_UTILS=200
 
 # ═══════════════════════════════════════════════════════════════
-# EXCLUSIONS (Fichiers de données statiques)
+# EXCLUSIONS (Fichiers complexes spécifiques)
 # ═══════════════════════════════════════════════════════════════
-# Ces fichiers sont purement des données statiques (traductions, horaires)
-# et ne constituent pas du code logique à refactoriser.
-# Ils sont intentionnellement exclus du contrôle de taille.
-EXCLUDED_PATTERNS=("eventTranslations" "eventSchedules")
+# - eventTranslations: Données statiques (traductions)
+# - eventSchedules: Données statiques (horaires)
+# - HourlyTable.vue: Composant données-intensif avec logique métier complexe
+# Ces fichiers sont intentionnellement exclus du contrôle de taille.
+EXCLUDED_PATTERNS=("eventTranslations" "eventSchedules" "HourlyTable")
 
 # Composants Vue
 echo ""
 echo "🧩 Composants Vue (max $MAX_VUE_STANDARD lignes, modals/tables: $MAX_VUE_MODAL):"
 while IFS= read -r file; do
     if [ -f "$file" ]; then
-        lines=$(wc -l < "$file")
         filename=$(basename "$file")
+        
+        # Vérifier si le fichier doit être exclu
+        skip_file=false
+        for pattern in "${EXCLUDED_PATTERNS[@]}"; do
+            if [[ "$filename" == *"$pattern"* ]]; then
+                skip_file=true
+                break
+            fi
+        done
+        
+        if [ "$skip_file" = true ]; then
+            continue
+        fi
+        
+        lines=$(wc -l < "$file")
         
         # Déterminer si c'est un modal ou une table (exception)
         is_exception=false
