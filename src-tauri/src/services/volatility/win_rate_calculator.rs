@@ -136,6 +136,7 @@ pub fn simulate_straddle_win_rate(candles: &[Candle], offset_pips: f64) -> WinRa
 }
 
 /// Résultat de la simulation du win rate
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct WinRateResult {
     pub total_trades: usize,
@@ -164,6 +165,7 @@ impl Default for WinRateResult {
 }
 
 /// Résultat détaillé d'un trade simulé
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub enum TradeResult {
     Win {

@@ -116,14 +116,6 @@ impl<'a> MetricsCalculator<'a> {
             .collect()
     }
 
-    /// OBSOLÈTE: Volume Imbalance (inutilisable en Forex - pas de données volume acheteur/vendeur)
-    /// Remplacé par Direction Strength = (body_range_mean * breakout_percentage) / 100
-    #[deprecated(since = "2.2.0", note = "Use direction_strength metric instead")]
-    pub fn calculate_volume_imbalance(&self, _period: usize) -> Result<Vec<f64>> {
-        // Retourne un vecteur vide pour compatibilité
-        Ok(Vec::new())
-    }
-
     /// Calcule le Noise Ratio (True Range / mouvement net)
     pub fn calculate_noise_ratio(&self) -> Vec<f64> {
         let mut noise_ratios = Vec::new();

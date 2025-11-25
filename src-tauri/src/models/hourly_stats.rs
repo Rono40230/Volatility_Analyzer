@@ -57,27 +57,6 @@ impl HourlyStats {
         score.min(100.0)
     }
 
-    /// Score de potentiel de mouvement pour stratégie STRADDLE (0-100)
-    pub fn movement_potential_score_straddle(&self) -> f64 {
-        if self.candle_count == 0 {
-            return 0.0;
-        }
-        let mut score: f64 = 0.0;
-        score += if self.range_mean > RANGE_STRADDLE_EXCELLENT { 60.0 }
-                 else if self.range_mean > RANGE_STRADDLE_GOOD { 50.0 }
-                 else if self.range_mean > RANGE_STRADDLE_FAIR { 40.0 }
-                 else if self.range_mean > RANGE_STRADDLE_POOR { 20.0 } else { 0.0 };
-        score += if self.atr_mean > ATR_STRADDLE_EXCELLENT { 25.0 }
-                 else if self.atr_mean > ATR_STRADDLE_GOOD { 20.0 }
-                 else if self.atr_mean > ATR_STRADDLE_FAIR { 15.0 }
-                 else if self.atr_mean > ATR_STRADDLE_POOR { 8.0 } else { 0.0 };
-        score += if self.body_range_mean > BODY_RANGE_STRADDLE_EXCELLENT { 15.0 }
-                 else if self.body_range_mean > BODY_RANGE_STRADDLE_GOOD { 12.0 }
-                 else if self.body_range_mean > BODY_RANGE_STRADDLE_FAIR { 8.0 }
-                 else if self.body_range_mean > BODY_RANGE_STRADDLE_POOR { 3.0 } else { 0.0 };
-        score.min(100.0)
-    }
-
     #[allow(dead_code)]
     pub fn quality_rating(&self) -> &'static str {
         let score = self.quality_score();

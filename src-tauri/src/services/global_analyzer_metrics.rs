@@ -2,7 +2,7 @@
 // Calcul des métriques globales (extracted compute functions)
 
 use crate::models::{
-    BestPair, EventImpact, GlobalStats, GoldenHour, TradableEventType,
+    BestPair, GlobalStats, GoldenHour, TradableEventType,
     StraddleSuccessRate, OptimalTimeWindow,
 };
 use super::global_analyzer_types::*;
@@ -275,8 +275,4 @@ pub fn compute_optimal_time_windows(archives: &[crate::models::Archive]) -> Vec<
 
     time_windows.sort_by(|a, b| b.consistency_score.partial_cmp(&a.consistency_score).unwrap_or(std::cmp::Ordering::Equal));
     time_windows
-}
-
-pub fn compute_event_impacts(_results: &[AnalyzableArchiveData]) -> Vec<EventImpact> {
-    vec![]
 }

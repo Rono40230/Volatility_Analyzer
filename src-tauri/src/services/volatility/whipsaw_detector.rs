@@ -93,6 +93,7 @@ fn calculate_risk_level(whipsaw_frequency: f64) -> WhipsawRiskLevel {
 }
 
 /// Résultat de l'analyse des whipsaws
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct WhipsawAnalysis {
     pub total_trades: usize,
@@ -119,6 +120,7 @@ impl Default for WhipsawAnalysis {
 }
 
 /// Détail d'un whipsaw survenu
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct WhipsawDetail {
     pub entry_index: usize,

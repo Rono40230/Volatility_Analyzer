@@ -34,6 +34,7 @@ pub struct EventImpactArchive {
     pub event_impact: EventImpactData,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 pub struct EventImpactData {
     pub event_name: String,
@@ -81,6 +82,7 @@ pub struct PairEvent {
 }
 
 // Structure interne pour données pondérées
+#[allow(dead_code)]
 pub struct WeightedArchiveData {
     pub data: AnalyzableArchiveData,
     pub weight: f64,
