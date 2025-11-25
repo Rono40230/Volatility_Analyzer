@@ -7,7 +7,6 @@ echo ""
 
 EXIT_CODE=0
 VIOLATIONS=0
-WARNINGS=0
 
 # Couleurs pour l'affichage
 RED='\033[0;31m'
@@ -37,9 +36,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_SERVICES)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt 250 ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src-tauri/src/services -name "*.rs" -type f 2>/dev/null || true)
@@ -54,9 +50,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_COMMANDS)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt 170 ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src-tauri/src/commands -name "*.rs" -type f 2>/dev/null || true)
@@ -71,9 +64,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_MODELS)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt 120 ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src-tauri/src/models -name "*.rs" -type f 2>/dev/null || true)
@@ -129,9 +119,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $limit)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt $((limit - 50)) ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite $limit)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src/components -name "*.vue" -type f 2>/dev/null || true)
@@ -157,9 +144,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $limit)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt $((limit - 50)) ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite $limit)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src/stores -name "*.ts" -o -name "*.js" 2>/dev/null || true)
@@ -174,9 +158,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_COMPOSABLE)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt 120 ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src/composables -name "*.ts" -o -name "*.js" 2>/dev/null || true)
@@ -191,9 +172,6 @@ while IFS= read -r file; do
             echo -e "${RED}❌ $file: $lines lignes (max $MAX_UTILS)${NC}"
             ((VIOLATIONS++))
             EXIT_CODE=1
-        elif [ "$lines" -gt 170 ]; then
-            echo -e "${YELLOW}⚠️  $file: $lines lignes (proche limite)${NC}"
-            ((WARNINGS++))
         fi
     fi
 done < <(find src/utils -name "*.ts" -o -name "*.js" 2>/dev/null || true)
@@ -205,16 +183,10 @@ done < <(find src/utils -name "*.ts" -o -name "*.js" 2>/dev/null || true)
 echo ""
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-if [ $VIOLATIONS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
+if [ $VIOLATIONS -eq 0 ]; then
     echo -e "${GREEN}✅ Tous les fichiers respectent les limites de taille !${NC}"
-elif [ $VIOLATIONS -eq 0 ]; then
-    echo -e "${YELLOW}⚠️  $WARNINGS fichier(s) proche(s) de la limite (warnings)${NC}"
-    echo -e "${GREEN}✅ Aucune violation critique${NC}"
 else
     echo -e "${RED}❌ $VIOLATIONS fichier(s) dépassent les limites (BLOQUANT)${NC}"
-    if [ $WARNINGS -gt 0 ]; then
-        echo -e "${YELLOW}⚠️  $WARNINGS fichier(s) proche(s) de la limite (warnings)${NC}"
-    fi
     echo ""
     echo "📝 Action requise: Refactoriser les fichiers trop longs"
     echo "   Voir RÈGLE 15 dans .clinerules pour les limites"
