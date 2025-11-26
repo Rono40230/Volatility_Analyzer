@@ -208,7 +208,7 @@ import EventDetailsDrawer from './EventDetailsDrawer.vue'
 
 const props = defineProps<{
   stats: HourlyStats[]
-  bestHours: number[]
+  bestQuarter: [number, number]  // [hour, quarter] - meilleur quarter de la journée
   stats15min?: any[]  // Stats 15-minutes optionnels
   globalMetrics?: any // Pour normalisation (ATR, Tick Quality)
 }>()
@@ -280,7 +280,7 @@ const bestSliceHour = computed(() => {
 })
 
 function isBestHour(hour: number): boolean {
-  return props.bestHours.includes(hour)
+  return props.bestQuarter[0] === hour
 }
 
 // ============================================

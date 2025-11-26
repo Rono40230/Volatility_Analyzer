@@ -137,7 +137,7 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'archives') 
               />
               <HourlyTable 
                 :stats="analysisResult.hourly_stats" 
-                :best-hours="analysisResult.best_hours"
+                :best-quarter="analysisResult.best_quarter"
                 :stats15min="analysisResult.stats_15min"
                 :global-metrics="analysisResult.global_metrics"
               />
