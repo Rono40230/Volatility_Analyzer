@@ -48,12 +48,13 @@ export function useMetricsAnalysisData() {
     entryWindowAnalysis.value = { optimal_offset: 0, optimal_win_rate: 0 }
 
     const result = analysisResult
+    const [bestHour, bestQuarter] = result.best_quarter
     analysisData.value = {
       globalMetrics: result.global_metrics,
       symbol: result.symbol,
       confidence: Math.round(result.confidence_score),
       strategy: 'SCALPING STANDARD',
-      bestHours: result.best_hours.slice(0, 3).join(', ')
+      bestHours: `${bestHour}:${bestQuarter * 15}-${bestHour}:${(bestQuarter + 1) * 15}`
     }
 
     if (result.stats_15min && result.stats_15min.length > 0) {

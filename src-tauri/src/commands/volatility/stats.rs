@@ -45,12 +45,12 @@ pub async fn get_best_hours(
     calendar_id: i32,
     calendar_state: State<'_, CalendarState>,
     pair_state: State<'_, PairDataState>,
-) -> Result<Vec<u8>, CommandError> {
+) -> Result<(u8, u8), CommandError> {
     info!(
         "Command: get_best_hours({}, calendar_id={})",
         symbol, calendar_id
     );
 
     let result = analyze_symbol(symbol, calendar_id, calendar_state, pair_state).await?;
-    Ok(result.best_hours)
+    Ok(result.best_quarter)
 }

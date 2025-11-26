@@ -84,7 +84,7 @@ export interface AnalysisResult {
   timeframe: string
   hourly_stats: HourlyStats[]
   stats_15min: Stats15Min[]      // Nouvelles stats pour scalping
-  best_hours: number[]
+  best_quarter: [number, number] // [hour, quarter] - meilleur quarter de la journée
   confidence_score: number
   recommendation: string
   risk_level: string
@@ -100,11 +100,10 @@ export const useVolatilityStore = defineStore('volatility', () => {
   const error = ref('')
   const dataRefreshTrigger = ref(0)
   const hasAnalysis = computed(() => analysisResult.value !== null)
-  const bestHoursStats = computed(() => {
-    if (!analysisResult.value) return []
-    return analysisResult.value.best_hours.map(hour => 
-      analysisResult.value!.hourly_stats.find(h => h.hour === hour)
-    ).filter(Boolean)
+  const bestQuarterStats = computed(() => {
+    if (!analysisResult.value) return null
+    const [hour, quarter] = analysisResult.value.best_quarter
+    return analysisResult.value.stats_15min.find(q => q.hour === hour && q.quarter === quarter)
   })
 
   async function loadSymbols() {
@@ -175,7 +174,7 @@ export const useVolatilityStore = defineStore('volatility', () => {
     error,
     dataRefreshTrigger,
     hasAnalysis,
-    bestHoursStats,
+    bestQuarterStats,
     loadSymbols,
     analyzeSymbol,
     getHourlyStats,

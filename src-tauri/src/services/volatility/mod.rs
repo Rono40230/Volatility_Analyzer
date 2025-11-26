@@ -3,6 +3,7 @@
 
 mod analyzer;
 mod best_hours_finder;
+mod best_quarter_finder;
 mod confidence_scorer;
 mod correlation;
 mod event_loader;

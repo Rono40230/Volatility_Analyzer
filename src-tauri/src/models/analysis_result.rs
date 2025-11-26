@@ -12,7 +12,7 @@ pub struct AnalysisResult {
     pub timeframe: String,
     pub hourly_stats: Vec<HourlyStats>,
     pub stats_15min: Vec<Stats15Min>,
-    pub best_hours: Vec<u8>,
+    pub best_quarter: (u8, u8), // (hour, quarter) - meilleur quarter de la journée
     pub confidence_score: f64,
     pub recommendation: TradingRecommendation,
     pub risk_level: RiskLevel,
@@ -52,7 +52,7 @@ mod tests {
             timeframe: "M5".to_string(),
             hourly_stats: vec![],
             stats_15min: vec![],
-            best_hours: vec![14, 15, 16],
+            best_quarter: (14, 2), // 14:30-14:45
             confidence_score: 75.0,
             recommendation: TradingRecommendation::ScalpNormal,
             risk_level: RiskLevel::Medium,
@@ -69,6 +69,6 @@ mod tests {
         };
 
         assert_eq!(result.symbol, "EURUSD");
-        assert_eq!(result.best_hours.len(), 3);
+        assert_eq!(result.best_quarter, (14, 2));
     }
 }
