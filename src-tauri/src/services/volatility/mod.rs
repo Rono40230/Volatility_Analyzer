@@ -4,6 +4,7 @@
 mod analyzer;
 mod best_quarter_finder;
 mod confidence_scorer;
+mod quarterly_aggregator;
 mod correlation;
 mod event_loader;
 mod hourly_stats;

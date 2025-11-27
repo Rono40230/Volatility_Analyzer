@@ -18,13 +18,20 @@ pub struct Stats15Min {
     pub noise_ratio_mean: f64,
     pub breakout_percentage: f64,
     pub events: Vec<EventInHour>,
-    // Analyse de décroissance de volatilité (TÂCHE 4)
+    // Analyse de décroissance de volatilité (TÂCHE 4) - par jour
     #[serde(skip_serializing_if = "Option::is_none")]
     pub peak_duration_minutes: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volatility_half_life_minutes: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recommended_trade_expiration_minutes: Option<u16>,
+    // Moyennes historiques sur toute la période (pour affichage dans le calendrier)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub peak_duration_mean: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub volatility_half_life_mean: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recommended_trade_expiration_mean: Option<u16>,
 }
 
 impl Stats15Min {

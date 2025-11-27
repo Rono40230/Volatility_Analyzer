@@ -5,6 +5,7 @@ use super::best_quarter_finder::BestQuarterFinder;
 use super::event_loader::EventLoader;
 use super::hourly_stats::HourlyStatsCalculator;
 use super::metrics::MetricsAggregator;
+use super::quarterly_aggregator::QuarterlyAggregator;
 use super::stats_15min::Stats15MinCalculator;
 use crate::db::DbPool;
 use crate::models::{
@@ -132,6 +133,9 @@ impl VolatilityAnalyzer {
         // 1.5 Calcule les statistiques par tranche de 15 minutes (pour scalping)
         let calculator_15min = Stats15MinCalculator::new(&self.candles);
         let mut stats_15min = calculator_15min.calculate()?;
+
+        // 1.6 Agrège les stats par quarter pour obtenir les moyennes historiques
+        stats_15min = QuarterlyAggregator::aggregate(&stats_15min);
 
         // 1b. Charge les événements économiques et les associe aux heures
         if let Err(e) = EventLoader::load_and_associate_events(

@@ -76,5 +76,5 @@ export function calculateSliceScore(slice: any): number {
 }
 
 export function isTradeExpTooLong(slice: any): boolean {
-  return (slice.recommended_trade_expiration_minutes ?? 0) > 150
+  return (slice.recommended_trade_expiration_mean ?? 0) > 150
 }

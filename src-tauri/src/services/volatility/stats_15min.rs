@@ -72,6 +72,9 @@ impl<'a> Stats15MinCalculator<'a> {
                         peak_duration_minutes: None,
                         volatility_half_life_minutes: None,
                         recommended_trade_expiration_minutes: None,
+                        peak_duration_mean: None,
+                        volatility_half_life_mean: None,
+                        recommended_trade_expiration_mean: None,
                     });
                 }
             }
@@ -111,6 +114,9 @@ impl<'a> Stats15MinCalculator<'a> {
                 peak_duration_minutes: None,
                 volatility_half_life_minutes: None,
                 recommended_trade_expiration_minutes: None,
+                peak_duration_mean: None,
+                volatility_half_life_mean: None,
+                recommended_trade_expiration_mean: None,
             });
         }
 
@@ -182,6 +188,9 @@ impl<'a> Stats15MinCalculator<'a> {
             peak_duration_minutes: peak_duration,
             volatility_half_life_minutes: half_life,
             recommended_trade_expiration_minutes: trade_exp,
+            peak_duration_mean: None,
+            volatility_half_life_mean: None,
+            recommended_trade_expiration_mean: None,
         })
     }
 }

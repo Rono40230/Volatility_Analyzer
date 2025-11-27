@@ -145,22 +145,22 @@
                         <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
                         <td
                           class="duration-cell"
-                          :title="`Peak duration: ${quarter.peak_duration_minutes ?? 'N/A'} min`"
+                          :title="`Peak duration moyen: ${quarter.peak_duration_mean ?? 'N/A'} min`"
                         >
-                          {{ quarter.peak_duration_minutes !== undefined ? quarter.peak_duration_minutes + ' min' : '—' }}
+                          {{ quarter.peak_duration_mean !== undefined ? quarter.peak_duration_mean + ' min' : '—' }}
                         </td>
                         <td
                           class="duration-cell"
-                          :title="`Half-life: ${quarter.volatility_half_life_minutes ?? 'N/A'} min`"
+                          :title="`Half-life moyen: ${quarter.volatility_half_life_mean ?? 'N/A'} min`"
                         >
-                          {{ quarter.volatility_half_life_minutes !== undefined ? quarter.volatility_half_life_minutes + ' min' : '—' }}
+                          {{ quarter.volatility_half_life_mean !== undefined ? quarter.volatility_half_life_mean + ' min' : '—' }}
                         </td>
                         <td
                           class="trade-exp-cell"
                           :class="{ 'warning': isTradeExpTooLong(quarter) }"
-                          :title="`Fermer trade après ${quarter.recommended_trade_expiration_minutes ?? 'N/A'} min`"
+                          :title="`Fermer trade après ${quarter.recommended_trade_expiration_mean ?? 'N/A'} min`"
                         >
-                          {{ quarter.recommended_trade_expiration_minutes !== undefined ? quarter.recommended_trade_expiration_minutes + ' min' : '—' }}
+                          {{ quarter.recommended_trade_expiration_mean !== undefined ? quarter.recommended_trade_expiration_mean + ' min' : '—' }}
                           <span
                             v-if="isTradeExpTooLong(quarter)"
                             class="warning-icon"
