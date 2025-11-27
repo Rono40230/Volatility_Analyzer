@@ -28,23 +28,23 @@ pub struct Stats15Min {
 }
 
 impl Stats15Min {
-    /// Retourne le label de la tranche (ex: "00:00-00:15")
+    /// Retourne le label de la tranche (ex: "00:00-00:15", "23:45-00:00")
     #[allow(dead_code)]
     pub fn time_label(&self) -> String {
         let start_min = self.quarter * 15;
         let end_min = start_min + 15;
         
-        // Gestion du débordement (45-60 devient 45-00 de l'heure suivante)
-        if end_min < 60 {
+        // Si end_min = 60, c'est l'heure suivante
+        if end_min >= 60 {
+            let end_hour = (self.hour + 1) % 24;
+            format!(
+                "{:02}:{:02}-{:02}:00",
+                self.hour, start_min, end_hour
+            )
+        } else {
             format!(
                 "{:02}:{:02}-{:02}:{:02}",
                 self.hour, start_min, self.hour, end_min
-            )
-        } else {
-            // 45-60 → 45-00 (next hour)
-            format!(
-                "{:02}:{:02}-{:02}:{:02}",
-                self.hour, start_min, self.hour, 0
             )
         }
     }
