@@ -1,9 +1,11 @@
 // services/volatility/analyzer.rs - Analyseur de volatilité principal
 // Conforme .clinerules : < 300L, structure claire, pas d'unwrap()
 
+use super::best_quarter_finder::BestQuarterFinder;
 use super::event_loader::EventLoader;
 use super::hourly_stats::HourlyStatsCalculator;
 use super::metrics::MetricsAggregator;
+use super::quarterly_aggregator::QuarterlyAggregator;
 use super::stats_15min::Stats15MinCalculator;
 use crate::db::DbPool;
 use crate::models::{
@@ -132,6 +134,9 @@ impl VolatilityAnalyzer {
         let calculator_15min = Stats15MinCalculator::new(&self.candles);
         let mut stats_15min = calculator_15min.calculate()?;
 
+        // 1.6 Agrège les stats par quarter pour obtenir les moyennes historiques
+        stats_15min = QuarterlyAggregator::aggregate(&stats_15min);
+
         // 1b. Charge les événements économiques et les associe aux heures
         if let Err(e) = EventLoader::load_and_associate_events(
             &self.candles,
@@ -166,8 +171,8 @@ impl VolatilityAnalyzer {
             }
         }
 
-        // 2. Trouve les meilleures heures
-        let best_hours = MetricsAggregator::find_best_hours(&hourly_stats);
+        // 2. Trouve le meilleur quarter
+        let best_quarter = BestQuarterFinder::find_best_quarter(&stats_15min).unwrap_or((0, 0));
 
         // 3. Calcule les métriques globales
         let global_metrics =
@@ -201,7 +206,7 @@ impl VolatilityAnalyzer {
             timeframe,
             hourly_stats,
             stats_15min,
-            best_hours,
+            best_quarter,
             confidence_score,
             recommendation,
             risk_level,

@@ -1,7 +1,6 @@
 // services/volatility/metrics.rs - Calcul des métriques globales et scores
 // Conforme .clinerules : < 300L, pas d'unwrap()
 
-use super::best_hours_finder::BestHoursFinder;
 use super::confidence_scorer::ConfidenceScorer;
 use crate::models::{GlobalMetrics, HourlyStats};
 
@@ -71,10 +70,5 @@ impl MetricsAggregator {
     /// Calcule le score de confiance - DÉLÉGUÉ au ConfidenceScorer
     pub(super) fn calculate_confidence_score(metrics: &GlobalMetrics) -> f64 {
         ConfidenceScorer::calculate_confidence_score(metrics)
-    }
-
-    /// Trouve les meilleures heures - DÉLÉGUÉ au BestHoursFinder
-    pub(super) fn find_best_hours(hourly_stats: &[HourlyStats]) -> Vec<u8> {
-        BestHoursFinder::find_best_hours(hourly_stats)
     }
 }

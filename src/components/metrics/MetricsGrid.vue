@@ -1,133 +1,203 @@
 <template>
   <div class="metrics-section">
     <h4>METRIQUES</h4>
-    <div class="metrics-grid">
-      <MetricItemCard
-        v-for="metric in getMetrics()"
-        :key="metric.label"
-        :metric="metric"
-      />
-    </div>
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th class="label-column"></th>
+          <th v-for="metric in displayedMetrics" :key="metric.label" class="metric-header">
+            {{ metric.label }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="value-row">
+          <td class="row-label">Valeur pour la période</td>
+          <td v-for="metric in displayedMetrics" :key="`value-${metric.label}`" class="metric-value">
+            <span :class="['value-cell', getMetricClass(metric.value15, metric.goodThreshold, metric.excellentThreshold)]">
+              {{ formatNumber(metric.value15, metric.decimals ?? 2) }}<span class="suffix">{{ metric.suffix }}</span>
+            </span>
+          </td>
+        </tr>
+        <tr class="average-row">
+          <td class="row-label">Moyenne globale</td>
+          <td v-for="metric in displayedMetrics" :key="`avg-${metric.label}`" class="metric-average">
+            {{ formatNumber(metric.valueGlobal, metric.decimals ?? 2) }}<span class="suffix">{{ metric.suffix }}</span>
+          </td>
+        </tr>
+        <tr class="threshold-row">
+          <td class="row-label">Seuil</td>
+          <td v-for="metric in displayedMetrics" :key="`thr-${metric.label}`" class="metric-threshold">
+            >{{ formatNumber(metric.excellentThreshold, metric.decimals ?? 2) }}
+          </td>
+        </tr>
+        <tr class="status-row">
+          <td class="row-label">Appréciation</td>
+          <td v-for="metric in displayedMetrics" :key="`status-${metric.label}`" class="metric-status">
+            <span :class="['status-badge', getMetricStatus(metric.value15, metric.goodThreshold, metric.excellentThreshold)]">
+              {{ getMetricStatusText(metric.value15, metric.goodThreshold, metric.excellentThreshold) }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import MetricItemCard from './MetricItemCard.vue'
 import type { SliceAnalysis } from '../../utils/straddleAnalysis'
+import {
+  buildMetricsConfig,
+  formatNumber,
+  getMetricClass,
+  getMetricStatus,
+  getMetricStatusText
+} from './MetricsGrid.helpers'
 
 interface Props {
   analysis: SliceAnalysis
   analysisData: any
 }
 
-interface MetricConfig {
-  label: string
-  value15: number
-  valueGlobal: number
-  goodThreshold: number
-  excellentThreshold: number
-  definition: string
-  usage: string
-  scoring: string
-  suffix?: string
-  decimals?: number
-}
-
 const props = defineProps<Props>()
 
-const getMetrics = computed(() => () => {
-  const stats = props.analysis.slice.stats
-  const globals = props.analysisData?.globalMetrics || {}
-
-  return [
-    {
-      label: 'ATR Moyen',
-      value15: stats.atr_mean,
-      valueGlobal: globals.mean_atr ?? 0,
-      goodThreshold: 0.001,
-      excellentThreshold: 0.002,
-      definition: 'Average True Range sur 14 périodes : mesure de volatilité moyenne du créneau horaire.',
-      usage: 'Score >0.002 = Excellent | 0.001-0.002 = Bon | <0.001 = Mauvais.',
-      scoring: 'Détermine largeur SL/TP. Plus ATR élevé = plus grande opportunité scalping.',
-      decimals: 5
-    },
-    {
-      label: 'True Range',
-      value15: stats.range_mean,
-      valueGlobal: globals.mean_range ?? 0,
-      goodThreshold: 0.0015,
-      excellentThreshold: 0.0025,
-      definition: 'Max(High-Low, |High-Close[t-1]|, |Low-Close[t-1]|) : mouvement total exploitable. Comparaison tranche 15-min vs moyenne jour.',
-      usage: 'Score >2.5% = Excellent | 1.5-2.5% = Bon | <1.5% = Faible.',
-      scoring: 'Capture les gaps contrairement au Range. Combine avec ATR pour breakouts.',
-      decimals: 5
-    },
-    {
-      label: 'Volatilité %',
-      value15: stats.volatility_mean * 100,
-      valueGlobal: (globals.mean_volatility ?? 0) * 100,
-      goodThreshold: 15,
-      excellentThreshold: 30,
-      definition: 'Ratio ATR / Close exprimé en pourcentage.',
-      usage: '>30% = Exceptionnellement volatil | 15-30% = Bon | <15% = Faible.',
-      scoring: 'Formula: (ATR / Close) × 100.',
-      suffix: '%',
-      decimals: 1
-    },
-    {
-      label: 'Body Range %',
-      value15: stats.body_range_mean,
-      valueGlobal: globals.mean_body_range ?? 0,
-      goodThreshold: 25,
-      excellentThreshold: 45,
-      definition: 'Pourcentage du range représenté par le body (Close-Open) : pureté du signal.',
-      usage: '>45% = Signal Très Pur | 25-45% = Acceptable | <25% = Bruité.',
-      scoring: 'Formula: (|Close - Open| / Range) × 100. Corps fort = pression directionnelle claire.',
-      suffix: '%',
-      decimals: 1
-    },
-    {
-      label: 'Direction Strength',
-      value15: stats.volume_imbalance_mean * 100,
-      valueGlobal: (globals.mean_volume_imbalance ?? 0) * 100,
-      goodThreshold: 10,
-      excellentThreshold: 20,
-      definition: 'Puissance du mouvement directionnel.',
-      usage: '>20% = Excellent | 10-20% = Bon | 5-10% = Moyen | <5% = Faible.',
-      scoring: 'Combine directionnalité + cassures identifiées.',
-      suffix: '%',
-      decimals: 1
-    },
-    {
-      label: 'Noise Ratio',
-      value15: stats.noise_ratio_mean,
-      valueGlobal: globals.mean_noise_ratio ?? 0,
-      goodThreshold: 2.0,
-      excellentThreshold: 1.5,
-      definition: 'Ratio wicks/body : mesure du bruit vs vraie direction.',
-      usage: '<2.0 = Signal Excellent | 2.0-2.5 = Acceptable | >2.5 = Très Bruité.',
-      scoring: 'Bas = direction confirmée. Élevé = beaucoup de rejets.',
-      decimals: 2
-    },
-    {
-      label: 'Breakout %',
-      value15: stats.breakout_percentage,
-      valueGlobal: globals.mean_breakout_percentage ?? 0,
-      goodThreshold: 10,
-      excellentThreshold: 20,
-      definition: 'Pourcentage de cassures de niveaux clés.',
-      usage: '>15% = Breakouts Fréquents | <10% = Peu de breakouts (range-bound).',
-      scoring: 'Formula: (Breakout_events / Total_periods) × 100.',
-      suffix: '%',
-      decimals: 1
-    }
-  ] as MetricConfig[]
-})
+const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props.analysisData))
 </script>
 
 <style scoped>
-.metrics-section { background: #0d1117; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #30363d; }
-.metrics-section h4 { margin: 0 0 15px 0; color: #e2e8f0; }
-.metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+.metrics-section {
+  background: #0d1117;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #30363d;
+}
+
+.metrics-section h4 {
+  margin: 0 0 15px 0;
+  color: #e2e8f0;
+}
+
+.metrics-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.metrics-table th {
+  background: #1a1f2e;
+  color: #e2e8f0;
+  font-weight: 600;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1px solid #30363d;
+  font-size: 0.85em;
+}
+
+.metrics-table th.label-column {
+  text-align: left;
+  background: #0d1117;
+  min-width: 140px;
+}
+
+.metrics-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #30363d;
+}
+
+.row-label {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 500;
+  color: #cbd5e0;
+  font-size: 0.85em;
+  background: #0d1117;
+  min-width: 140px;
+  border-right: 2px solid #30363d;
+}
+
+.value-row .metric-value {
+  font-weight: 600;
+  font-size: 1em;
+}
+
+.value-cell {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.value-cell.excellent {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.value-cell.good {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.value-cell.poor {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.suffix {
+  font-size: 0.8em;
+  margin-left: 2px;
+}
+
+.average-row {
+  background: rgba(45, 55, 72, 0.3);
+}
+
+.metric-average {
+  color: #a0aec0;
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+
+.threshold-row {
+  background: rgba(45, 55, 72, 0.2);
+}
+
+.metric-threshold {
+  color: #718096;
+  font-size: 0.85em;
+  opacity: 0.6;
+}
+
+.status-row .metric-status {
+  padding: 6px 8px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.status-badge.excellent {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.status-badge.good {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.status-badge.acceptable {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.status-badge.poor {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
 </style>

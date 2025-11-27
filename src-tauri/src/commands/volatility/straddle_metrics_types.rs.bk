@@ -37,6 +37,7 @@ pub struct WhipsawData {
 }
 
 /// Calcule le risque et la couleur basé sur la fréquence whipsaw
+#[allow(dead_code)]
 pub fn calculate_risk_level(whipsaw_freq_pct: f64) -> (String, String) {
     let risk_level = match whipsaw_freq_pct {
         x if x < 5.0 => "Très Bas",

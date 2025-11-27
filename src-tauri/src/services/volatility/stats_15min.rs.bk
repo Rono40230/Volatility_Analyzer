@@ -72,6 +72,9 @@ impl<'a> Stats15MinCalculator<'a> {
                         peak_duration_minutes: None,
                         volatility_half_life_minutes: None,
                         recommended_trade_expiration_minutes: None,
+                        peak_duration_mean: None,
+                        volatility_half_life_mean: None,
+                        recommended_trade_expiration_mean: None,
                     });
                 }
             }
@@ -111,6 +114,9 @@ impl<'a> Stats15MinCalculator<'a> {
                 peak_duration_minutes: None,
                 volatility_half_life_minutes: None,
                 recommended_trade_expiration_minutes: None,
+                peak_duration_mean: None,
+                volatility_half_life_mean: None,
+                recommended_trade_expiration_mean: None,
             });
         }
 
@@ -135,7 +141,7 @@ impl<'a> Stats15MinCalculator<'a> {
         let range_mean = mean(&tr_dist.true_ranges);
         let body_range_mean = mean(&body_ranges);
         let shadow_ratio_mean = mean(&shadow_ratios);
-        let tick_quality_mean = mean(&tick_qualities);
+        let _tick_quality_mean = mean(&tick_qualities);
         let noise_ratio_mean = mean(&noise_ratios);
         
         // Calculate breakout percentage first
@@ -182,6 +188,9 @@ impl<'a> Stats15MinCalculator<'a> {
             peak_duration_minutes: peak_duration,
             volatility_half_life_minutes: half_life,
             recommended_trade_expiration_minutes: trade_exp,
+            peak_duration_mean: None,
+            volatility_half_life_mean: None,
+            recommended_trade_expiration_mean: None,
         })
     }
 }

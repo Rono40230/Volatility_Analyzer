@@ -1,6 +1,6 @@
 <template>
   <div class="movement-quality-section">
-    <h4>💫 Qualité du Mouvement</h4>
+    <h4>💫 Qualité du Mouvement - Détails</h4>
     
     <!-- Pas de données -->
     <div
@@ -13,43 +13,19 @@
     <!-- Données chargées -->
     <div
       v-else-if="movementQualities[getMovementQualityKey(analysis)]"
-      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 15px;"
+      style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px;"
     >
-      <!-- Score Qualité -->
-      <MetricTooltip title="Score Qualité">
-        <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px;">
-          <div style="font-size: 11px; color: #999; margin-bottom: 6px; text-transform: uppercase;">
-            Score Qualité
-          </div>
-          <div style="font-size: 13px; color: #4ecdc4; font-weight: bold;">
-            {{ (movementQualities[getMovementQualityKey(analysis)]?.score || 0).toFixed(1) }}/100
-          </div>
-        </div>
-        <template #definition>
-          Notation globale 0-100 de la qualité du setup combinant tous les facteurs : volatilité, signal purity, mouvement directionnel.
-        </template>
-        <template #usage>
-          Score &gt;80 = Excellent | 60-80 = Bon | &lt;40 = Faible.
-        </template>
-        <template #scoring>
-          Basé sur Trend Score, Smoothness et Consistance des bougies.
-        </template>
-      </MetricTooltip>
-      
-      <!-- Label Qualité -->
-      <MetricTooltip title="Label Qualité">
-        <div style="padding: 12px; background: rgba(255,255,255,0.05); border-radius: 6px;">
-          <div style="font-size: 11px; color: #999; margin-bottom: 6px; text-transform: uppercase;">
-            Label
-          </div>
-          <div style="font-size: 13px; color: #4ecdc4; font-weight: bold;">
-            {{ movementQualities[getMovementQualityKey(analysis)]?.label || 'N/A' }}
-          </div>
-        </div>
-        <template #definition>
-          Appréciation qualitative du mouvement.
-        </template>
-      </MetricTooltip>
+      <div style="font-size: 14px; color: #e0e7ff; font-weight: bold; margin-bottom: 8px;">
+        Score: {{ (movementQualities[getMovementQualityKey(analysis)]?.score || 0).toFixed(0) }}/100
+      </div>
+      <div style="font-size: 13px; color: #b0bec5; margin-bottom: 8px;">
+        Label: {{ movementQualities[getMovementQualityKey(analysis)]?.label || 'N/A' }}
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <span :class="['quality-badge', getQualityStatus(movementQualities[getMovementQualityKey(analysis)]?.score || 0)]">
+          {{ getQualityStatusText(movementQualities[getMovementQualityKey(analysis)]?.score || 0) }}
+        </span>
+      </div>
     </div>
 
     <!-- Chargement en cours -->
@@ -78,6 +54,26 @@ const getMovementQualityKey = (analysis: any): string => {
   if (!analysis?.slice) return ''
   return `${analysis.slice.hour}-${analysis.slice.quarter}`
 }
+
+/**
+ * Détermine le statut d'appréciation basé sur le score (échelle 0-100)
+ */
+const getQualityStatus = (score: number): string => {
+  if (score > 80) return 'excellent'
+  if (score > 60) return 'good'
+  if (score > 40) return 'acceptable'
+  return 'poor'
+}
+
+/**
+ * Retourne le texte d'appréciation avec emoji
+ */
+const getQualityStatusText = (score: number): string => {
+  if (score > 80) return '🟢 Excellent'
+  if (score > 60) return '🔵 Bon'
+  if (score > 40) return '🟡 Acceptable'
+  return '🔴 Faible'
+}
 </script>
 
 <style scoped>
@@ -104,5 +100,34 @@ const getMovementQualityKey = (analysis: any): string => {
   color: #64748b;
   font-size: 12px;
   font-style: italic;
+}
+
+/* Quality Badges */
+.quality-badge {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.quality-badge.excellent {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+}
+
+.quality-badge.good {
+  background: rgba(59, 130, 246, 0.2);
+  color: #3b82f6;
+}
+
+.quality-badge.acceptable {
+  background: rgba(234, 179, 8, 0.2);
+  color: #eab308;
+}
+
+.quality-badge.poor {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
 }
 </style>

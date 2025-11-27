@@ -48,8 +48,13 @@ export function calculateBidiParameters(bestSlice: Stats15Min, allSlices: Stats1
 }
 
 function formatSliceTime(hour: number, quarter: number): string {
-  const h = String(hour).padStart(2, '0')
-  const start = String(quarter * 15).padStart(2, '0')
-  const end = String(Math.min(quarter * 15 + 15, 60)).padStart(2, '0')
-  return `${h}:${start}-${h}:${end}`
+  const startMin = quarter * 15
+  const endMin = startMin + 15
+  
+  if (endMin >= 60) {
+    const endHour = (hour + 1) % 24
+    return `${String(hour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:00`
+  } else {
+    return `${String(hour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}-${String(hour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`
+  }
 }

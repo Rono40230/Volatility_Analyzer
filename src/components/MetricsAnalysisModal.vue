@@ -4,9 +4,8 @@
       <div class="modal-header"><div class="header-title"><span class="icon">🎯</span><h2>Métriques du meilleur moment pour trader</h2></div><button class="close-btn" @click="close">✕</button></div>
       <div class="modal-section">
         <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
-          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :volatility-duration="volatilityDuration">
+          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities">
             <MetricsGrid :analysis="analysis" :analysis-data="analysisData" />
-            <MovementQualitySection :analysis="analysis" :analysis-data="analysisData" :movement-qualities="movementQualities" />
             <VolatilityDurationSection :volatility-duration="volatilityDuration" :trading-plan="tradingPlan" />
             <BidiParametersSection :slice-analyses="sliceAnalyses" :entry-window-analysis="entryWindowAnalysis" :analysis="analysis" />
             <ObservationsSection :analysis="analysis" :analysis-data="analysisData" :movement-qualities="movementQualities" :volatility-duration="volatilityDuration" />
