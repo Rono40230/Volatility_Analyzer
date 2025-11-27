@@ -95,10 +95,10 @@ export async function loadEntryWindowAnalysis(
 export function extractVolatilityDuration(bestSliceStats: Stats15Min): VolatilityDuration | null {
   if (!bestSliceStats) return null
 
-  // Récupère les valeurs du créneau élu
-  const peak = bestSliceStats.peak_duration_minutes ?? 0
-  const halfLife = bestSliceStats.volatility_half_life_minutes ?? 0
-  const tradeDuration = bestSliceStats.recommended_trade_expiration_minutes ?? 0
+  // Récupère les valeurs du créneau élu (moyennes historiques)
+  const peak = bestSliceStats.peak_duration_mean ?? 0
+  const halfLife = bestSliceStats.volatility_half_life_mean ?? 0
+  const tradeDuration = bestSliceStats.recommended_trade_expiration_mean ?? 0
 
   if (peak === 0 && halfLife === 0 && tradeDuration === 0) {
     return null

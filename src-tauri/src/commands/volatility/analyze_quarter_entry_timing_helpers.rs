@@ -1,5 +1,6 @@
 // Helpers pour analyze_quarter_entry_timing_command.rs
 use std::collections::HashMap;
+use chrono::Timelike;
 
 /// Métriques calculées pour une minute spécifique
 #[derive(Debug, Default)]

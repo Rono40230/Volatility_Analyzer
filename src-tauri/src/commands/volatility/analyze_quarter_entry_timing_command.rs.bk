@@ -2,11 +2,9 @@
 // Commande pour analyser le meilleur moment d'entrée dans un quarter spécifique
 // Teste chaque minute du quarter sur tout l'historique et retourne l'offset optimal
 
-mod analyze_quarter_entry_timing_helpers;
-
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use analyze_quarter_entry_timing_helpers::*;
+use super::analyze_quarter_entry_timing_helpers::{*};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuarterEntryTimingResponse {
@@ -99,13 +97,12 @@ pub async fn analyze_quarter_entry_timing(
         if daily_candles.is_empty() {
             continue;
         }
-
         // Scorer chaque minute du quarter pour ce jour
         let best_minute = find_best_minute_in_quarter(daily_candles)?;
         offsets.push(best_minute);
         
         // Calculer win-rate pour ce minute
-        let win_rate = estimate_win_rate_for_minute(daily_candles, best_minute as usize)?;
+        let win_rate = estimate_win_rate_for_minute(daily_candles)?;
         total_win_rates += win_rate;
     }
 
@@ -141,28 +138,4 @@ pub async fn analyze_quarter_entry_timing(
         total_occurrences_analyzed: offsets.len(),
         confidence_score: confidence,
     })
-}
-
-/// Groupe les candles par jour (pour isoler chaque occurrence du quarter)
-fn group_candles_by_day(candles: &[crate::models::Candle]) -> Vec<Vec<crate::models::Candle>> {
-    analyze_quarter_entry_timing_helpers::group_candles_by_day(candles)
-}
-
-/// Trouve la meilleure minute (offset 0-14) dans un jour donné pour ce quarter
-fn find_best_minute_in_quarter(
-    daily_candles: &[crate::models::Candle],
-) -> Result<u8, String> {
-    analyze_quarter_entry_timing_helpers::find_best_minute_in_quarter(daily_candles)
-}
-
-/// Estime le win-rate pour une minute spécifique
-fn estimate_win_rate_for_minute(
-    daily_candles: &[crate::models::Candle],
-) -> Result<f64, String> {
-    analyze_quarter_entry_timing_helpers::estimate_win_rate_for_minute(daily_candles)
-}
-
-/// Calcule le score de confiance (basé sur la consistance des offsets)
-fn calculate_confidence(offsets: &[u8], optimal: u8) -> f64 {
-    analyze_quarter_entry_timing_helpers::calculate_confidence(offsets, optimal)
 }

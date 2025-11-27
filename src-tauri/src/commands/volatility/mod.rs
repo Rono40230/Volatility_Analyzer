@@ -1,6 +1,7 @@
 mod analysis;
 mod analyze_slice_metrics_command;
 mod analyze_volatility_duration_command;
+mod analyze_quarter_entry_timing_helpers;
 mod analyze_quarter_entry_timing_command;
 mod stats;
 mod straddle_analysis;

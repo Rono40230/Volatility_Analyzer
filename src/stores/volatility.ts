@@ -45,6 +45,9 @@ export interface Stats15Min {
   peak_duration_minutes?: number
   volatility_half_life_minutes?: number
   recommended_trade_expiration_minutes?: number
+  peak_duration_mean?: number
+  volatility_half_life_mean?: number
+  recommended_trade_expiration_mean?: number
 }
 
 export interface GlobalMetrics {
