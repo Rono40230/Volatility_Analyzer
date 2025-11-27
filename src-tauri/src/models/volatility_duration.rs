@@ -73,10 +73,20 @@ impl VolatilityDuration {
     pub fn time_label(&self) -> String {
         let start_min = self.quarter * 15;
         let end_min = start_min + 15;
-        format!(
-            "{:02}:{:02}-{:02}:{:02}",
-            self.hour, start_min, self.hour, end_min
-        )
+        
+        // Gestion du débordement (45-60 devient 45-00)
+        if end_min < 60 {
+            format!(
+                "{:02}:{:02}-{:02}:{:02}",
+                self.hour, start_min, self.hour, end_min
+            )
+        } else {
+            // 45-60 → 45-00
+            format!(
+                "{:02}:{:02}-{:02}:{:02}",
+                self.hour, start_min, self.hour, 0
+            )
+        }
     }
 
     /// Valide que les valeurs sont cohérentes
