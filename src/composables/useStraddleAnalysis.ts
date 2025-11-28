@@ -32,14 +32,7 @@ export function useStraddleAnalysis() {
       } catch (preloadErr) {
         // Préchargement échoué - peut-être déjà chargée
       }
-      const candles = await loadCandlesForQuarter(symbol, hour, quarter)
-      if (candles.length === 0) {
-        offsetOptimal.value = { offset_pips: 0, percentile_95_wicks: 0, with_margin: 0 }
-        winRate.value = { total_trades: 0, wins: 0, losses: 0, whipsaws: 0, win_rate_percentage: 0 }
-        whipsawAnalysis.value = { total_trades: 0, whipsaw_count: 0, whipsaw_frequency_percentage: 0, risk_level: 'N/A', risk_color: '#6b7280' }
-        return null
-      }
-      const result = await invoke<StraddleMetricsResponse>('analyze_straddle_metrics', { symbol, hour, candles })
+      const result = await invoke<StraddleMetricsResponse>('analyze_straddle_metrics', { symbol, hour, quarter })
       offsetOptimal.value = result.offset_optimal
       winRate.value = result.win_rate
       whipsawAnalysis.value = result.whipsaw

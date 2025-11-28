@@ -1,9 +1,7 @@
 // services/straddle_simulator.rs
 // Simule une stratégie Straddle sur l'historique complet d'un créneau
-// AVEC pondération temporelle du whipsaw (Option B)
 
 use crate::models::Candle;
-use chrono::Timelike;
 
 #[derive(Debug, Clone)]
 pub struct StraddleSimulationResult {
@@ -50,10 +48,11 @@ pub fn get_pip_value(symbol: &str) -> f64 {
     0.0001
 }
 
-/// Simule une stratégie Straddle sur un ensemble de bougies avec tracking temporel du whipsaw
+/// Simule une stratégie Straddle sur un ensemble de bougies
 /// 
 /// Stratégie : Place un ordre Buy Stop et Sell Stop à distance égale du prix d'ouverture
-/// Whipsaw pondéré : Chaque whipsaw reçoit un coefficient selon QUAND il se produit
+/// - Si le prix monte et touche le Buy Stop, on gagne si ça continue, on perd si ça revient (whipsaw)
+/// - Si le prix descend et touche le Sell Stop, on gagne si ça continue, on perd si ça revient (whipsaw)
 pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulationResult {
     if candles.is_empty() {
         return StraddleSimulationResult {
@@ -91,58 +90,82 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         0.0
     };
 
-    let offset_optimal = p95_wick * 1.1;
+    let offset_optimal = p95_wick * 1.1; // Ajouter 10% de marge
     let offset_optimal_pips = normalize_to_pips(offset_optimal, symbol);
 
-    // Simuler les trades avec pondération temporelle du whipsaw
+    // Simuler les trades
     let mut total_trades = 0;
     let mut wins = 0;
     let mut losses = 0;
     let mut whipsaws = 0;
-    let mut whipsaw_weight_sum = 0.0;
-
-    let tp_distance = offset_optimal * 2.0;
-    let sl_distance = offset_optimal;
+    let mut whipsaw_weight_sum = 0.0; // Pour le calcul pondéré
 
     for (i, candle) in candles.iter().enumerate() {
+        // Pour chaque bougie, on simule un trade Straddle
         let open = candle.open;
         let high = candle.high;
         let low = candle.low;
         let close = candle.close;
-        let entry_time = candle.datetime;
 
         let buy_stop = open + offset_optimal;
         let sell_stop = open - offset_optimal;
 
+        // Définir TP et SL (simplifié : 2x l'offset pour TP, 1x pour SL)
+        let tp_distance = offset_optimal * 2.0;
+        let sl_distance = offset_optimal;
+
         let mut trade_triggered = false;
         let mut is_win = false;
         let mut is_whipsaw = false;
-        let mut whipsaw_duration_minutes = 0;
+        let mut whipsaw_duration_coefficient = 1.0; // Par défaut, très grave
 
-        // ===== BUY STOP =====
+        // Vérifier si le Buy Stop est touché
         if high >= buy_stop {
             trade_triggered = true;
             let buy_tp = buy_stop + tp_distance;
             let buy_sl = buy_stop - sl_distance;
 
-            // TOUJOURS chercher la résolution complète dans les 15 minutes suivantes
-            // Même si le SL/TP est touché dans la bougie d'entrée, il faut voir ce qui se passe après
-            let result = find_trade_resolution(candles, i, entry_time, buy_tp, buy_sl, true);
-            is_win = result.0;
-            is_whipsaw = result.1;
-            whipsaw_duration_minutes = result.2;
+            if high >= buy_tp {
+                // TP atteint
+                is_win = true;
+            } else if low <= buy_sl {
+                // SL atteint (whipsaw si le prix est monté puis redescendu)
+                is_whipsaw = true;
+                // Whipsaw détecté dans la même bougie = très rapide = coefficient 1.0
+                whipsaw_duration_coefficient = 1.0;
+            } else {
+                // Trade en cours, on considère le close
+                if close >= buy_stop + (tp_distance * 0.5) {
+                    is_win = true;
+                } else {
+                    is_whipsaw = true;
+                    // Trade fermé dans la même bougie = rapide = coefficient 0.8
+                    whipsaw_duration_coefficient = 0.8;
+                }
+            }
         }
-        // ===== SELL STOP =====
+        // Vérifier si le Sell Stop est touché
         else if low <= sell_stop {
             trade_triggered = true;
             let sell_tp = sell_stop - tp_distance;
             let sell_sl = sell_stop + sl_distance;
 
-            // TOUJOURS chercher la résolution complète dans les 15 minutes suivantes
-            let result = find_trade_resolution(candles, i, entry_time, sell_tp, sell_sl, false);
-            is_win = result.0;
-            is_whipsaw = result.1;
-            whipsaw_duration_minutes = result.2;
+            if low <= sell_tp {
+                // TP atteint
+                is_win = true;
+            } else if high >= sell_sl {
+                // SL atteint (whipsaw)
+                is_whipsaw = true;
+                whipsaw_duration_coefficient = 1.0;
+            } else {
+                // Trade en cours
+                if close <= sell_stop - (tp_distance * 0.5) {
+                    is_win = true;
+                } else {
+                    is_whipsaw = true;
+                    whipsaw_duration_coefficient = 0.8;
+                }
+            }
         }
 
         if trade_triggered {
@@ -153,8 +176,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                 losses += 1;
                 if is_whipsaw {
                     whipsaws += 1;
-                    let coefficient = get_whipsaw_coefficient(whipsaw_duration_minutes);
-                    whipsaw_weight_sum += coefficient;
+                    // Ajouter le poids du whipsaw selon le coefficient
+                    whipsaw_weight_sum += whipsaw_duration_coefficient;
                 }
             }
         }
@@ -166,6 +189,10 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         0.0
     };
 
+    // Calculer la fréquence whipsaw pondérée par durée
+    // Au lieu de: whipsaws / total_trades
+    // On utilise: whipsaw_weight_sum / total_trades
+    // Cela réduit significativement le % pour les whipsaws longs
     let whipsaw_frequency_percentage = if total_trades > 0 {
         (whipsaw_weight_sum / total_trades as f64) * 100.0
     } else {
@@ -185,60 +212,6 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         percentile_95_wicks: normalize_to_pips(p95_wick, symbol),
         risk_level,
         risk_color,
-    }
-}
-
-/// Trouve la résolution d'un trade sur les candles suivantes
-/// Retourne: (is_win, is_whipsaw, whipsaw_duration_minutes)
-fn find_trade_resolution(
-    candles: &[Candle],
-    start_idx: usize,
-    entry_time: chrono::DateTime<chrono::Utc>,
-    tp_level: f64,
-    sl_level: f64,
-    is_buy: bool,
-) -> (bool, bool, i32) {
-    use chrono::Duration;
-    
-    let max_lookforward = std::cmp::min(start_idx + 15, candles.len());
-
-    for check_idx in (start_idx + 1)..max_lookforward {
-        let candle = &candles[check_idx];
-        
-        // Calculer la durée en minutes de manière précise
-        let duration = candle.datetime.signed_duration_since(entry_time);
-        let duration_minutes = duration.num_minutes() as i32;
-
-        if is_buy {
-            if candle.high >= tp_level {
-                return (true, false, 0);
-            }
-            if candle.low <= sl_level {
-                return (false, true, duration_minutes);
-            }
-        } else {
-            if candle.low <= tp_level {
-                return (true, false, 0);
-            }
-            if candle.high >= sl_level {
-                return (false, true, duration_minutes);
-            }
-        }
-    }
-
-    // Non résolu = loss
-    (false, false, 15)
-}
-
-/// Retourne le coefficient de pondération selon la durée du whipsaw
-/// Option B: Pondération par durée
-fn get_whipsaw_coefficient(minutes: i32) -> f64 {
-    match minutes {
-        0 => 1.0,      // Immédiat = coefficient 1.0 (très grave)
-        1..=2 => 0.8,  // 1-2 min = coefficient 0.8
-        3..=5 => 0.6,  // 3-5 min = coefficient 0.6
-        6..=10 => 0.3, // 6-10 min = coefficient 0.3
-        _ => 0.1,      // 11-15 min = coefficient 0.1 (très léger)
     }
 }
 
@@ -267,7 +240,10 @@ mod tests {
 
     #[test]
     fn test_normalize_to_pips() {
-        let value = 0.0020;
+        let value = 0.0020; // 20 pips pour EURUSD
         assert_eq!(normalize_to_pips(value, "EURUSD"), 20.0);
+        
+        let value_btc = 100.0; // 100 pips pour BTCUSD
+        assert_eq!(normalize_to_pips(value_btc, "BTCUSD"), 100.0);
     }
 }
