@@ -1,0 +1,190 @@
+/* FormuleDetailPanel Styles */
+
+.formule-detail {
+  padding-bottom: 24px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #cbd5e0;
+  gap: 16px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  opacity: 0.5;
+}
+
+.formule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #2d3748;
+}
+
+.formule-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.definition {
+  margin: 0;
+  color: #a0aec0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.copy-btn {
+  background: rgba(99, 179, 237, 0.1);
+  border: 1px solid #63b3ed;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  background: rgba(99, 179, 237, 0.2);
+}
+
+.formule-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.formule-section h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #63b3ed;
+}
+
+.formule-section p {
+  margin: 0;
+  color: #cbd5e0;
+  line-height: 1.6;
+}
+
+.formula-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #2d3748;
+  border-radius: 6px;
+  padding: 16px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  color: #81e6d9;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inputs-list,
+.notes-list {
+  margin: 0;
+  padding-left: 24px;
+  list-style: none;
+}
+
+.inputs-list li,
+.notes-list li {
+  color: #cbd5e0;
+  margin-bottom: 8px;
+  position: relative;
+  padding-left: 20px;
+}
+
+.inputs-list li::before,
+.notes-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #63b3ed;
+  font-weight: bold;
+}
+
+.output-info {
+  background: rgba(45, 90, 123, 0.15);
+  border: 1px solid #2d5a7b;
+  border-radius: 6px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.output-line {
+  display: flex;
+  gap: 12px;
+}
+
+.output-line .label {
+  color: #64a5d8;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.output-line .value {
+  color: #cbd5e0;
+  font-family: monospace;
+}
+
+.exemple-box {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid #10b981;
+  border-radius: 6px;
+  padding: 12px 16px;
+  color: #a7f3d0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.formule-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid #2d3748;
+  margin-top: 24px;
+}
+
+.nav-btn {
+  padding: 8px 16px;
+  background: rgba(99, 179, 237, 0.1);
+  border: 1px solid #63b3ed;
+  border-radius: 6px;
+  color: #63b3ed;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(99, 179, 237, 0.2);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-info {
+  color: #a0aec0;
+  font-size: 14px;
+}

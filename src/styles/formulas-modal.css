@@ -1,0 +1,240 @@
+/* styles/formulas-modal.css - Styles partagés pour la modale Formules */
+
+.formulas-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.formulas-container {
+  background: #1a1f2e;
+  border: 2px solid #2d3748;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1400px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  color: #e2e8f0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+.formulas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 2px solid #2d3748;
+  background: linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%);
+}
+
+.formulas-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.formulas-title-icon {
+  font-size: 28px;
+}
+
+.formulas-title-text {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.formulas-close {
+  background: none;
+  border: none;
+  color: #cbd5e0;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.formulas-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.formulas-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.formulas-sidebar {
+  width: 280px;
+  border-right: 1px solid #2d3748;
+  display: flex;
+  flex-direction: column;
+  background: rgba(45, 55, 72, 0.3);
+  overflow-y: auto;
+}
+
+.formulas-search {
+  padding: 16px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.formulas-search input {
+  width: 100%;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #4a5568;
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 14px;
+}
+
+.formulas-search input:focus {
+  outline: none;
+  border-color: #63b3ed;
+  box-shadow: 0 0 0 2px rgba(99, 179, 237, 0.1);
+}
+
+.formulas-categories {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 8px;
+  gap: 8px;
+}
+
+.formulas-category-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #cbd5e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.formulas-category-btn:hover {
+  background: rgba(99, 179, 237, 0.1);
+  color: #fff;
+}
+
+.formulas-category-btn.active {
+  background: rgba(99, 179, 237, 0.2);
+  border-left: 3px solid #63b3ed;
+  color: #63b3ed;
+}
+
+.formulas-category-emoji {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.formulas-category-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.formulas-category-count {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.formulas-separator {
+  height: 1px;
+  background: #2d3748;
+  margin: 8px 0;
+}
+
+.formulas-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.formulas-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #2d3748;
+  background: rgba(45, 55, 72, 0.3);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.formulas-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.formulas-btn-export {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.formulas-btn-export:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.formulas-btn-close {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.formulas-btn-close:hover {
+  background: #2563eb;
+}
+
+.formulas-sidebar::-webkit-scrollbar,
+.formulas-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.formulas-sidebar::-webkit-scrollbar-track,
+.formulas-content::-webkit-scrollbar-track {
+  background: rgba(45, 55, 72, 0.3);
+}
+
+.formulas-sidebar::-webkit-scrollbar-thumb,
+.formulas-content::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+@media (max-width: 1024px) {
+  .formulas-container {
+    max-width: 95vw;
+  }
+  .formulas-sidebar {
+    width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .formulas-body {
+    flex-direction: column;
+  }
+  .formulas-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #2d3748;
+    max-height: 30vh;
+  }
+}

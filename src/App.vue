@@ -7,6 +7,7 @@ import SymbolSelector from './components/SymbolSelector.vue'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import HourlyTable from './components/HourlyTable.vue'
 import MetricsAnalysisModal from './components/MetricsAnalysisModal.vue'
+import FormulasModal from './components/FormulasModal.vue'
 import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
 import ArchivesView from './views/ArchivesView.vue'
@@ -35,6 +36,9 @@ const activeCalendarId = ref<number | null>(null)
 const showBidiModal = ref(false)
 const bidiModalHour = ref(0)
 const bidiModalQuarter = ref(0)
+
+// Gestion de la modal Formules
+const showFormulasModal = ref(false)
 
 async function handleSymbolSelected(symbol: string) {
   await store.analyzeSymbol(symbol)
@@ -88,6 +92,13 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'archives') 
         @click="switchTab('calendar')"
       >
         📥 Importer des données
+      </button>
+      <button 
+        class="tab-button formulas-btn"
+        @click="showFormulasModal = true"
+        title="Voir toutes les formules et calculs"
+      >
+        🧮 Formules
       </button>
     </nav>
 
@@ -183,6 +194,12 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'archives') 
       @close="showBidiModal = false"
     />
 
+    <!-- Modal des Formules -->
+    <FormulasModal 
+      :is-open="showFormulasModal"
+      @close="showFormulasModal = false"
+    />
+
     <footer class="app-footer">
       <p>Powered by Rust + Tauri 2.0 + Vue 3</p>
     </footer>
@@ -247,6 +264,19 @@ body {
   color: #ffffff;
   border-color: #58a6ff;
   box-shadow: 0 0 12px rgba(88, 166, 255, 0.3);
+}
+
+.formulas-btn {
+  margin-left: auto;
+  border-color: #667eea;
+  color: #a78bfa;
+}
+
+.formulas-btn:hover {
+  background: #161b22;
+  border-color: #a78bfa;
+  color: #c4b5fd;
+  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
 }
 
 .app-main {
