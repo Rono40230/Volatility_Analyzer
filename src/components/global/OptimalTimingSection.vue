@@ -35,8 +35,22 @@
 <script setup lang="ts">
 import { useEventTranslation } from '../../composables/useEventTranslation'
 
+interface OptimalTimeWindow {
+  event_type: string
+  consistency_score: number
+  avg_peak_time_minutes: number
+  avg_entry_window_minutes: number
+  avg_return_to_normal_minutes: number
+  occurrence_count: number
+  affected_pairs: string[]
+}
+
+interface OptimalTimingResult {
+  optimal_time_windows?: OptimalTimeWindow[]
+}
+
 defineProps<{
-  result: any
+  result: OptimalTimingResult
 }>()
 
 const { translateEventName } = useEventTranslation()
@@ -50,197 +64,35 @@ function getScoreClass(score: number): string {
 </script>
 
 <style scoped>
-.timing-section {
-  margin-bottom: 20px;
-}
-
-.timing-section h3 {
-  font-size: 18px;
-  margin-bottom: 20px;
-  color: #e2e8f0;
-}
-
-.timing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.timing-card {
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
-}
-
-.timing-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(78, 205, 196, 0.3);
-}
-
-.timing-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.timing-rank {
-  font-size: 14px;
-  font-weight: 700;
-  color: #718096;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 2px 8px;
-  border-radius: 4px;
-  margin-top: 2px;
-}
-
+.timing-section { margin-bottom: 20px; }
+.timing-section h3 { font-size: 18px; margin-bottom: 20px; color: #e2e8f0; }
+.timing-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px; }
+.timing-card { padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s; }
+.timing-card:hover { transform: translateY(-2px); border-color: rgba(78, 205, 196, 0.3); }
+.timing-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.timing-rank { font-size: 14px; font-weight: 700; color: #718096; background: rgba(255, 255, 255, 0.05); padding: 2px 8px; border-radius: 4px; margin-top: 2px; }
 .timing-rank-1 .timing-rank { color: #fbbf24; background: rgba(251, 191, 36, 0.1); }
-
-.timing-event {
-  flex: 1;
-}
-
-.event-name-original {
-  font-weight: 600;
-  color: #fff;
-  font-size: 15px;
-  margin-bottom: 2px;
-}
-
-.event-name-translation {
-  font-size: 12px;
-  color: #a0aec0;
-  font-style: italic;
-}
-
-.timing-consistency {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.score-excellent { color: #4ecdc4; }
-.score-good { color: #3b82f6; }
-.score-average { color: #f59e0b; }
-.score-poor { color: #ef4444; }
-
-.timing-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.timing-metric {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.metric-icon {
-  font-size: 18px;
-  background: rgba(255, 255, 255, 0.05);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.metric-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.metric-label {
-  font-size: 11px;
-  color: #a0aec0;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.metric-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.metric-hint {
-  font-size: 11px;
-  color: #718096;
-}
-
-.timing-footer {
-  font-size: 12px;
-  color: #a0aec0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.footer-separator {
-  color: #4a5568;
-}
-
-.insight-box {
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-}
-
-.insight-box h4 {
-  color: #fbbf24;
-  margin: 0 0 8px 0;
-  font-size: 14px;
-}
-
-.insight-box p {
-  margin: 0;
-  font-size: 13px;
-  color: #e2e8f0;
-  line-height: 1.5;
-}
-
-.timing-placeholder {
-  padding: 40px;
-  text-align: center;
-  border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  margin-bottom: 20px;
-}
-
-.placeholder-icon {
-  font-size: 40px;
-  margin-bottom: 16px;
-  opacity: 0.5;
-}
-
-.timing-placeholder h4 {
-  color: #e2e8f0;
-  margin-bottom: 8px;
-}
-
-.timing-placeholder p {
-  color: #a0aec0;
-  font-size: 13px;
-  margin: 0;
-}
-
-.timing-placeholder .hint {
-  color: #4ecdc4;
-  margin-top: 8px;
-  font-size: 12px;
-}
-
-.glass {
-  background: rgba(30, 30, 45, 0.6);
-  backdrop-filter: blur(10px);
-}
+.timing-event { flex: 1; }
+.event-name-original { font-weight: 600; color: #fff; font-size: 15px; margin-bottom: 2px; }
+.event-name-translation { font-size: 12px; color: #a0aec0; font-style: italic; }
+.timing-consistency { font-size: 16px; font-weight: 700; }
+.score-excellent { color: #4ecdc4; } .score-good { color: #3b82f6; } .score-average { color: #f59e0b; } .score-poor { color: #ef4444; }
+.timing-metrics { display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px; }
+.timing-metric { display: flex; align-items: flex-start; gap: 12px; }
+.metric-icon { font-size: 18px; background: rgba(255, 255, 255, 0.05); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.metric-content { display: flex; flex-direction: column; }
+.metric-label { font-size: 11px; color: #a0aec0; text-transform: uppercase; margin-bottom: 2px; }
+.metric-value { font-size: 15px; font-weight: 600; color: #fff; }
+.metric-hint { font-size: 11px; color: #718096; }
+.timing-footer { font-size: 12px; color: #a0aec0; display: flex; align-items: center; gap: 8px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.footer-separator { color: #4a5568; }
+.insight-box { padding: 16px; border-radius: 8px; border-left: 4px solid #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.insight-box h4 { color: #fbbf24; margin: 0 0 8px 0; font-size: 14px; }
+.insight-box p { margin: 0; font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+.timing-placeholder { padding: 40px; text-align: center; border-radius: 12px; border: 1px dashed rgba(255, 255, 255, 0.1); margin-bottom: 20px; }
+.placeholder-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.5; }
+.timing-placeholder h4 { color: #e2e8f0; margin-bottom: 8px; }
+.timing-placeholder p { color: #a0aec0; font-size: 13px; margin: 0; }
+.timing-placeholder .hint { color: #4ecdc4; margin-top: 8px; font-size: 12px; }
+.glass { background: rgba(30, 30, 45, 0.6); backdrop-filter: blur(10px); }
 </style>

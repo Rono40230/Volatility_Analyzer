@@ -32,8 +32,20 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
 
+interface PairMetadataInfo {
+  symbol: string
+  timeframe: string
+  row_count: number
+  last_updated: string
+  last_imported_file: string
+  quality_score: number
+  candle_count?: number
+  start_date?: string
+  end_date?: string
+}
+
 defineProps<{
-  pairsMetadata: any[]
+  pairsMetadata: PairMetadataInfo[]
   loading: boolean
 }>()
 
@@ -42,7 +54,7 @@ defineEmits<{
   delete: [symbol: string]
 }>()
 
-function formatPeriod(pair: any): string {
+function formatPeriod(pair: PairMetadataInfo): string {
   if (!pair.start_date && !pair.end_date) return 'N/A'
   const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString) return '?'

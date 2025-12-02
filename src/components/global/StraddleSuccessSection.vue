@@ -46,8 +46,22 @@
 </template>
 
 <script setup lang="ts">
+interface PairStraddleRate {
+  pair: string
+  straddle_score: number
+  directional_move_rate: number
+  whipsaw_rate: number
+  avg_volatility: number
+  total_events: number
+  top_events: string[]
+}
+
+interface StraddleSuccessResult {
+  pair_straddle_rates?: PairStraddleRate[]
+}
+
 defineProps<{
-  result: any
+  result: StraddleSuccessResult
 }>()
 
 function getScoreClass(score: number): string {

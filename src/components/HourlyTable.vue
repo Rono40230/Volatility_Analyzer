@@ -216,11 +216,28 @@ import { ref, onMounted, computed } from 'vue'
 import type { HourlyStats, EventInHour, Stats15Min } from '../stores/volatility'
 import EventDetailsDrawer from './EventDetailsDrawer.vue'
 
+interface GlobalMetrics {
+  mean_atr: number
+  mean_volatility: number
+  mean_body_range: number
+  mean_noise_ratio: number
+  mean_volume_imbalance: number
+  mean_breakout_percentage: number
+  mean_range: number
+  total_candles: number
+}
+
+interface ScoredSlice {
+  hour: number
+  quarter: number
+  score: number
+}
+
 const props = defineProps<{
   stats: HourlyStats[]
   bestQuarter: [number, number]  // [hour, quarter] - meilleur quarter de la journée
-  stats15min?: any[]  // Stats 15-minutes optionnels
-  globalMetrics?: any // Pour normalisation (ATR, Tick Quality)
+  stats15min?: Stats15Min[]  // Stats 15-minutes optionnels
+  globalMetrics?: GlobalMetrics // Pour normalisation (ATR, Tick Quality)
 }>()
 
 const emit = defineEmits<{
@@ -264,7 +281,7 @@ const drawerOpen = ref(false)
 const selectedHour = ref<number | null>(null)
 const selectedEvents = ref<EventInHour[] | null>(null)
 const expandedHours = ref<number[]>([])
-const top3Slices = ref<any[]>([])
+const top3Slices = ref<Array<{ hour: number; quarter: number }>>([])
 
 // Calculer le TOP 3 au montage/changement des stats
 onMounted(() => {
@@ -272,7 +289,7 @@ onMounted(() => {
     try {
       // Besoin de globalMetrics pour analyzeTop3Slices
       // On va créer une fonction locale pour identifier les TOP 3 slices
-      const scoredSlices = props.stats15min.map((slice: any) => ({
+      const scoredSlices = props.stats15min.map((slice: Stats15Min): ScoredSlice => ({
         hour: slice.hour,
         quarter: slice.quarter,
         score: calculateSliceScore(slice)
@@ -280,9 +297,9 @@ onMounted(() => {
       
       // Trier par score décroissant et prendre les 3 meilleurs
       top3Slices.value = scoredSlices
-        .sort((a: any, b: any) => b.score - a.score)
+        .sort((a: ScoredSlice, b: ScoredSlice) => b.score - a.score)
         .slice(0, 3)
-        .map((item: any) => ({ hour: item.hour, quarter: item.quarter }))
+        .map((item: ScoredSlice) => ({ hour: item.hour, quarter: item.quarter }))
     } catch (err) {
       // Erreur calcul TOP 3 - ignorer silencieusement
     }
@@ -449,7 +466,7 @@ function getQuartersForHour(hour: number) {
   return quarters
 }
 
-function calculateSliceScore(slice: any): number {
+function calculateSliceScore(slice: Stats15Min): number {
   // Même logique que straddleAnalysis.ts::calculateStraddleScore
   if (slice.candle_count === 0) return 0
   let score = 0

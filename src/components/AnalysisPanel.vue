@@ -101,7 +101,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { useVolatilityStore } from '../stores/volatility'
+import { useVolatilityStore, type Stats15Min } from '../stores/volatility'
 import { useDataRefresh } from '../composables/useDataRefresh'
 import MetricTooltip from './MetricTooltip.vue'
 import MetricsAnalysisModal from './MetricsAnalysisModal.vue'
@@ -137,7 +137,7 @@ interface AnalysisResult {
   global_metrics: GlobalMetrics
   hourly_stats: HourlyStats[]
   best_hours: number[]
-  stats_15min?: any[]
+  stats_15min?: Stats15Min[]
 }
 
 const props = defineProps<{

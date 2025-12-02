@@ -25,12 +25,13 @@
 
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
+import type { PairCorrelationData } from '../composables/useEventCorrelationByPair'
 
 defineProps<{
   modelValue: string
   availablePairs: string[]
   selectedPair: string
-  pairCorrelation: any
+  pairCorrelation: PairCorrelationData | null
   loading: boolean
   isArchiveMode: boolean
 }>()

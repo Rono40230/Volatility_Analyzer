@@ -62,9 +62,25 @@
 </template>
 
 <script setup lang="ts">
+interface BestPair {
+  symbol: string
+  analysis_count: number
+  score: number
+}
+
+interface GoldenHour {
+  hour: number
+  reliability: number
+}
+
+interface DashboardResult {
+  best_pairs: BestPair[]
+  total_analyses: number
+}
+
 defineProps<{
-  result: any
-  sortedGoldenHours: any[]
+  result: DashboardResult
+  sortedGoldenHours: GoldenHour[]
   bestHour: number | string
   bestHourReliability: string
   bestPair: string
@@ -79,160 +95,34 @@ function getHourClass(reliability: number): string {
 </script>
 
 <style scoped>
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 30px;
-  margin-bottom: 40px;
-}
-
-@media (max-width: 1000px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.dashboard-column h3 {
-  font-size: 18px;
-  margin-bottom: 20px;
-  color: #e2e8f0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.pairs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.pair-item {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s;
-}
-
-.pair-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(4px);
-}
-
-.pair-rank {
-  font-size: 16px;
-  font-weight: 700;
-  color: #718096;
-  width: 40px;
-}
-
+.dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; }
+@media (max-width: 1000px) { .dashboard-grid { grid-template-columns: 1fr; } }
+.dashboard-column h3 { font-size: 18px; margin-bottom: 20px; color: #e2e8f0; display: flex; align-items: center; gap: 10px; }
+.pairs-list { display: flex; flex-direction: column; gap: 12px; }
+.pair-item { display: flex; align-items: center; padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s; }
+.pair-item:hover { background: rgba(255, 255, 255, 0.08); transform: translateX(4px); }
+.pair-rank { font-size: 16px; font-weight: 700; color: #718096; width: 40px; }
 .rank-1 .pair-rank { color: #fbbf24; }
 .rank-2 .pair-rank { color: #94a3b8; }
 .rank-3 .pair-rank { color: #b45309; }
-
-.pair-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.pair-symbol {
-  font-weight: 700;
-  color: #fff;
-  font-size: 15px;
-}
-
-.pair-details {
-  font-size: 11px;
-  color: #a0aec0;
-}
-
-.pair-score {
-  text-align: right;
-}
-
-.score-label {
-  display: block;
-  font-size: 10px;
-  color: #a0aec0;
-  text-transform: uppercase;
-}
-
-.score-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #4ecdc4;
-}
-
-.hours-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.hour-bar-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.hour-label {
-  width: 40px;
-  font-size: 13px;
-  color: #a0aec0;
-  text-align: right;
-}
-
-.hour-bar-wrapper {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.hour-bar {
-  height: 100%;
-  border-radius: 4px;
-}
-
+.pair-info { flex: 1; display: flex; flex-direction: column; }
+.pair-symbol { font-weight: 700; color: #fff; font-size: 15px; }
+.pair-details { font-size: 11px; color: #a0aec0; }
+.pair-score { text-align: right; }
+.score-label { display: block; font-size: 10px; color: #a0aec0; text-transform: uppercase; }
+.score-value { font-size: 18px; font-weight: 700; color: #4ecdc4; }
+.hours-chart { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.hour-bar-container { display: flex; align-items: center; gap: 12px; }
+.hour-label { width: 40px; font-size: 13px; color: #a0aec0; text-align: right; }
+.hour-bar-wrapper { flex: 1; height: 8px; background: rgba(255, 255, 255, 0.05); border-radius: 4px; overflow: hidden; }
+.hour-bar { height: 100%; border-radius: 4px; }
 .bar-excellent { background: linear-gradient(90deg, #4ecdc4, #2d9ca6); }
 .bar-good { background: linear-gradient(90deg, #3b82f6, #2563eb); }
 .bar-average { background: linear-gradient(90deg, #f59e0b, #d97706); }
 .bar-poor { background: linear-gradient(90deg, #ef4444, #b91c1c); }
-
-.hour-value {
-  width: 40px;
-  font-size: 13px;
-  color: #fff;
-  font-weight: 600;
-}
-
-.insight-box {
-  padding: 16px;
-  border-radius: 8px;
-  border-left: 4px solid #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-}
-
-.insight-box h4 {
-  color: #fbbf24;
-  margin: 0 0 8px 0;
-  font-size: 14px;
-}
-
-.insight-box p {
-  margin: 0;
-  font-size: 13px;
-  color: #e2e8f0;
-  line-height: 1.5;
-}
-
-.glass {
-  background: rgba(30, 30, 45, 0.6);
-  backdrop-filter: blur(10px);
-}
+.hour-value { width: 40px; font-size: 13px; color: #fff; font-weight: 600; }
+.insight-box { padding: 16px; border-radius: 8px; border-left: 4px solid #fbbf24; background: rgba(251, 191, 36, 0.1); }
+.insight-box h4 { color: #fbbf24; margin: 0 0 8px 0; font-size: 14px; }
+.insight-box p { margin: 0; font-size: 13px; color: #e2e8f0; line-height: 1.5; }
+.glass { background: rgba(30, 30, 45, 0.6); backdrop-filter: blur(10px); }
 </style>

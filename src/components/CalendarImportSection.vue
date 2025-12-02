@@ -38,8 +38,16 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
 
+interface CalendarMetadata {
+  id: number
+  name: string
+  event_count: number
+  start_date?: string
+  end_date?: string
+}
+
 defineProps<{
-  calendarsMetadata: any[]
+  calendarsMetadata: CalendarMetadata[]
   loading: boolean
   activeCalendarId: number | null
 }>()
@@ -54,7 +62,7 @@ function isActiveCalendar(id: number): boolean {
   return (new URL(location.href).searchParams.get('activeCalendarId') || localStorage.getItem('activeCalendarId')) === id.toString()
 }
 
-function formatCalendarPeriod(calendar: any): string {
+function formatCalendarPeriod(calendar: CalendarMetadata): string {
   if (!calendar.start_date && !calendar.end_date) return 'N/A'
   const formatDate = (dateString: string | null | undefined): string => {
     if (!dateString) return '?'

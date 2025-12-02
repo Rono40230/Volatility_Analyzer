@@ -39,10 +39,30 @@ import { useVolatilityStore } from '../stores/volatility'
 import CalendarImportSection from './CalendarImportSection.vue'
 import PairImportSection from './PairImportSection.vue'
 
+interface CalendarMetadata {
+  id: number
+  name: string
+  event_count: number
+  start_date?: string
+  end_date?: string
+}
+
+interface PairMetadataInfo {
+  symbol: string
+  timeframe: string
+  row_count: number
+  last_updated: string
+  last_imported_file: string
+  quality_score: number
+  candle_count?: number
+  start_date?: string
+  end_date?: string
+}
+
 const store = useVolatilityStore()
 
-const calendarsMetadata = ref<any[]>([])
-const pairsMetadata = ref<any[]>([])
+const calendarsMetadata = ref<CalendarMetadata[]>([])
+const pairsMetadata = ref<PairMetadataInfo[]>([])
 const loadingCalendars = ref(false)
 const loadingPairs = ref(false)
 const showDeleteConfirm = ref(false)
@@ -70,8 +90,8 @@ function setActiveCalendar(id: number) {
 
 async function loadMetadata() {
   try {
-    const calendars = await invoke<any[]>('get_calendars_metadata')
-    const pairs = await invoke<any[]>('get_pairs_metadata')
+    const calendars = await invoke<CalendarMetadata[]>('get_calendars_metadata')
+    const pairs = await invoke<PairMetadataInfo[]>('get_pairs_metadata')
     calendarsMetadata.value = calendars || []
     pairsMetadata.value = pairs || []
   } catch (err) {

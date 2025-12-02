@@ -68,7 +68,7 @@ import { formatATR, isTradeExpTooLong } from '../utils/hourlyTableUtils'
 defineProps<{
   stat: HourlyStats
   expandedHours: number[]
-  stats15min: any[] | undefined
+  stats15min: Stats15Min[] | undefined
   quarters: Stats15Min[]
   estimatedPrice: number
   colspan: number
@@ -96,7 +96,12 @@ function isBestSliceInHour(hour: number, quarter: number): boolean {
     score: calculateSliceScore(q)
   }))
   
-  const bestQuarter = scoredQuarters.reduce((p: any, c: any) => 
+  interface ScoredQuarter {
+    quarter: number
+    score: number
+  }
+  
+  const bestQuarter = scoredQuarters.reduce((p: ScoredQuarter, c: ScoredQuarter) => 
     c.score > p.score ? c : p
   )
   

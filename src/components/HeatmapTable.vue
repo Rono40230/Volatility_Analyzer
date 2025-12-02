@@ -22,7 +22,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ pairs: string[]; sortedEventTypes: any[]; minVolatility: number; getHeatmapValue: (e: string, p: string) => number; getHeatmapClass: (v: number) => string; getFormattedEventName: (e: string) => string }>()
+interface EventTypeEntry {
+  name: string
+  has_data?: boolean
+}
+
+defineProps<{
+  pairs: string[]
+  sortedEventTypes: EventTypeEntry[]
+  minVolatility: number
+  getHeatmapValue: (e: string, p: string) => number
+  getHeatmapClass: (v: number) => string
+  getFormattedEventName: (e: string) => string
+}>()
 </script>
 
 <style scoped>

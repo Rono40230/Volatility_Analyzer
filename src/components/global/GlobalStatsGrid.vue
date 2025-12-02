@@ -95,8 +95,18 @@
 <script setup lang="ts">
 import MetricTooltip from '../MetricTooltip.vue'
 
+interface GlobalStats {
+  average_confidence: number
+  average_volatility: number
+}
+
+interface GlobalStatsResult {
+  total_analyses: number
+  global_stats: GlobalStats
+}
+
 defineProps<{
-  result: any
+  result: GlobalStatsResult
 }>()
 </script>
 

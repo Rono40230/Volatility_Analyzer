@@ -41,12 +41,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useEventCorrelationByPair } from '../composables/useEventCorrelationByPair'
+import { useEventCorrelationByPair, type PairCorrelationData } from '../composables/useEventCorrelationByPair'
 import ArchiveModal from './ArchiveModal.vue'
 import PairSelectorPanel from './PairSelectorPanel.vue'
 import PairCorrelationTable from './PairCorrelationTable.vue'
 
-const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: any; isArchiveMode?: boolean }>(), {
+const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: PairCorrelationData; isArchiveMode?: boolean }>(), {
   availablePairs: () => [],
   isArchiveMode: false
 })

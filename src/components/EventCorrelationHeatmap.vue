@@ -24,12 +24,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useEventCorrelationHeatmap } from '../composables/useEventCorrelationHeatmap'
+import { useEventCorrelationHeatmap, type HeatmapData } from '../composables/useEventCorrelationHeatmap'
 import HeatmapHeader from './HeatmapHeader.vue'
 import HeatmapFilters from './HeatmapFilters.vue'
 import HeatmapTable from './HeatmapTable.vue'
 
-const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: any; isArchiveMode?: boolean; calendarId?: number | null }>(), {
+const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: HeatmapData; isArchiveMode?: boolean; calendarId?: number | null }>(), {
   availablePairs: () => [],
   isArchiveMode: false,
   calendarId: null
