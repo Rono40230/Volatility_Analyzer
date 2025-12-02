@@ -122,14 +122,53 @@ import MetricTooltip from '../MetricTooltip.vue'
 import { useMetricsFormatting } from '../../composables/useMetricsFormatting'
 import { getWinrateColor } from './BidiParametersSection.helpers'
 
+interface SliceAnalysis {
+  slice: {
+    startTime: string
+    hour: number
+    quarter: number
+  }
+}
+
+interface EntryWindowAnalysis {
+  optimal_offset: number
+}
+
+interface WhipsawAnalysis {
+  whipsaw_frequency_percentage: number
+  trailing_stop_adjusted: number
+  timeout_adjusted_minutes: number
+  optimal_entry_minutes: number
+}
+
+interface OffsetOptimal {
+  sl_adjusted_pips: number
+}
+
+interface WinRate {
+  win_rate_adjusted: number
+}
+
+interface VolatilityDuration {
+  peak_duration_minutes: number
+}
+
+interface TradingPlan {
+  trailingStopCoefficient: number
+}
+
+interface Analysis {
+  tradingPlan: TradingPlan
+}
+
 const props = defineProps<{
-  sliceAnalyses: any[]
-  entryWindowAnalysis: any
-  analysis: any
-  volatilityDuration: any
-  whipsawAnalysis?: any
-  offsetOptimal?: any
-  winRate?: any
+  sliceAnalyses: SliceAnalysis[]
+  entryWindowAnalysis: EntryWindowAnalysis
+  analysis: Analysis
+  volatilityDuration: VolatilityDuration
+  whipsawAnalysis?: WhipsawAnalysis
+  offsetOptimal?: OffsetOptimal
+  winRate?: WinRate
 }>()
 
 const { calculateExactTime } = useMetricsFormatting()

@@ -4,8 +4,8 @@
 
 <script setup lang="ts">
 defineProps<{
-  volatilityDuration: any
-  tradingPlan: any
+  volatilityDuration: Record<string, unknown>
+  tradingPlan: Record<string, unknown>
 }>()
 </script>
 

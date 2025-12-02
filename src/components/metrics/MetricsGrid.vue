@@ -55,9 +55,13 @@ import {
   getMetricStatusText
 } from './MetricsGrid.helpers'
 
+interface AnalysisData {
+  [key: string]: unknown
+}
+
 interface Props {
   analysis: SliceAnalysis
-  analysisData: any
+  analysisData: AnalysisData
 }
 
 const props = defineProps<Props>()

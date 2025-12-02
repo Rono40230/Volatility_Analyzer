@@ -41,16 +41,30 @@
 <script setup lang="ts">
 import MetricTooltip from '../MetricTooltip.vue'
 
+interface SliceInfo {
+  hour: number
+  quarter: number
+}
+
+interface Analysis {
+  slice: SliceInfo
+}
+
+interface MovementQuality {
+  score: number
+  label: string
+}
+
 const props = defineProps<{
-  analysis: any
-  analysisData: any
-  movementQualities: Record<string, any>
+  analysis: Analysis
+  analysisData: Record<string, unknown>
+  movementQualities: Record<string, MovementQuality>
 }>()
 
 /**
  * Helper: construit la clé pour accéder une qualité de mouvement
  */
-const getMovementQualityKey = (analysis: any): string => {
+const getMovementQualityKey = (analysis: Analysis): string => {
   if (!analysis?.slice) return ''
   return `${analysis.slice.hour}-${analysis.slice.quarter}`
 }

@@ -72,10 +72,24 @@
 </template>
 
 <script setup lang="ts">
+interface WinRate {
+  win_rate_adjusted: number
+}
+
+interface WhipsawAnalysis {
+  whipsaw_frequency_percentage: number
+  risk_color: string
+  risk_level: string
+}
+
+interface OffsetOptimal {
+  sl_adjusted_pips: number
+}
+
 defineProps<{
-  winRate: any
-  whipsawAnalysis: any
-  offsetOptimal: any
+  winRate: WinRate
+  whipsawAnalysis: WhipsawAnalysis
+  offsetOptimal: OffsetOptimal
   winRateColor: string
 }>()
 </script>

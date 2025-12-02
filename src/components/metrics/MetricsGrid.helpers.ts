@@ -1,5 +1,20 @@
 import type { SliceAnalysis } from '../../utils/straddleAnalysis'
 
+interface GlobalMetrics {
+  mean_atr?: number
+  mean_range?: number
+  mean_volatility?: number
+  mean_body_range?: number
+  mean_volume_imbalance?: number
+  mean_noise_ratio?: number
+  mean_breakout_percentage?: number
+}
+
+interface AnalysisData {
+  globalMetrics?: GlobalMetrics
+  [key: string]: unknown
+}
+
 export interface MetricConfig {
   label: string
   value15: number
@@ -10,25 +25,25 @@ export interface MetricConfig {
   decimals?: number
 }
 
-export function getEstimatedPrice(analysisData: any): number {
+export function getEstimatedPrice(analysisData: AnalysisData): number {
   const globalMetrics = analysisData?.globalMetrics
   if (!globalMetrics) return 100000
-  const atr = globalMetrics.mean_atr
+  const atr = globalMetrics.mean_atr ?? 0
   if (atr > 1000) return 100000
   if (atr > 10) return 10000
   return 1.0
 }
 
-export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): MetricConfig[] {
+export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: AnalysisData): MetricConfig[] {
   const stats = analysis.slice.stats
-  const globals = analysisData?.globalMetrics || {}
+  const globals: GlobalMetrics = analysisData?.globalMetrics || {}
   const price = getEstimatedPrice(analysisData)
 
   return [
     {
       label: 'ATR Moyen',
       value15: (stats.atr_mean / price) * 100,
-      valueGlobal: (globals.mean_atr / price) * 100,
+      valueGlobal: ((globals.mean_atr ?? 0) / price) * 100,
       goodThreshold: 1.5,
       excellentThreshold: 2.0,
       suffix: '%',
@@ -37,7 +52,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'True Range',
       value15: (stats.range_mean / price) * 100,
-      valueGlobal: (globals.mean_range / price) * 100,
+      valueGlobal: ((globals.mean_range ?? 0) / price) * 100,
       goodThreshold: 1.5,
       excellentThreshold: 2.5,
       suffix: '%',
@@ -46,7 +61,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'Volatilité %',
       value15: stats.volatility_mean * 100,
-      valueGlobal: globals.mean_volatility ? globals.mean_volatility * 100 : 0,
+      valueGlobal: (globals.mean_volatility ?? 0) * 100,
       goodThreshold: 15.0,
       excellentThreshold: 25.0,
       suffix: '%',
@@ -55,7 +70,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'Body Range %',
       value15: stats.body_range_mean,
-      valueGlobal: globals.mean_body_range || 0,
+      valueGlobal: globals.mean_body_range ?? 0,
       goodThreshold: 35.0,
       excellentThreshold: 45.0,
       suffix: '%',
@@ -64,7 +79,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'Direction Strength',
       value15: stats.volume_imbalance_mean * 100,
-      valueGlobal: globals.mean_volume_imbalance ? globals.mean_volume_imbalance * 100 : 0,
+      valueGlobal: (globals.mean_volume_imbalance ?? 0) * 100,
       goodThreshold: 15.0,
       excellentThreshold: 20.0,
       suffix: '%',
@@ -73,7 +88,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'Noise Ratio',
       value15: stats.noise_ratio_mean,
-      valueGlobal: globals.mean_noise_ratio || 0,
+      valueGlobal: globals.mean_noise_ratio ?? 0,
       goodThreshold: 2.0,
       excellentThreshold: 1.5,
       decimals: 2
@@ -81,7 +96,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: any): 
     {
       label: 'Breakout %',
       value15: stats.breakout_percentage,
-      valueGlobal: globals.mean_breakout_percentage || 0,
+      valueGlobal: globals.mean_breakout_percentage ?? 0,
       goodThreshold: 15.0,
       excellentThreshold: 20.0,
       suffix: '%',
