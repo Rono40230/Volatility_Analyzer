@@ -73,6 +73,30 @@ pub async fn get_candle_index_stats(state: State<'_, CandleIndexState>) -> Resul
     }
 }
 
+/// Récupère TOUS les candles pour une paire (pour Phase 7 analyses)
+#[tauri::command]
+pub async fn get_pair_candles(
+    symbol: String,
+    state: State<'_, CandleIndexState>,
+) -> Result<Vec<crate::models::Candle>, String> {
+    let mut index_state = state
+        .index
+        .lock()
+        .map_err(|e| format!("Failed to lock state: {}", e))?;
+
+    let index = index_state
+        .as_mut()
+        .ok_or("CandleIndex not initialized. Call init_candle_index first.")?;
+
+    if !index.is_pair_loaded(&symbol) {
+        index.load_pair_candles(&symbol)?;
+    }
+
+    index
+        .get_all_candles(&symbol)
+        .ok_or(format!("No candles found for {}", symbol))
+}
+
 /// Récupère les 60 candles pour une heure spécifique
 #[tauri::command]
 pub async fn get_candles_for_hour(

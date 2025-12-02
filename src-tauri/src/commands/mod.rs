@@ -28,7 +28,7 @@ pub mod volatility_duration_commands;
 pub use archive_commands::*;
 pub use calendar_commands::get_upcoming_events;
 pub use calendar_import_commands::*;
-pub use candle_index_commands::{get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, init_candle_index, load_pair_candles};
+pub use candle_index_commands::{get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles, init_candle_index, load_pair_candles};
 pub use config_commands::*;
 pub use correlation::*;
 pub use csv_cleaner_commands::*;

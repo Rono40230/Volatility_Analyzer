@@ -211,6 +211,7 @@ pub fn run() {
             // Candle index commands (Performance optimization)
             init_candle_index,
             load_pair_candles,
+            get_pair_candles,
             get_candle_index_stats,
             get_candles_for_hour,
             get_candles_for_quarter, // NEW: Charger candles filtrées par quarter (TÂCHE 5)
@@ -224,9 +225,7 @@ pub fn run() {
             // Retrospective analysis commands (Phase 7)
             analyze_peak_delay,
             analyze_decay_profile,
-            analyze_entry_timing,
-            analyze_directional_bias,
-            analyze_whipsaw_root_cause,
+            get_event_types,
             // PDF export commands
             exporter_formules_pdf,
         ]);

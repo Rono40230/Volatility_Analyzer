@@ -127,7 +127,7 @@ function switchTab(tab: 'volatility' | 'calendar' | 'correlation' | 'archives') 
               class="welcome"
             >
               <div class="welcome-icon">
-                📊
+                💱
               </div>
               <h3>Sélectionnez un symbole pour commencer</h3>
               <div class="welcome-select-container">

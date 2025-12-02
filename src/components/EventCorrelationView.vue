@@ -32,9 +32,6 @@
       <div class="content-area">
         <PeakDelayAnalysis v-if="retrospectiveView === 'peak-delay'" />
         <DecayProfileView v-if="retrospectiveView === 'decay'" />
-        <EntryTimingProfitability v-if="retrospectiveView === 'entry-timing'" />
-        <DirectionalBiasView v-if="retrospectiveView === 'bias'" />
-        <WhipsawRootCauseView v-if="retrospectiveView === 'whipsaw'" />
       </div>
     </div>
   </div>
@@ -54,16 +51,13 @@ import EventCorrelationHeatmap from './EventCorrelationHeatmap.vue'
 import CalendarFileSelector from './CalendarFileSelector.vue'
 import PeakDelayAnalysis from './PeakDelayAnalysis.vue'
 import DecayProfileView from './DecayProfileView.vue'
-import EntryTimingProfitability from './EntryTimingProfitability.vue'
-import DirectionalBiasView from './DirectionalBiasView.vue'
-import WhipsawRootCauseView from './WhipsawRootCauseView.vue'
 
 interface PastEvent { name: string; count: number }
 
 const store = useVolatilityStore()
 const analysisGroup = ref<'correlation' | 'retrospective'>('correlation')
 const viewMode = ref<'by-event' | 'by-pair' | 'heatmap'>('by-event')
-const retrospectiveView = ref<'peak-delay' | 'decay' | 'entry-timing' | 'bias' | 'whipsaw'>('peak-delay')
+const retrospectiveView = ref<'peak-delay' | 'decay'>('peak-delay')
 const pastEvents = ref<PastEvent[]>([])
 const availablePairs = ref<string[]>([])
 const selectedCalendarId = ref<number | null>(null)

@@ -2,7 +2,6 @@
 pub mod archive_service;
 pub mod breakout_detector;
 pub mod calendar_converter;
-pub mod calendar_file_stats;
 pub mod calendar_scraper;
 pub mod candle_index;
 pub mod config_service;
@@ -10,9 +9,7 @@ pub mod contextual_atr_analyzer;
 pub mod csv_cleaner;
 pub mod csv_loader;
 pub mod database_loader;
-pub mod directional_bias_analyzer;
 pub mod economic_event_loader;
-pub mod entry_timing_analyzer;
 pub mod entry_timing_optimizer;
 pub mod entry_window_analyzer;
 pub mod entry_window_optimizer;
@@ -38,9 +35,7 @@ pub mod straddle_simulator_helpers;
 pub mod straddle_adjustments;
 pub mod volatility;
 pub mod volatility_duration_calculator;
-pub mod volatility_decay_calculator;
 pub mod win_rate_calculator;
-pub mod retrospective_helpers;
 
 pub use archive_service::*;
 pub use calendar_converter::*;

@@ -5,42 +5,21 @@
       :class="{ active: modelValue === 'peak-delay' }"
       @click="$emit('update:modelValue', 'peak-delay')"
     >
-      ⏰ Peak Delays
+      ⏰ Délai Peak
     </button>
     <button
       class="mode-button"
       :class="{ active: modelValue === 'decay' }"
       @click="$emit('update:modelValue', 'decay')"
     >
-      📉 Volatility Decay
-    </button>
-    <button
-      class="mode-button"
-      :class="{ active: modelValue === 'entry-timing' }"
-      @click="$emit('update:modelValue', 'entry-timing')"
-    >
-      📊 Entry Windows
-    </button>
-    <button
-      class="mode-button"
-      :class="{ active: modelValue === 'bias' }"
-      @click="$emit('update:modelValue', 'bias')"
-    >
-      🎯 Directional Bias
-    </button>
-    <button
-      class="mode-button"
-      :class="{ active: modelValue === 'whipsaw' }"
-      @click="$emit('update:modelValue', 'whipsaw')"
-    >
-      ⚡ Whipsaw Causes
+      📉 Décroissance Vol.
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-defineProps<{ modelValue: 'peak-delay' | 'decay' | 'entry-timing' | 'bias' | 'whipsaw' }>()
-defineEmits<{ 'update:modelValue': [value: 'peak-delay' | 'decay' | 'entry-timing' | 'bias' | 'whipsaw'] }>()
+defineProps<{ modelValue: 'peak-delay' | 'decay' }>()
+defineEmits<{ 'update:modelValue': [value: 'peak-delay' | 'decay'] }>()
 </script>
 
 <style scoped>
