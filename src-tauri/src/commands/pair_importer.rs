@@ -73,10 +73,11 @@ pub fn process_single_file(
     info!("📋 Prepared INSERT statement for candle_data");
 
     for (idx, candle) in candles.iter().enumerate() {
-        // Convertir timestamp Unix en DateTime RFC3339
+        // Convertir timestamp Unix en format compatible SQLite datetime
+        // Format: YYYY-MM-DD HH:MM:SS (pour compatibilité avec calendar_events)
         let dt = chrono::DateTime::<Utc>::from_timestamp(candle.timestamp, 0)
             .ok_or(format!("Invalid timestamp: {}", candle.timestamp))?;
-        let time_str = dt.to_rfc3339();
+        let time_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
 
         let res = stmt.execute(rusqlite::params![
             &metadata.pair,

@@ -29,12 +29,13 @@ import HeatmapHeader from './HeatmapHeader.vue'
 import HeatmapFilters from './HeatmapFilters.vue'
 import HeatmapTable from './HeatmapTable.vue'
 
-const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: any; isArchiveMode?: boolean }>(), {
+const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: any; isArchiveMode?: boolean; calendarId?: number | null }>(), {
   availablePairs: () => [],
-  isArchiveMode: false
+  isArchiveMode: false,
+  calendarId: null
 })
 
-const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.availablePairs, props.isArchiveMode, props.archiveData)
+const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
 
 const selectedEventType = ref('')
 
@@ -51,10 +52,15 @@ const filteredEventTypes = computed(() => {
   return sortedEventTypes.value.filter(et => et.name === selectedEventType.value)
 })
 
+// Watch availablePairs et charger la heatmap quand elles changent
+watch(() => props.availablePairs, (newPairs) => {
+  if (newPairs && newPairs.length > 0 && !props.isArchiveMode) {
+    loadHeatmapData(newPairs)
+  }
+}, { deep: true })
+
 onMounted(() => {
-  if (!props.isArchiveMode) {
-    loadHeatmapData()
-  } else {
+  if (props.isArchiveMode) {
     heatmapData.value = props.archiveData || null
   }
 })

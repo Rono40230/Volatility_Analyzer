@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
-import { useEventTranslation } from './useEventTranslation'
+import { getEventTranslation } from '../stores/eventTranslations'
 
 interface HeatmapData {
   pairs: string[]
@@ -8,17 +8,22 @@ interface HeatmapData {
   data: Record<string, Record<string, number>>
 }
 
-export function useEventCorrelationHeatmap(availablePairs: string[] = [], isArchiveMode = false, archiveData?: HeatmapData) {
-  const { getEventTranslation } = useEventTranslation()
+export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: HeatmapData) {
   const loadingHeatmap = ref(false)
   const heatmapData = ref<HeatmapData | null>(null)
   const minVolatilityThreshold = ref(3)
   const maxEventsToDisplay = ref(10)
 
-  async function loadHeatmapData() {
+  async function loadHeatmapData(pairs: string[]) {
+    if (!pairs || pairs.length === 0) {
+      return
+    }
     loadingHeatmap.value = true
     try {
-      const result = await invoke<HeatmapData>('get_event_pair_heatmap', { monthsBack: 12 })
+      const result = await invoke<HeatmapData>('get_correlation_heatmap', { 
+        pairs: pairs,
+        calendar_id: null
+      })
       heatmapData.value = result
     } catch (error) {
       heatmapData.value = { pairs: [], event_types: [], data: {} }

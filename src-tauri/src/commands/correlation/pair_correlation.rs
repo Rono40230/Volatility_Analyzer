@@ -71,13 +71,13 @@ pub fn calculate_pair_event_correlation(
             "SELECT MIN(event_time), MAX(event_time) 
              FROM calendar_events 
              WHERE calendar_import_id = {} 
-             AND impact IN ('HIGH', 'MEDIUM')",
+             AND impact IN ('H', 'M')",
             cal_id
         )
     } else {
         "SELECT MIN(event_time), MAX(event_time) 
          FROM calendar_events 
-         WHERE impact IN ('HIGH', 'MEDIUM')"
+         WHERE impact IN ('H', 'M')"
             .to_string()
     };
 
@@ -99,7 +99,7 @@ pub fn calculate_pair_event_correlation(
             "SELECT description, COUNT(DISTINCT event_time) as count 
              FROM calendar_events 
              WHERE calendar_import_id = {} 
-             AND impact IN ('HIGH', 'MEDIUM')
+             AND impact IN ('H', 'M')
              GROUP BY description
              ORDER BY count DESC",
             cal_id
@@ -107,7 +107,7 @@ pub fn calculate_pair_event_correlation(
     } else {
         "SELECT description, COUNT(DISTINCT event_time) as count 
          FROM calendar_events 
-         WHERE impact IN ('HIGH', 'MEDIUM')
+         WHERE impact IN ('H', 'M')
          GROUP BY description
          ORDER BY count DESC"
             .to_string()

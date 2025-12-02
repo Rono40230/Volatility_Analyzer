@@ -50,13 +50,46 @@ export function useEventCorrelationByPair(availablePairs: string[], isArchiveMod
     if (!topEvents.value.length) return []
     const obs: string[] = []
     const topEvent = topEvents.value[0]
+    
     if (topEvent) {
       obs.push(`L'événement "${topEvent.name}" est le plus corrélé avec ${selectedPair.value} (score: ${topEvent.correlation_score.toFixed(1)}%).`)
+      
+      // Analyse du timing (avant vs après)
+      const beforeEvents = topEvents.value.filter(e => e.volatility_before > e.volatility_after)
+      const afterEvents = topEvents.value.filter(e => e.volatility_after > e.volatility_before)
+      const balancedEvents = topEvents.value.filter(e => Math.abs(e.volatility_after - e.volatility_before) <= 0.1)
+      
+      if (beforeEvents.length > afterEvents.length && beforeEvents.length > 0) {
+        obs.push(`📊 Volatilité d'anticipation dominante (${beforeEvents.length}/${topEvents.value.length} événements) - Le marché se positionne AVANT les annonces.`)
+      } else if (afterEvents.length > beforeEvents.length && afterEvents.length > 0) {
+        obs.push(`📊 Volatilité de réaction dominante (${afterEvents.length}/${topEvents.value.length} événements) - ${selectedPair.value} réagit APRÈS les annonces.`)
+      } else if (balancedEvents.length >= 3) {
+        obs.push(`📊 Volatilité équilibrée - Réactions mixtes avant/après selon les événements.`)
+      }
+      
+      // Volatilité moyenne
+      const avgVolatility = topEvents.value.reduce((sum, e) => sum + e.volatility_total, 0) / topEvents.value.length
+      if (avgVolatility > 5) {
+        obs.push(`⚡ Volatilité événementielle élevée (${avgVolatility.toFixed(2)} pips) - Les annonces économiques impactent fortement ${selectedPair.value}.`)
+      } else if (avgVolatility > 2) {
+        obs.push(`⚡ Volatilité événementielle modérée (${avgVolatility.toFixed(2)} pips) - Impact mesuré sur ${selectedPair.value}.`)
+      } else {
+        obs.push(`⚡ Volatilité événementielle faible (${avgVolatility.toFixed(2)} pips) - ${selectedPair.value} peu sensible aux événements économiques.`)
+      }
+      
+      // Score corrélation moyen
       const avgScore = topEvents.value.reduce((sum, e) => sum + e.correlation_score, 0) / topEvents.value.length
-      if (avgScore > 60) obs.push(`Corrélation moyenne élevée (${avgScore.toFixed(1)}%) - ${selectedPair.value} est très réactive aux événements économiques.`)
-      else if (avgScore > 30) obs.push(`Corrélation moyenne modérée (${avgScore.toFixed(1)}%) - Impact événementiel mesuré.`)
-      else obs.push(`Corrélation moyenne faible (${avgScore.toFixed(1)}%) - ${selectedPair.value} peu affectée par les événements économiques.`)
+      if (avgScore > 60) obs.push(`🎯 Corrélation moyenne élevée (${avgScore.toFixed(1)}%) - ${selectedPair.value} est très réactive aux événements économiques.`)
+      else if (avgScore > 30) obs.push(`🎯 Corrélation moyenne modérée (${avgScore.toFixed(1)}%) - Impact événementiel mesuré.`)
+      else obs.push(`🎯 Corrélation moyenne faible (${avgScore.toFixed(1)}%) - ${selectedPair.value} peu affectée par les événements économiques.`)
+      
+      // Anomalies intéressantes
+      const zeroAfterCount = topEvents.value.filter(e => e.volatility_after < 0.1).length
+      if (zeroAfterCount >= 5) {
+        obs.push(`🔍 Anomalie : ${zeroAfterCount} événements affichent 0 pips APRÈS → Possibilité d'offset horaire ou données manquantes après événement.`)
+      }
     }
+    
     return obs
   })
 

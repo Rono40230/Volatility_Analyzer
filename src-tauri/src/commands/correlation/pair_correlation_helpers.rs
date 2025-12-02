@@ -27,7 +27,7 @@ pub fn calculate_event_volatility_for_pair(
     let event_query = format!(
         "SELECT event_time FROM calendar_events 
          WHERE description = ?{}
-         AND impact IN ('HIGH', 'MEDIUM')",
+         AND impact IN ('H', 'M')",
         cal_filter
     );
 
@@ -61,6 +61,12 @@ pub fn calculate_event_volatility_for_pair(
         }
 
         has_data_found = true;
+
+        tracing::debug!(
+            "🔍 calculate_event_volatility_for_pair: Processing event_time='{}', event_dt={:?}",
+            event_time,
+            event_dt
+        );
 
         // Volatilité 30min AVANT
         let query_before = "SELECT AVG(high - low) as avg_vol 

@@ -60,6 +60,19 @@ const availableEventTypes = computed(() => props.availableEventTypes ?? [])
 .filters-container { display: flex; gap: 30px; align-items: center; margin-bottom: 25px; padding: 15px; background: #2d3748; border-radius: 8px; flex-wrap: wrap; }
 .filter-group { display: flex; align-items: center; gap: 10px; }
 .filter-group label { color: #cbd5e0; font-size: 0.9em; font-weight: 500; white-space: nowrap; }
-.filter-select { padding: 8px 12px; background: #1a202c; border: 1px solid #4a5568; border-radius: 6px; color: #e2e8f0; cursor: pointer; min-width: 150px; }
+.filter-select { 
+  padding: 8px 12px; 
+  background: #1a202c; 
+  border: 1px solid #4a5568; 
+  border-radius: 6px; 
+  color: #000000; 
+  cursor: pointer; 
+  min-width: 150px;
+  font-size: 1em;
+  font-weight: 500;
+}
 .filter-select:hover { border-color: #667eea; }
+.filter-select option { 
+  color: #000000;
+}
 </style>

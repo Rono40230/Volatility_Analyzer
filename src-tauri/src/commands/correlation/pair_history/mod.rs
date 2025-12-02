@@ -38,7 +38,7 @@ pub async fn get_pair_event_history(
         .prepare(
             "SELECT id, description, datetime(event_time), impact
              FROM calendar_events
-             WHERE date(event_time) >= ?1 AND impact IN ('HIGH', 'MEDIUM')
+             WHERE date(event_time) >= ?1 AND impact IN ('H', 'M')
              ORDER BY event_time DESC",
         )
         .map_err(|e| format!("Failed to prepare events: {}", e))?;

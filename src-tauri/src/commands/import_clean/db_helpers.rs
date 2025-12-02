@@ -76,7 +76,7 @@ pub fn insert_candles_to_db(
     for (idx, candle) in candles.iter().enumerate() {
         let dt = chrono::DateTime::<chrono::Utc>::from_timestamp(candle.timestamp, 0)
             .ok_or(format!("Invalid timestamp: {}", candle.timestamp))?;
-        let time_str = dt.to_rfc3339();
+        let time_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
 
         stmt.execute(rusqlite::params![
             symbol,

@@ -61,13 +61,13 @@ pub async fn get_correlation_heatmap(
             "SELECT MIN(event_time), MAX(event_time) 
              FROM calendar_events 
              WHERE calendar_import_id = {} 
-             AND impact IN ('HIGH', 'MEDIUM')",
+             AND impact IN ('H', 'M')",
             cal_id
         )
     } else {
         "SELECT MIN(event_time), MAX(event_time) 
          FROM calendar_events 
-         WHERE impact IN ('HIGH', 'MEDIUM')"
+         WHERE impact IN ('H', 'M')"
             .to_string()
     };
 

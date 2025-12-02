@@ -20,7 +20,7 @@
       <tbody>
         <tr v-for="(event, index) in topEvents" :key="event.name" :class="{ 'top-event': index < 3 }">
           <td>#{{ index + 1 }}</td>
-          <td class="event-name">{{ event.name }}</td>
+          <td class="event-name">{{ getTranslatedName(event.name) }}</td>
           <td class="volatility">{{ event.volatility_before_fmt }}</td>
           <td class="volatility">{{ event.volatility_after_fmt }}</td>
           <td class="volatility-total">{{ event.volatility_total_fmt }}</td>
@@ -36,13 +36,19 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
+import { defineProps, computed } from 'vue'
 import type { EventCorrelation } from '../composables/useEventCorrelationByPair'
+import { getEventTranslation } from '../stores/eventTranslations'
 
-defineProps<{
+const props = defineProps<{
   topEvents: EventCorrelation[]
   getScoreClass: (score: number) => string
 }>()
+
+function getTranslatedName(eventName: string): string {
+  const translation = getEventTranslation(eventName)
+  return `${eventName} (${translation.fr}) ${translation.flag}`
+}
 </script>
 
 <style scoped>
