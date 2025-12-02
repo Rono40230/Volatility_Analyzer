@@ -128,18 +128,3 @@ pub async fn analyze_straddle_metrics(
         },
     })
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_empty_candles() {
-        let result = futures::executor::block_on(analyze_straddle_metrics(
-            "EURUSD".to_string(),
-            14,
-            vec![],
-        ));
-        assert!(result.is_err());
-    }
-}

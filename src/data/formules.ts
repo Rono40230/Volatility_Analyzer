@@ -71,6 +71,19 @@ export const categories: Categorie[] = [
     emoji: '🔢',
     description: 'Scores finaux et recommandations',
     formules: ['score_brut', 'score_ajuste', 'recommendation', 'meilleure_heure']
+  },
+  {
+    id: 'retrospectif',
+    titre: 'Analyse Rétrospective',
+    emoji: '📊',
+    description: 'Métriques d\'analyse rétrospective pour backtesting',
+    formules: [
+      'peak_delay',
+      'whipsaw_root_cause',
+      'entry_timing_profitability',
+      'volatility_decay_profile',
+      'directional_bias_score'
+    ]
   }
 ]
 
@@ -652,6 +665,114 @@ export const formules: Record<string, Formule> = {
       'Confidence = ATR + Body% + Volatilité + Noise + Breakout (0-100)',
       'Win Rate ajusté = WR brut × (1 - Whipsaw%)',
       'Whipsaw impact: Freq=0% → pas pénalité, Freq=33% → perte 33 points'
+    ]
+  },
+
+  // === ANALYSE RÉTROSPECTIVE (PHASE 7) ===
+  peak_delay: {
+    id: 'peak_delay',
+    titre: 'Peak Delay (Minutes)',
+    categorieId: 'retrospectif',
+    definition:
+      'Délai en minutes entre l\'annonce d\'un événement et le pic de volatilité réel.',
+    explication_litterale:
+      'Cette formule mesure QUAND arrive le vrai mouvement. Si Peak Delay = +2.3 min, ça signifie qu\'après l\'annonce, il faut attendre 2.3 minutes pour voir le mouvement maximum. Utile pour savoir: "Quand est-ce que je dois être attentif?"',
+    formule: 'Peak_Delay = Time(max_ATR) - Time(event_announcement)',
+    inputs: ['Time of announcement', 'ATR timeseries'],
+    output: { type: 'integer', range: '-5 to +15', unite: 'minutes' },
+    exemple:
+      'NFP annoncé à 13:30:00 → Peak ATR à 13:32:18 → Delay = +2.3 min',
+    notes: [
+      'Négatif = pic avant l\'annonce (rare)',
+      'Positif = pic après l\'annonce (habituel)',
+      'Variance importante selon paires et types d\'événements'
+    ]
+  },
+
+  whipsaw_root_cause: {
+    id: 'whipsaw_root_cause',
+    titre: 'Whipsaw Root Cause',
+    categorieId: 'retrospectif',
+    definition:
+      'Analyse des whipsaws: combien avant peak vs après peak.',
+    explication_litterale:
+      'Cette formule sépare les faux déclenchements en deux: ceux qui arrivent AVANT le pic (mauvaise chance) et ceux qui arrivent APRÈS (mauvais SL). Si beaucoup de whipsaws "late", tu dois agrandir ton SL. Si beaucoup de "early", c\'est juste de la malchance.',
+    formule:
+      'Whipsaw_Early% = (whipsaws_before_peak / total_whipsaws) × 100\nWhipsaw_Late% = (whipsaws_after_peak / total_whipsaws) × 100',
+    inputs: ['Whipsaw events', 'Peak duration'],
+    output: { type: 'float', range: '0-100', unite: '%' },
+    exemple:
+      '8% early (before peak), 20% late (after peak) → SL issue → Increase SL',
+    notes: [
+      'Early whipsaw = avant le pic = malchance du timing',
+      'Late whipsaw = après le pic = SL trop serré',
+      'Ajuster SL si late% > 15%'
+    ]
+  },
+
+  entry_timing_profitability: {
+    id: 'entry_timing_profitability',
+    titre: 'Entry Timing Profitability',
+    categorieId: 'retrospectif',
+    definition:
+      'Profitabilité stratifiée par offset d\'entrée (T-10, T-5, T-0, T+3).',
+    explication_litterale:
+      'Cette formule te montre: "Si j\'étais entré 5 minutes avant l\'annonce, quel aurait été mon win rate?" Compare 4 moments d\'entrée différents pour trouver le meilleur. Le moment idéal change selon l\'événement.',
+    formule:
+      'For each entry_offset in [-10, -5, 0, +3]:\n  Win_Rate(offset) = (wins / total) × 100\n  P&L(offset) = sum(profits) / total',
+    inputs: ['Backtest results', 'Entry time offsets'],
+    output: { type: 'matrix', range: '4 rows × 5 cols', unite: 'win%, P&L' },
+    exemple:
+      'T-5 min: 52% win, +18p avg ← BEST\nT-0 min: 50% win, +8p avg\nT+3 min: 45% win, -5p avg',
+    notes: [
+      'Meilleur offset varie par type d\'événement',
+      'NFP optimal = T-5 min',
+      'Jobless optimal = T-3 min'
+    ]
+  },
+
+  volatility_decay_profile: {
+    id: 'volatility_decay_profile',
+    titre: 'Volatility Decay Profile',
+    categorieId: 'retrospectif',
+    definition:
+      'Taux de décroissance de la volatilité après le pic (pips/minute).',
+    explication_litterale:
+      'Cette formule mesure: "Comment vite la volatilité baisse après le mouvement?" Si la volatilité baisse très vite (3 pips/minute), le mouvement est court, donc timeout court. Si elle baisse lentement (0.8 pips/minute), le mouvement dure longtemps, donc timeout long.',
+    formule:
+      'Decay_Rate = (Peak_ATR - ATR_at_T+10) / 10 min\nDecay_Speed = FAST (>3) | MEDIUM (1.5-3) | SLOW (<1.5)',
+    inputs: ['ATR timeseries', 'Peak ATR value'],
+    output: { type: 'float', range: '0.5 to 5.0', unite: 'pips/minute' },
+    exemple:
+      'Peak 45p → 18p at T+10 → Decay = 2.7p/min = MEDIUM → Timeout = 25 min',
+    notes: [
+      'FAST decay = mouvement court = short timeout (18 min)',
+      'MEDIUM decay = équilibré = medium timeout (25 min)',
+      'SLOW decay = mouvement long = long timeout (32 min)'
+    ]
+  },
+
+  directional_bias_score: {
+    id: 'directional_bias_score',
+    titre: 'Directional Bias Score',
+    categorieId: 'retrospectif',
+    definition:
+      'Asymétrie UP vs DOWN des gagnants: mesure la tendance inhérente.',
+    explication_litterale:
+      'Cette formule regarde: "Les achats gagnent-ils plus que les ventes pour cet événement?" Si oui = événement biaisé HAUT. Si non = biaisé BAS. Si égal = neutre. Un Straddle fonctionne mieux sur événements neutres.',
+    formule:
+      'UP_Bias = (Up_Wins - Down_Wins) / Total_Wins\nAsymmetry% = |UP_Bias| × 100\nClassification: |Bias| > 0.3 = BIASED, else NEUTRAL',
+    inputs: ['Backtest results (buy/sell side)'],
+    output: {
+      type: 'enum',
+      range: '{UP_BIASED, DOWN_BIASED, NEUTRAL}',
+      unite: 'classification'
+    },
+    exemple: 'NFP: 67% buy wins, 33% sell wins → Bias = +0.7 → UP_BIASED',
+    notes: [
+      'Straddle fonctionne mal sur événements biaisés',
+      'Meilleur sur événements NEUTRAL',
+      'Si biaisé, utiliser pour stratégies directionnelles'
     ]
   }
 }

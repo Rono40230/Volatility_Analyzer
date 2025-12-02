@@ -221,6 +221,8 @@ pub fn run() {
             delete_archive,
             // Global Analysis (Phase IA)
             analyze_all_archives,
+            // PDF export commands
+            exporter_formules_pdf,
         ]);
 
     tracing::info!("✅ Tauri Builder configuré");

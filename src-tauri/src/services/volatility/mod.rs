@@ -12,11 +12,17 @@ mod metrics;
 mod offset_calculator;
 mod stats_15min;
 mod utils;
+mod volatility_duration_analyzer;
+mod volatility_heuristics;
 mod whipsaw_detector;
+mod whipsaw_classifier;
 mod win_rate_calculator;
 
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;
 pub use offset_calculator::calculate_optimal_offset;
-pub use whipsaw_detector::calculate_whipsaw_frequency;
+pub use volatility_duration_analyzer::VolatilityDurationAnalyzer;
+pub use volatility_heuristics::VolatilityHeuristics;
+pub use whipsaw_detector::{calculate_whipsaw_frequency, WhipsawAnalysis};
+pub use whipsaw_classifier::WhipsawRootCauseAnalysis;
 pub use win_rate_calculator::simulate_straddle_win_rate;

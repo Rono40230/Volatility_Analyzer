@@ -174,6 +174,7 @@ mod tests {
             mean_noise_ratio: 10.0,
             mean_breakout_percentage: 0.0,
             mean_volume_imbalance: 0.0,
+            mean_range: 0.0,
             total_candles: 1000,
         };
 
@@ -194,6 +195,7 @@ mod tests {
             mean_noise_ratio: 1.5,
             mean_breakout_percentage: 20.0,
             mean_volume_imbalance: 0.05,
+            mean_range: 0.0008,
             total_candles: 200000,
         };
 
@@ -215,7 +217,7 @@ mod tests {
             (0.001, 0.70),
         ];
 
-            for (atr, volatility) in test_cases {
+        for (atr, volatility) in test_cases {
             let metrics = GlobalMetrics {
                 mean_atr: atr,
                 mean_volatility: volatility,
@@ -223,8 +225,10 @@ mod tests {
                 mean_noise_ratio: 2.0,
                 mean_breakout_percentage: 12.0,
                 mean_volume_imbalance: 0.05,
+                mean_range: 0.0008,
                 total_candles: 100000,
-            };            let score = ConfidenceScorer::calculate_confidence_score(&metrics);
+            };
+            let score = ConfidenceScorer::calculate_confidence_score(&metrics);
             assert!(
                 score <= 100.0,
                 "Score ne doit pas dépasser 100. ATR={}, Vol={}, Score={}",

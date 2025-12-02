@@ -203,28 +203,34 @@ mod tests {
         let mut candles = Vec::new();
 
         // 5 candles initiales
+        use chrono::{DateTime, Utc};
+        let base_time = DateTime::parse_from_rfc3339("2024-12-01T14:00:00Z")
+            .expect("valid RFC3339 datetime")
+            .with_timezone(&Utc);
         for i in 0..5 {
             candles.push(Candle {
+                id: None,
+                symbol: "EURUSD".to_string(),
+                datetime: base_time + chrono::Duration::minutes(i as i64),
                 open: 1.0850,
                 high: 1.0860,
                 low: 1.0840,
                 close: 1.0855,
                 volume: 1000.0,
-                time: i as i64 * 60000,
-                hour_utc: 14,
             });
         }
 
         // 15 candles avec un mouvement haut (win du buy)
         for i in 5..20 {
             candles.push(Candle {
+                id: None,
+                symbol: "EURUSD".to_string(),
+                datetime: base_time + chrono::Duration::minutes(i as i64),
                 open: 1.0855 + (i as f64 - 5.0) * 0.0001,
                 high: 1.0865 + (i as f64 - 5.0) * 0.0001,
                 low: 1.0850 + (i as f64 - 5.0) * 0.0001,
                 close: 1.0860 + (i as f64 - 5.0) * 0.0001,
                 volume: 1000.0,
-                time: i as i64 * 60000,
-                hour_utc: 14,
             });
         }
 
