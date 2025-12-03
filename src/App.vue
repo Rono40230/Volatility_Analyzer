@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
 import { useVolatilityStore } from './stores/volatility'
@@ -11,6 +11,20 @@ import FormulasModal from './components/FormulasModal.vue'
 import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
 import ArchivesView from './views/ArchivesView.vue'
+
+const store = useVolatilityStore()
+const { analysisResult, selectedSymbol, loading, error } = storeToRefs(store)
+
+// Restaurer l'onglet depuis localStorage ou utiliser 'heatmap' comme défaut
+const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | null
+const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives'>(savedTab || 'heatmap')
+const selectedSymbolLocal = ref('')
+const activeCalendarId = ref<number | null>(null)
+
+// Surveiller les changements d'onglet et sauvegarder dans localStorage
+watch(activeTab, (newTab) => {
+  localStorage.setItem('activeTab', newTab)
+})
 
 onMounted(async () => {
   
@@ -24,13 +38,6 @@ onMounted(async () => {
   // Charger les symboles au démarrage
   store.loadSymbols()
 });
-
-const store = useVolatilityStore()
-const { analysisResult, selectedSymbol, loading, error } = storeToRefs(store)
-
-const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives'>('volatility')
-const selectedSymbolLocal = ref('')
-const activeCalendarId = ref<number | null>(null)
 
 // Gestion de la modal Bidi depuis le tableau
 const showBidiModal = ref(false)
@@ -66,17 +73,17 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives')
     <nav class="app-tabs">
       <button 
         class="tab-button" 
-        :class="{ active: activeTab === 'volatility' }"
-        @click="switchTab('volatility')"
-      >
-        📊 Volatilité brute
-      </button>
-      <button 
-        class="tab-button" 
         :class="{ active: activeTab === 'heatmap' }"
         @click="switchTab('heatmap')"
       >
         🔥 Heatmap de Corrélation
+      </button>
+      <button 
+        class="tab-button" 
+        :class="{ active: activeTab === 'volatility' }"
+        @click="switchTab('volatility')"
+      >
+        📊 Volatilité brute
       </button>
       <button 
         class="tab-button" 
