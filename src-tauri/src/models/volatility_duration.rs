@@ -73,14 +73,11 @@ impl VolatilityDuration {
     pub fn time_label(&self) -> String {
         let start_min = self.quarter * 15;
         let end_min = start_min + 15;
-        
+
         // Si end_min = 60, c'est l'heure suivante
         if end_min >= 60 {
             let end_hour = (self.hour + 1) % 24;
-            format!(
-                "{:02}:{:02}-{:02}:00",
-                self.hour, start_min, end_hour
-            )
+            format!("{:02}:{:02}-{:02}:00", self.hour, start_min, end_hour)
         } else {
             format!(
                 "{:02}:{:02}-{:02}:{:02}",

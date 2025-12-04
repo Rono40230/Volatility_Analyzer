@@ -27,10 +27,9 @@ pub fn exporter_formules_pdf(
     fichier_sortie: String,
 ) -> Result<String, String> {
     let path = Path::new(&fichier_sortie);
-    
+
     // Créer le fichier
-    let file = File::create(path)
-        .map_err(|e| format!("Erreur création fichier: {}", e))?;
+    let file = File::create(path).map_err(|e| format!("Erreur création fichier: {}", e))?;
 
     let (document, page1, layer1) =
         PdfDocument::new("Formules Straddle", Mm(210.0), Mm(297.0), "Layer 1");
@@ -38,7 +37,7 @@ pub fn exporter_formules_pdf(
     let font = document
         .add_builtin_font(BuiltinFont::Helvetica)
         .map_err(|e| format!("Erreur font: {:?}", e))?;
-        
+
     let font_bold = document
         .add_builtin_font(BuiltinFont::HelveticaBold)
         .map_err(|e| format!("Erreur font bold: {:?}", e))?;
@@ -50,7 +49,13 @@ pub fn exporter_formules_pdf(
 
     // Titre principal
     let current_layer = document.get_page(current_page).get_layer(current_layer_id);
-    current_layer.use_text("Formules & Calculs - Straddle Trading", 18.0, Mm(margin), Mm(y_pos), &font_bold);
+    current_layer.use_text(
+        "Formules & Calculs - Straddle Trading",
+        18.0,
+        Mm(margin),
+        Mm(y_pos),
+        &font_bold,
+    );
     y_pos -= 15.0;
 
     for formule in formules {
@@ -82,7 +87,13 @@ pub fn exporter_formules_pdf(
         current_layer.use_text("Inputs:", 11.0, Mm(margin), Mm(y_pos), &font_bold);
         y_pos -= 5.0;
         for input in &formule.inputs {
-            current_layer.use_text(&format!("• {}", input), 9.0, Mm(margin + 3.0), Mm(y_pos), &font);
+            current_layer.use_text(
+                format!("• {}", input),
+                9.0,
+                Mm(margin + 3.0),
+                Mm(y_pos),
+                &font,
+            );
             y_pos -= 4.0;
         }
         y_pos -= 3.0;
@@ -91,7 +102,7 @@ pub fn exporter_formules_pdf(
         current_layer.use_text("Output:", 11.0, Mm(margin), Mm(y_pos), &font_bold);
         y_pos -= 5.0;
         current_layer.use_text(
-            &format!("Type: {}", formule.output.r#type),
+            format!("Type: {}", formule.output.r#type),
             9.0,
             Mm(margin + 3.0),
             Mm(y_pos),
@@ -99,7 +110,7 @@ pub fn exporter_formules_pdf(
         );
         y_pos -= 4.0;
         current_layer.use_text(
-            &format!("Range: {}", formule.output.range),
+            format!("Range: {}", formule.output.range),
             9.0,
             Mm(margin + 3.0),
             Mm(y_pos),
@@ -107,7 +118,7 @@ pub fn exporter_formules_pdf(
         );
         y_pos -= 4.0;
         current_layer.use_text(
-            &format!("Unité: {}", formule.output.unite),
+            format!("Unité: {}", formule.output.unite),
             9.0,
             Mm(margin + 3.0),
             Mm(y_pos),
@@ -126,7 +137,13 @@ pub fn exporter_formules_pdf(
             current_layer.use_text("Notes:", 11.0, Mm(margin), Mm(y_pos), &font_bold);
             y_pos -= 5.0;
             for note in &formule.notes {
-                current_layer.use_text(&format!("• {}", note), 9.0, Mm(margin + 3.0), Mm(y_pos), &font);
+                current_layer.use_text(
+                    format!("• {}", note),
+                    9.0,
+                    Mm(margin + 3.0),
+                    Mm(y_pos),
+                    &font,
+                );
                 y_pos -= 4.0;
             }
         }

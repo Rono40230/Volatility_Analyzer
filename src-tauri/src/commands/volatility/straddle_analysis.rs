@@ -35,8 +35,14 @@ pub struct WhipsawResponse {
 
 /// Calcule l'offset optimal pour éviter 95% des fausses mèches
 #[command]
-pub fn calculate_offset_optimal(candles: Vec<Candle>, _window: tauri::Window) -> Result<OptimalOffsetResponse, String> {
-    tracing::info!("Command: calculate_offset_optimal for {} candles", candles.len());
+pub fn calculate_offset_optimal(
+    candles: Vec<Candle>,
+    _window: tauri::Window,
+) -> Result<OptimalOffsetResponse, String> {
+    tracing::info!(
+        "Command: calculate_offset_optimal for {} candles",
+        candles.len()
+    );
 
     let offset_pips = calculate_optimal_offset(&candles);
 
@@ -46,7 +52,10 @@ pub fn calculate_offset_optimal(candles: Vec<Candle>, _window: tauri::Window) ->
         .flat_map(|c| {
             let upper = c.high - c.close.max(c.open);
             let lower = c.open.min(c.close) - c.low;
-            vec![if upper > 0.0 { upper } else { 0.0 }, if lower > 0.0 { lower } else { 0.0 }]
+            vec![
+                if upper > 0.0 { upper } else { 0.0 },
+                if lower > 0.0 { lower } else { 0.0 },
+            ]
         })
         .filter(|w| *w > 0.0)
         .collect();

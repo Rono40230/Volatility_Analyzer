@@ -6,13 +6,13 @@ use crate::models::Candle;
 #[derive(Debug, Clone, Default)]
 pub struct MovementQualityResult {
     #[allow(dead_code)]
-    pub trend_score: f64,        // 0-100: Force de la tendance
+    pub trend_score: f64, // 0-100: Force de la tendance
     #[allow(dead_code)]
-    pub smoothness_score: f64,   // 0-100: Régularité du mouvement (peu de retracements)
+    pub smoothness_score: f64, // 0-100: Régularité du mouvement (peu de retracements)
     #[allow(dead_code)]
     pub candle_consistency: f64, // 0-100: Cohérence des bougies (couleur uniforme)
-    pub overall_quality: f64,    // Moyenne pondérée
-    pub quality_label: String,   // "Excellent", "Bon", "Moyen", "Faible"
+    pub overall_quality: f64,  // Moyenne pondérée
+    pub quality_label: String, // "Excellent", "Bon", "Moyen", "Faible"
 }
 
 /// Analyse la qualité du mouvement sur un ensemble de bougies
@@ -53,7 +53,9 @@ pub fn analyze_movement_quality(candles: &[Candle]) -> MovementQualityResult {
 }
 
 fn calculate_trend_score(candles: &[Candle]) -> f64 {
-    if candles.is_empty() { return 0.0; }
+    if candles.is_empty() {
+        return 0.0;
+    }
     let start_price = candles.first().map(|c| c.open).unwrap_or(0.0);
     let end_price = candles.last().map(|c| c.close).unwrap_or(0.0);
     let is_uptrend = end_price > start_price;
@@ -66,11 +68,19 @@ fn calculate_trend_score(candles: &[Candle]) -> f64 {
         let prev = &candles[i - 1];
 
         if is_uptrend {
-            if curr.high > prev.high { score += 1.0; }
-            if curr.low > prev.low { score += 1.0; }
+            if curr.high > prev.high {
+                score += 1.0;
+            }
+            if curr.low > prev.low {
+                score += 1.0;
+            }
         } else {
-            if curr.low < prev.low { score += 1.0; }
-            if curr.high < prev.high { score += 1.0; }
+            if curr.low < prev.low {
+                score += 1.0;
+            }
+            if curr.high < prev.high {
+                score += 1.0;
+            }
         }
     }
 
@@ -80,7 +90,9 @@ fn calculate_trend_score(candles: &[Candle]) -> f64 {
 
 fn calculate_smoothness_score(candles: &[Candle]) -> f64 {
     // Somme des mouvements absolus vs mouvement net
-    if candles.is_empty() { return 0.0; }
+    if candles.is_empty() {
+        return 0.0;
+    }
     let mut total_movement = 0.0;
     let start_price = candles.first().map(|c| c.open).unwrap_or(0.0);
     let end_price = candles.last().map(|c| c.close).unwrap_or(0.0);
@@ -90,17 +102,21 @@ fn calculate_smoothness_score(candles: &[Candle]) -> f64 {
         total_movement += candle.high - candle.low;
     }
 
-    if total_movement == 0.0 { return 0.0; }
+    if total_movement == 0.0 {
+        return 0.0;
+    }
 
     // Ratio d'efficacité (Efficiency Ratio)
     let efficiency = net_movement / total_movement;
-    
+
     // Normaliser: efficiency 1.0 = 100, 0.0 = 0
     efficiency * 100.0
 }
 
 fn calculate_candle_consistency(candles: &[Candle]) -> f64 {
-    if candles.is_empty() { return 0.0; }
+    if candles.is_empty() {
+        return 0.0;
+    }
     let start_price = candles.first().map(|c| c.open).unwrap_or(0.0);
     let end_price = candles.last().map(|c| c.close).unwrap_or(0.0);
     let is_uptrend = end_price > start_price;

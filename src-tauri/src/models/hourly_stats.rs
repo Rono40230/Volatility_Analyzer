@@ -1,6 +1,6 @@
 // models/hourly_stats.rs - Statistiques par heure UTC
-use serde::{Deserialize, Serialize};
 use super::hourly_stats_thresholds::*;
+use serde::{Deserialize, Serialize};
 
 /// Événement économique dans une heure spécifique
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,24 +35,57 @@ impl HourlyStats {
             return 0.0;
         }
         let mut score: f64 = 0.0;
-        score += if self.atr_mean > ATR_EXCELLENT { 30.0 }
-                 else if self.atr_mean > ATR_GOOD { 25.0 }
-                 else if self.atr_mean > ATR_FAIR { 20.0 }
-                 else if self.atr_mean > ATR_POOR { 10.0 } else { 0.0 };
-        score += if self.body_range_mean > BODY_RANGE_EXCELLENT { 25.0 }
-                 else if self.body_range_mean > BODY_RANGE_GOOD { 20.0 }
-                 else if self.body_range_mean > BODY_RANGE_FAIR { 15.0 }
-                 else if self.body_range_mean > BODY_RANGE_POOR { 8.0 } else { 0.0 };
-        score += if self.volatility_mean > VOL_EXCELLENT { 20.0 }
-                 else if self.volatility_mean > VOL_GOOD { 16.0 }
-                 else if self.volatility_mean > VOL_FAIR { 12.0 }
-                 else if self.volatility_mean > VOL_POOR { 6.0 } else { 0.0 };
-        score += if self.noise_ratio_mean < NOISE_EXCELLENT { 15.0 }
-                 else if self.noise_ratio_mean < NOISE_GOOD { 10.0 }
-                 else if self.noise_ratio_mean < NOISE_FAIR { 5.0 } else { 0.0 };
-        score += if self.breakout_percentage > BREAKOUT_EXCELLENT { 10.0 }
-                 else if self.breakout_percentage > BREAKOUT_GOOD { 7.0 }
-                 else if self.breakout_percentage > BREAKOUT_FAIR { 4.0 } else { 0.0 };
+        score += if self.atr_mean > ATR_EXCELLENT {
+            30.0
+        } else if self.atr_mean > ATR_GOOD {
+            25.0
+        } else if self.atr_mean > ATR_FAIR {
+            20.0
+        } else if self.atr_mean > ATR_POOR {
+            10.0
+        } else {
+            0.0
+        };
+        score += if self.body_range_mean > BODY_RANGE_EXCELLENT {
+            25.0
+        } else if self.body_range_mean > BODY_RANGE_GOOD {
+            20.0
+        } else if self.body_range_mean > BODY_RANGE_FAIR {
+            15.0
+        } else if self.body_range_mean > BODY_RANGE_POOR {
+            8.0
+        } else {
+            0.0
+        };
+        score += if self.volatility_mean > VOL_EXCELLENT {
+            20.0
+        } else if self.volatility_mean > VOL_GOOD {
+            16.0
+        } else if self.volatility_mean > VOL_FAIR {
+            12.0
+        } else if self.volatility_mean > VOL_POOR {
+            6.0
+        } else {
+            0.0
+        };
+        score += if self.noise_ratio_mean < NOISE_EXCELLENT {
+            15.0
+        } else if self.noise_ratio_mean < NOISE_GOOD {
+            10.0
+        } else if self.noise_ratio_mean < NOISE_FAIR {
+            5.0
+        } else {
+            0.0
+        };
+        score += if self.breakout_percentage > BREAKOUT_EXCELLENT {
+            10.0
+        } else if self.breakout_percentage > BREAKOUT_GOOD {
+            7.0
+        } else if self.breakout_percentage > BREAKOUT_FAIR {
+            4.0
+        } else {
+            0.0
+        };
         score.min(100.0)
     }
 

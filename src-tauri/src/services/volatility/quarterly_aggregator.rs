@@ -18,7 +18,7 @@ impl QuarterlyAggregator {
             if stat.candle_count > 0 {
                 quarterly_groups
                     .entry((stat.hour, stat.quarter))
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(stat);
             }
         }
@@ -57,8 +57,7 @@ impl QuarterlyAggregator {
                         let count = instances.len() as f64;
                         let atr_mean_avg =
                             instances.iter().map(|s| s.atr_mean).sum::<f64>() / count;
-                        let atr_max_avg =
-                            instances.iter().map(|s| s.atr_max).sum::<f64>() / count;
+                        let atr_max_avg = instances.iter().map(|s| s.atr_max).sum::<f64>() / count;
                         let volatility_mean_avg =
                             instances.iter().map(|s| s.volatility_mean).sum::<f64>() / count;
                         let range_mean_avg =
@@ -75,8 +74,7 @@ impl QuarterlyAggregator {
                         let noise_ratio_mean_avg =
                             instances.iter().map(|s| s.noise_ratio_mean).sum::<f64>() / count;
                         let breakout_percentage_avg =
-                            instances.iter().map(|s| s.breakout_percentage).sum::<f64>()
-                                / count;
+                            instances.iter().map(|s| s.breakout_percentage).sum::<f64>() / count;
 
                         // Calculer les moyennes des peak/half-life/trade_exp
                         let peak_duration_with_values: Vec<u16> = instances
@@ -84,7 +82,10 @@ impl QuarterlyAggregator {
                             .filter_map(|s| s.peak_duration_minutes)
                             .collect();
                         let peak_duration_mean = if !peak_duration_with_values.is_empty() {
-                            let avg = peak_duration_with_values.iter().map(|v| *v as f64).sum::<f64>()
+                            let avg = peak_duration_with_values
+                                .iter()
+                                .map(|v| *v as f64)
+                                .sum::<f64>()
                                 / peak_duration_with_values.len() as f64;
                             Some(avg as u16)
                         } else {
@@ -107,14 +108,14 @@ impl QuarterlyAggregator {
                             .iter()
                             .filter_map(|s| s.recommended_trade_expiration_minutes)
                             .collect();
-                        let recommended_trade_expiration_mean =
-                            if !trade_exp_with_values.is_empty() {
-                                let avg = trade_exp_with_values.iter().map(|v| *v as f64).sum::<f64>()
-                                    / trade_exp_with_values.len() as f64;
-                                Some(avg as u16)
-                            } else {
-                                None
-                            };
+                        let recommended_trade_expiration_mean = if !trade_exp_with_values.is_empty()
+                        {
+                            let avg = trade_exp_with_values.iter().map(|v| *v as f64).sum::<f64>()
+                                / trade_exp_with_values.len() as f64;
+                            Some(avg as u16)
+                        } else {
+                            None
+                        };
 
                         // Compter les candles totaux sur la période
                         let total_candle_count: usize =

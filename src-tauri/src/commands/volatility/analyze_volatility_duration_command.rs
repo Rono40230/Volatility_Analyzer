@@ -26,11 +26,11 @@ pub async fn analyze_volatility_duration_for_slice(
     use crate::services::volatility_duration_calculator::calculate_volatility_duration;
 
     // Créer le pool de connexions pour la BD paires
-    let data_dir = dirs::data_local_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())?;
+    let data_dir =
+        dirs::data_local_dir().ok_or_else(|| "Failed to get data directory".to_string())?;
     let pairs_db_path = data_dir.join("volatility-analyzer").join("pairs.db");
     let pairs_db_url = format!("sqlite://{}", pairs_db_path.display());
-    
+
     let pairs_pool = db::create_pool(&pairs_db_url)
         .map_err(|e| format!("Failed to create pairs DB pool: {}", e))?;
 

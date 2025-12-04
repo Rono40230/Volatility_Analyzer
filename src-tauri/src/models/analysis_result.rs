@@ -38,4 +38,3 @@ pub struct CorrelatedEvent {
     pub volatility_increase: f64,
     pub correlation_score: f64,
 }
-

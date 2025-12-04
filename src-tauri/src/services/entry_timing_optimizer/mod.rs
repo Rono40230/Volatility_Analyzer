@@ -240,8 +240,12 @@ mod tests {
             .into();
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
-        let result1 = optimizer.find_optimal_timing(2.0, 3.0, 120).expect("should find timing");
-        let result2 = optimizer.find_optimal_timing(2.0, 3.0, 120).expect("should find timing");
+        let result1 = optimizer
+            .find_optimal_timing(2.0, 3.0, 120)
+            .expect("should find timing");
+        let result2 = optimizer
+            .find_optimal_timing(2.0, 3.0, 120)
+            .expect("should find timing");
 
         assert_eq!(
             result1.best_entry_minutes_before,

@@ -71,23 +71,21 @@ mod tests {
             noise_ratio_mean: 2.0,
             breakout_percent: 30.0,
             candle_count: 15,
-            events: vec![
-                CalendarEvent {
-                    id: 1,
-                    symbol: "EURUSD".to_string(),
-                    event_time: chrono::Utc::now(),
-                    impact: if events_count > 0 {
-                        "HIGH".to_string()
-                    } else {
-                        "LOW".to_string()
-                    },
-                    description: "Test".to_string(),
-                    actual: None,
-                    forecast: None,
-                    previous: None,
-                    created_at: chrono::Utc::now(),
-                }
-            ][0..events_count]
+            events: vec![CalendarEvent {
+                id: 1,
+                symbol: "EURUSD".to_string(),
+                event_time: chrono::Utc::now(),
+                impact: if events_count > 0 {
+                    "HIGH".to_string()
+                } else {
+                    "LOW".to_string()
+                },
+                description: "Test".to_string(),
+                actual: None,
+                forecast: None,
+                previous: None,
+                created_at: chrono::Utc::now(),
+            }][0..events_count]
                 .to_vec(),
         }
     }

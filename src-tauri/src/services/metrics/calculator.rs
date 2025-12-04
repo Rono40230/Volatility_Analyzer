@@ -49,13 +49,16 @@ impl<'a> MetricsCalculator<'a> {
 
         // Smoothing Wilder: ATR[i] = (ATR[i-1] * (period - 1) + TR[i]) / period
         let multiplier = (period - 1) as f64;
-        for i in period..true_ranges.len() {
-            let prev_atr = atr_values[atr_values.len() - 1];  // Dernière valeur ATR calculée
-            let atr = (prev_atr * multiplier + true_ranges[i]) / period as f64;
+        for tr in true_ranges.iter().skip(period) {
+            let prev_atr = atr_values[atr_values.len() - 1]; // Dernière valeur ATR calculée
+            let atr = (prev_atr * multiplier + tr) / period as f64;
             atr_values.push(atr);
         }
 
-        debug!("ATR calculated with Wilder's smoothing: {} values", atr_values.len());
+        debug!(
+            "ATR calculated with Wilder's smoothing: {} values",
+            atr_values.len()
+        );
         Ok(atr_values)
     }
 

@@ -28,7 +28,10 @@ pub mod volatility_duration_commands;
 pub use archive_commands::*;
 pub use calendar_commands::get_upcoming_events;
 pub use calendar_import_commands::*;
-pub use candle_index_commands::{get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles, init_candle_index, load_pair_candles};
+pub use candle_index_commands::{
+    get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles,
+    init_candle_index, load_pair_candles,
+};
 pub use config_commands::*;
 pub use correlation::*;
 pub use csv_cleaner_commands::*;
@@ -46,17 +49,17 @@ pub use file_listing::*;
 pub use global_analysis_commands::*;
 pub use import_clean::import_and_clean_files;
 pub use metadata::{
-    get_calendar_id_by_filename, get_calendar_period_by_id, get_calendars_metadata, get_pair_metadata_from_db,
-    get_pairs_metadata,
+    get_calendar_id_by_filename, get_calendar_period_by_id, get_calendars_metadata,
+    get_pair_metadata_from_db, get_pairs_metadata,
 };
 pub use movement_analysis_commands::{analyze_movement_quality, get_movement_qualities};
 pub use pair_data::import_pair_data;
 // Phase 7: Retrospective analysis commands (fully integrated)
-pub use retrospective_analysis::{analyze_peak_delay, analyze_decay_profile, get_event_types};
+pub use retrospective_analysis::{analyze_decay_profile, analyze_peak_delay, get_event_types};
 pub use session_commands::*;
 pub use volatility::{
-    analyze_slice_metrics, analyze_straddle_metrics, analyze_symbol,
-    analyze_volatility_duration_for_slice, analyze_quarter_entry_timing, calculate_offset_optimal, calculate_whipsaw_freq,
+    analyze_quarter_entry_timing, analyze_slice_metrics, analyze_straddle_metrics, analyze_symbol,
+    analyze_volatility_duration_for_slice, calculate_offset_optimal, calculate_whipsaw_freq,
     calculate_win_rate, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
     load_candles_for_hour, load_symbols, ping,
 };

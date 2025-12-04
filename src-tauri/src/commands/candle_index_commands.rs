@@ -1,8 +1,8 @@
 // commands/candle_index_commands.rs
 // Gère le chargement et l'initialisation du CandleIndex global
 
-use crate::commands::pair_data::PairDataState;
 use crate::commands::candle_helpers::*;
+use crate::commands::pair_data::PairDataState;
 use crate::services::candle_index::CandleIndex;
 use crate::services::DatabaseLoader;
 use std::sync::Mutex;
@@ -29,7 +29,10 @@ pub async fn init_candle_index(
     let db_loader = DatabaseLoader::new(pair_pool);
     let index = CandleIndex::with_db_loader(db_loader);
 
-    *state.index.lock().map_err(|e| format!("Failed to lock state: {}", e))? = Some(index);
+    *state
+        .index
+        .lock()
+        .map_err(|e| format!("Failed to lock state: {}", e))? = Some(index);
 
     Ok("CandleIndex initialized avec DatabaseLoader - paires chargées depuis BD".to_string())
 }
@@ -119,10 +122,16 @@ pub async fn get_candles_for_hour(
 
     let candles = index
         .get_candles_for_hour(&symbol, date, hour)
-        .ok_or(format!("No candles found for {} on {} hour {}", symbol, date_str, hour))?;
+        .ok_or(format!(
+            "No candles found for {} on {} hour {}",
+            symbol, date_str, hour
+        ))?;
 
     if candles.is_empty() {
-        return Err(format!("No candles for {} on {} hour {} (empty result)", symbol, date_str, hour));
+        return Err(format!(
+            "No candles for {} on {} hour {} (empty result)",
+            symbol, date_str, hour
+        ));
     }
 
     Ok(CandlesForHourResponse {
@@ -145,19 +154,23 @@ pub async fn get_candles_for_quarter(
     validate_hour(hour as u32)?;
     validate_quarter(quarter)?;
 
-    info!("🔍 get_candles_for_quarter: {} hour={} quarter={}", symbol, hour, quarter);
+    info!(
+        "🔍 get_candles_for_quarter: {} hour={} quarter={}",
+        symbol, hour, quarter
+    );
 
     let mut index_state = state
         .index
         .lock()
         .map_err(|e| format!("Failed to lock state: {}", e))?;
 
-    let index = index_state
-        .as_mut()
-        .ok_or("CandleIndex not initialized")?;
+    let index = index_state.as_mut().ok_or("CandleIndex not initialized")?;
 
     if !index.is_pair_loaded(&symbol) {
-        info!("📥 Paire {} pas encore chargée - chargement en cours...", symbol);
+        info!(
+            "📥 Paire {} pas encore chargée - chargement en cours...",
+            symbol
+        );
         index.load_pair_candles(&symbol)?;
         info!("✅ Paire {} chargée", symbol);
     }
@@ -166,7 +179,11 @@ pub async fn get_candles_for_quarter(
         .get_all_candles(&symbol)
         .ok_or(format!("No candles found for {} after loading", symbol))?;
 
-    info!("📊 Total candles loaded for {}: {}", symbol, all_candles.len());
+    info!(
+        "📊 Total candles loaded for {}: {}",
+        symbol,
+        all_candles.len()
+    );
 
     let filtered = filter_by_quarter(all_candles, hour, quarter);
     ensure_not_empty(&filtered, &symbol, hour, quarter)?;

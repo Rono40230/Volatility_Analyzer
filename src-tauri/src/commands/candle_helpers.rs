@@ -53,40 +53,62 @@ pub fn validate_quarter(quarter: u8) -> Result<(), String> {
 pub fn filter_by_quarter(all_candles: Vec<Candle>, hour: u8, quarter: u8) -> Vec<Candle> {
     const PARIS_OFFSET: i32 = 1;
     let mut debug_count = 0;
-    
+
     all_candles
         .into_iter()
         .filter(|candle| {
             let utc_hour = candle.hour_utc() as i32;
             let utc_minute = candle.datetime.minute() as i32;
-            
+
             let paris_hour = (utc_hour + PARIS_OFFSET) % 24;
             let paris_minute = utc_minute;
-            
+
             let q = (paris_minute / 15) as u8;
             let matches = paris_hour == hour as i32 && q == quarter;
-            
+
             if debug_count < 5 {
-                debug!("  Candle: {} UTC {}:{} → Paris {}:{} q={} → match={}", 
-                    candle.datetime, utc_hour, utc_minute, paris_hour, paris_minute, q, matches);
+                debug!(
+                    "  Candle: {} UTC {}:{} → Paris {}:{} q={} → match={}",
+                    candle.datetime, utc_hour, utc_minute, paris_hour, paris_minute, q, matches
+                );
                 debug_count += 1;
             }
-            
+
             matches
         })
         .collect()
 }
 
 /// Retourne un message d'erreur si les candles filtrées sont vides
-pub fn ensure_not_empty(filtered: &[Candle], symbol: &str, hour: u8, quarter: u8) -> Result<(), String> {
+pub fn ensure_not_empty(
+    filtered: &[Candle],
+    symbol: &str,
+    hour: u8,
+    quarter: u8,
+) -> Result<(), String> {
     if filtered.is_empty() {
-        warn!("❌ No candles found for {} hour={}:{} quarter={}", symbol, hour, quarter * 15, quarter);
+        warn!(
+            "❌ No candles found for {} hour={}:{} quarter={}",
+            symbol,
+            hour,
+            quarter * 15,
+            quarter
+        );
         Err(format!(
             "No candles for {} hour {}:{} (quarter {})",
-            symbol, hour, quarter * 15, quarter
+            symbol,
+            hour,
+            quarter * 15,
+            quarter
         ))
     } else {
-        info!("✅ Filtered {} candles for {}:{}(q{})", filtered.len(), hour, quarter * 15, quarter);
+        info!(
+            "✅ Filtered {} candles for {}:{}(q{})",
+            filtered.len(),
+            hour,
+            quarter * 15,
+            quarter
+        );
         Ok(())
     }
 }

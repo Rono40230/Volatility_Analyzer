@@ -15,7 +15,7 @@ pub struct VolatilityDurationResult {
 }
 
 /// Calcule la durée de volatilité en analysant comment la volatilité décroît après le pic
-/// 
+///
 /// Méthode :
 /// 1. Pour chaque jour, on identifie le pic de volatilité dans le créneau
 /// 2. On mesure combien de temps la volatilité reste élevée après le pic
@@ -38,7 +38,10 @@ pub fn calculate_volatility_duration(
     let mut candles_by_day: HashMap<String, Vec<&Candle>> = HashMap::new();
     for candle in candles {
         let day_key = candle.datetime.date_naive().to_string();
-        candles_by_day.entry(day_key).or_insert_with(Vec::new).push(candle);
+        candles_by_day
+            .entry(day_key)
+            .or_default()
+            .push(candle);
     }
 
     let mut peak_durations: Vec<i64> = Vec::new();
@@ -67,15 +70,18 @@ pub fn calculate_volatility_duration(
         }
 
         // Trouver le pic de volatilité
-        let max_atr = atrs.iter().map(|(_, atr)| atr).fold(0.0_f64, |a, &b| a.max(b));
+        let max_atr = atrs
+            .iter()
+            .map(|(_, atr)| atr)
+            .fold(0.0_f64, |a, &b| a.max(b));
         let peak_idx = atrs.iter().position(|(_, atr)| *atr == max_atr);
 
         if let Some(peak_idx) = peak_idx {
             // Calculer la durée du pic (combien de temps au-dessus de 75% du max)
             let threshold_75 = max_atr * 0.75;
             let mut duration = 0;
-            for i in peak_idx..atrs.len() {
-                if atrs[i].1 >= threshold_75 {
+            for atr in atrs.iter().skip(peak_idx) {
+                if atr.1 >= threshold_75 {
                     duration += 1;
                 } else {
                     break;
@@ -88,8 +94,8 @@ pub fn calculate_volatility_duration(
             // Calculer la demi-vie (temps pour atteindre 50% du max)
             let threshold_50 = max_atr * 0.5;
             let mut half_life = 0;
-            for i in peak_idx..atrs.len() {
-                if atrs[i].1 >= threshold_50 {
+            for atr in atrs.iter().skip(peak_idx) {
+                if atr.1 >= threshold_50 {
                     half_life += 1;
                 } else {
                     break;

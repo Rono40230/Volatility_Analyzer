@@ -2,7 +2,7 @@
 use crate::models::Candle;
 
 /// Simule le win rate d'un Straddle sur un ensemble de candles
-/// 
+///
 /// Algorithme :
 /// 1. Pour chaque "événement" (1ère bougie), on place une commande Straddle
 /// 2. Buy stop = prix de fermeture + offset_pips

@@ -157,7 +157,7 @@ impl ConfidenceScorer {
             score -= 8.0; // Volatilité instable/chaotique = à éviter
         }
 
-        score.min(100.0).max(0.0) // Clamp entre 0 et 100
+        score.clamp(0.0, 100.0) // Clamp entre 0 et 100
     }
 }
 

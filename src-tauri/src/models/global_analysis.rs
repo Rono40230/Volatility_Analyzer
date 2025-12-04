@@ -62,8 +62,8 @@ pub struct TradableEventType {
     pub event_name: String,
     pub occurrence_count: usize,
     pub avg_volatility_increase: f64, // Ratio event_volatility / baseline_volatility
-    pub tradability_score: f64, // Score composite (0-100)
-    pub affected_pairs: Vec<String>, // Liste des paires impactées
+    pub tradability_score: f64,       // Score composite (0-100)
+    pub affected_pairs: Vec<String>,  // Liste des paires impactées
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,8 +71,8 @@ pub struct StraddleSuccessRate {
     pub pair: String,
     pub total_events: usize,
     pub directional_move_rate: f64, // % de mouvements directionnels clairs
-    pub whipsaw_rate: f64, // % de mouvements erratiques (tueur de straddle)
-    pub avg_volatility: f64, // Volatilité moyenne sur tous les événements
+    pub whipsaw_rate: f64,          // % de mouvements erratiques (tueur de straddle)
+    pub avg_volatility: f64,        // Volatilité moyenne sur tous les événements
     pub straddle_score: f64, // Score composite (0-100) : directional_move_rate - whipsaw_rate
     pub top_events: Vec<String>, // Top 3 événements les plus impactants pour cette paire
 }

@@ -4,13 +4,13 @@ use crate::services::straddle_simulator_helpers::calculate_atr_mean;
 use tracing::info;
 
 /// Calcule l'offset optimal pour un Straddle basé sur ATR
-/// 
+///
 /// Algorithme (CORRECTED - PHASE 2):
 /// 1. Calculer l'ATR moyen (Average True Range)
 /// 2. Appliquer le multiplicateur Straddle: ATR × 1.75
 /// 3. Retourner en points (pips × 10000)
-/// 
-/// Rationale: 
+///
+/// Rationale:
 /// - Offset = ATR × 1.75 protège contre la vraie volatilité (pas juste les wicks)
 /// - Formule Straddle standard: 1.5 (conservateur) à 2.0 (agressif)
 /// - 1.75 = équilibre optimal
@@ -34,9 +34,12 @@ pub fn calculate_optimal_offset(candles: &[Candle]) -> f64 {
 
     // 3. Convertir en pips (multiplier par 10000)
     let result = optimal_offset * 10000.0;
-    
-    info!("✅ Offset final (ATR-based): {:.0} pips | ATR_mean: {:.8}", result, atr_mean);
-    
+
+    info!(
+        "✅ Offset final (ATR-based): {:.0} pips | ATR_mean: {:.8}",
+        result, atr_mean
+    );
+
     result
 }
 
@@ -51,7 +54,7 @@ mod tests {
         let base_time = DateTime::parse_from_rfc3339("2024-12-01T14:00:00Z")
             .expect("valid RFC3339 datetime")
             .with_timezone(&Utc);
-        
+
         let candles = vec![
             Candle {
                 id: None,
@@ -87,12 +90,16 @@ mod tests {
 
         let offset = calculate_optimal_offset(&candles);
         assert!(offset > 0.0, "Offset doit être > 0");
-        
+
         // Calcul ATR (TR1=0.0020, TR2=0.0025, TR3=0.0025) → ATR_mean ≈ 0.00233
         // Offset = ATR_mean × 1.75 ≈ 0.00233 × 1.75 ≈ 0.00408
         // En pips = 0.00408 × 10000 ≈ 40.8 pips
         // Plage acceptable: 35-50 pips
-        assert!(offset > 35.0 && offset < 50.0, "Offset {:.1} doit être entre 35 et 50 pips", offset);
+        assert!(
+            offset > 35.0 && offset < 50.0,
+            "Offset {:.1} doit être entre 35 et 50 pips",
+            offset
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
+use crate::schema::archives;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use crate::schema::archives;
 
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Archive {

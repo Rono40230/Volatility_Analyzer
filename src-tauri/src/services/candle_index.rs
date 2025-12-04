@@ -201,8 +201,6 @@ impl CandleIndex {
         self.data.keys().cloned().collect()
     }
 
-
-
     /// Récupère les candles d'une HEURE SPÉCIFIQUE pour une paire
     /// Retourne les 60 candles (1 minute chacune) pour l'heure donnée d'une date
     pub fn get_candles_for_hour(

@@ -5,7 +5,6 @@
 use crate::models::Candle;
 use crate::services::candle_index::CandleIndex;
 
-
 #[derive(Debug, Clone)]
 pub struct SliceMetrics {
     pub candle_count: usize,
@@ -55,12 +54,8 @@ pub fn analyze_slice_metrics(
     let end_minute = start_minute + 15;
 
     // Collecter toutes les bougies du créneau à travers l'historique (OPTIMISÉ)
-    let slice_candles = candle_index.get_candles_for_slice_all_history(
-        symbol,
-        hour,
-        start_minute,
-        end_minute,
-    );
+    let slice_candles =
+        candle_index.get_candles_for_slice_all_history(symbol, hour, start_minute, end_minute);
 
     if slice_candles.is_empty() {
         return Ok((SliceMetrics::default(), Vec::new()));
@@ -68,14 +63,17 @@ pub fn analyze_slice_metrics(
 
     // Calculer les métriques réelles
     let metrics = calculate_metrics_from_candles(&slice_candles, symbol)?;
-    
+
     Ok((metrics, slice_candles))
 }
 
 /// Calcule les métriques à partir d'un ensemble de bougies
-fn calculate_metrics_from_candles(candles: &[Candle], symbol: &str) -> Result<SliceMetrics, String> {
+fn calculate_metrics_from_candles(
+    candles: &[Candle],
+    symbol: &str,
+) -> Result<SliceMetrics, String> {
     use crate::services::straddle_simulator::normalize_to_pips;
-    
+
     if candles.is_empty() {
         return Ok(SliceMetrics::default());
     }
@@ -114,11 +112,7 @@ fn calculate_metrics_from_candles(candles: &[Candle], symbol: &str) -> Result<Sl
         let upper_wick = candle.high - candle.close.max(candle.open);
         let lower_wick = candle.open.min(candle.close) - candle.low;
         let total_wicks = upper_wick + lower_wick;
-        let noise = if body > 0.0 {
-            total_wicks / body
-        } else {
-            0.0
-        };
+        let noise = if body > 0.0 { total_wicks / body } else { 0.0 };
         noise_ratio_sum += noise;
 
         // Volume Imbalance (Direction Strength)

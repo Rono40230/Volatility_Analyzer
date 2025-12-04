@@ -36,7 +36,7 @@ impl EventCorrelationService {
 
     /// Analyse la corrélation entre un événement et la volatilité observée
     /// NOTE: Méthode conservée pour usage futur (Phase 2 - analyses avancées)
-    /// 
+    ///
     /// CORRECTION PHASE 2: Filtre maintenant les événements LOW-impact
     #[allow(dead_code)]
     pub fn correlate_event_with_volatility(

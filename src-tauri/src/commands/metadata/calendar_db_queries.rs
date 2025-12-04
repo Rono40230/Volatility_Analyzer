@@ -1,6 +1,6 @@
 // Requêtes BD pour calendrier (utilitaires pour refactorisation)
-use rusqlite::Connection;
 use super::CalendarImportInfo;
+use rusqlite::Connection;
 
 pub fn get_db_path() -> Result<std::path::PathBuf, String> {
     Ok(dirs::data_local_dir()

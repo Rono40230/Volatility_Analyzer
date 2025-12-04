@@ -1,6 +1,7 @@
 // Helpers pour analyze_quarter_entry_timing_command.rs
-use std::collections::HashMap;
+use crate::commands::volatility::minute_scoring::{score_metrics as score_metrics_fn, calculate_confidence as calculate_confidence_fn};
 use chrono::Timelike;
+use std::collections::HashMap;
 
 /// Métriques calculées pour une minute spécifique
 #[derive(Debug, Default)]
@@ -14,16 +15,14 @@ pub struct MinuteMetrics {
 }
 
 /// Groupe les candles par jour (pour isoler chaque occurrence du quarter)
-pub fn group_candles_by_day(
-    candles: &[crate::models::Candle],
-) -> Vec<Vec<crate::models::Candle>> {
+pub fn group_candles_by_day(candles: &[crate::models::Candle]) -> Vec<Vec<crate::models::Candle>> {
     let mut daily_map: HashMap<String, Vec<crate::models::Candle>> = HashMap::new();
 
     for candle in candles {
         let date_key = candle.datetime.format("%Y-%m-%d").to_string();
         daily_map
             .entry(date_key)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(candle.clone());
     }
 
@@ -31,9 +30,7 @@ pub fn group_candles_by_day(
 }
 
 /// Trouve la meilleure minute (offset 0-14) dans un jour donné
-pub fn find_best_minute_in_quarter(
-    daily_candles: &[crate::models::Candle],
-) -> Result<u8, String> {
+pub fn find_best_minute_in_quarter(daily_candles: &[crate::models::Candle]) -> Result<u8, String> {
     if daily_candles.is_empty() {
         return Ok(0);
     }
@@ -52,7 +49,7 @@ pub fn find_best_minute_in_quarter(
         }
 
         let metrics = calculate_minute_metrics(&minute_candles)?;
-        let score = score_metrics(&metrics);
+        let score = score_metrics_fn(&metrics);
 
         if score > best_score {
             best_score = score;
@@ -96,7 +93,11 @@ pub fn calculate_minute_metrics(
 
         let body = (candle.close - candle.open).abs();
         let wick = candle.high - candle.low;
-        let body_range = if wick > 0.0 { (body / wick) * 100.0 } else { 0.0 };
+        let body_range = if wick > 0.0 {
+            (body / wick) * 100.0
+        } else {
+            0.0
+        };
         body_range_sum += body_range;
 
         let upper_wick = candle.high - candle.close.max(candle.open);
@@ -124,29 +125,6 @@ pub fn calculate_minute_metrics(
     })
 }
 
-/// Score les métriques
-pub fn score_metrics(m: &MinuteMetrics) -> f64 {
-    let mut score = 0.0;
-    // Range scoring
-    score += if m.range_percent > 2.5 { 60.0 } else if m.range_percent > 2.0 { 50.0 } 
-            else if m.range_percent > 1.5 { 40.0 } else if m.range_percent > 1.0 { 20.0 } else { 0.0 };
-    // ATR scoring
-    score += if m.atr_percent > 2.0 { 25.0 } else if m.atr_percent > 1.5 { 20.0 }
-            else if m.atr_percent > 1.0 { 15.0 } else if m.atr_percent > 0.5 { 8.0 } else { 0.0 };
-    // Body Range
-    score += if m.body_range > 45.0 { 15.0 } else if m.body_range > 35.0 { 12.0 }
-            else if m.body_range > 25.0 { 8.0 } else if m.body_range > 15.0 { 3.0 } else { 0.0 };
-    // Noise Ratio
-    score += if m.noise_ratio < 1.0 { 8.0 } else if m.noise_ratio < 1.5 { 5.0 }
-            else if m.noise_ratio < 2.5 { 2.0 } else { 0.0 };
-    // Volume + Breakout
-    score += if m.volume_imbalance > 0.25 { 8.0 } else if m.volume_imbalance > 0.15 { 5.0 }
-            else if m.volume_imbalance > 0.05 { 2.0 } else { 0.0 };
-    score += if m.breakout_percent > 50.0 { 12.0 } else if m.breakout_percent > 25.0 { 8.0 }
-            else if m.breakout_percent > 10.0 { 4.0 } else { 0.0 };
-    score
-}
-
 /// Estime le win-rate pour une minute spécifique
 pub fn estimate_win_rate_for_minute(
     daily_candles: &[crate::models::Candle],
@@ -161,27 +139,12 @@ pub fn estimate_win_rate_for_minute(
         .sum();
     let avg_volatility = volatility_sum / daily_candles.len() as f64;
 
-    let win_rate = (0.5 + (avg_volatility * 50.0)).min(0.95).max(0.40);
+    let win_rate = (0.5 + (avg_volatility * 50.0)).clamp(0.40, 0.95);
 
     Ok(win_rate)
 }
 
-/// Calcule le score de confiance (basé sur la consistance des offsets)
+/// Calcule le score de confiance (basé sur la consistance)
 pub fn calculate_confidence(offsets: &[u8], optimal: u8) -> f64 {
-    if offsets.is_empty() {
-        return 0.0;
-    }
-
-    let optimal_i32 = optimal as i32;
-    let variance: f64 = offsets
-        .iter()
-        .map(|&o| {
-            let diff = (o as i32 - optimal_i32).abs() as f64;
-            diff * diff
-        })
-        .sum::<f64>()
-        / offsets.len() as f64;
-
-    let std_dev = variance.sqrt();
-    (100.0 - (std_dev * 10.0)).max(20.0).min(100.0)
+    calculate_confidence_fn(offsets, optimal)
 }

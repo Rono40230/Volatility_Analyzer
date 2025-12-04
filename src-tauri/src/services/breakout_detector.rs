@@ -4,7 +4,7 @@
 use crate::models::Candle;
 
 /// Détecte les breakouts dans un ensemble de bougies
-/// 
+///
 /// Un breakout est défini comme :
 /// - Le prix casse un niveau de support/résistance récent
 /// - Le mouvement est confirmé par un body significatif (> 50% du range)

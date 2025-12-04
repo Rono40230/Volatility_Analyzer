@@ -10,8 +10,8 @@ pub struct PeakDelayResult {
     pub event_count: usize,
     pub event_type: String,
     pub optimal_entry_seconds_before: i32,
-    pub event_date_min: String,  // ISO 8601: 1er événement analysé
-    pub event_date_max: String,  // ISO 8601: dernier événement analysé
+    pub event_date_min: String, // ISO 8601: 1er événement analysé
+    pub event_date_max: String, // ISO 8601: dernier événement analysé
 }
 
 /// Decay profile analysis result

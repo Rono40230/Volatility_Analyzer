@@ -1,5 +1,5 @@
 // commands/global_analysis_commands.rs - Commandes pour l'analyse globale
-use crate::models::{GlobalAnalysisResult, AnalysisFilters};
+use crate::models::{AnalysisFilters, GlobalAnalysisResult};
 use crate::services::{ArchiveService, GlobalAnalyzer};
 use tauri::State;
 

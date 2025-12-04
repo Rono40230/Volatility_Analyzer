@@ -1,9 +1,9 @@
 // services/global_analyzer.rs - Moteur d'analyse statistique globale
+use super::global_analyzer_helpers::calculate_temporal_weight;
+use super::global_analyzer_metrics::*;
+use super::global_analyzer_types::*;
 use crate::models::{AnalysisFilters, GlobalAnalysisResult};
 use crate::services::ArchiveService;
-use super::global_analyzer_types::*;
-use super::global_analyzer_metrics::*;
-use super::global_analyzer_helpers::calculate_temporal_weight;
 use tracing::info;
 
 pub struct GlobalAnalyzer {
@@ -15,17 +15,30 @@ impl GlobalAnalyzer {
         GlobalAnalyzer { archive_service }
     }
 
-    pub fn analyze_all_archives(&self, filters: Option<AnalysisFilters>) -> Result<GlobalAnalysisResult, String> {
-        let archives = self.archive_service.list_archives()
+    pub fn analyze_all_archives(
+        &self,
+        filters: Option<AnalysisFilters>,
+    ) -> Result<GlobalAnalysisResult, String> {
+        let archives = self
+            .archive_service
+            .list_archives()
             .map_err(|e| format!("Erreur lors de la récupération des archives: {}", e))?;
 
         let total_archives = archives.len();
         info!("Début analyse globale sur {} archives", total_archives);
 
-        let (weighted_data, filtered_archives) = self.filter_and_weight_archives(&archives, filters.as_ref())?;
+        let (weighted_data, filtered_archives) =
+            self.filter_and_weight_archives(&archives, filters.as_ref())?;
 
-        info!("Archives valides pour analyse : {}/{}", weighted_data.len(), total_archives);
-        info!("Archives filtrées pour analyses avancées : {}", filtered_archives.len());
+        info!(
+            "Archives valides pour analyse : {}/{}",
+            weighted_data.len(),
+            total_archives
+        );
+        info!(
+            "Archives filtrées pour analyses avancées : {}",
+            filtered_archives.len()
+        );
 
         if weighted_data.is_empty() && filtered_archives.is_empty() {
             return Err("Aucune archive compatible trouvée après filtrage.".to_string());
@@ -55,7 +68,11 @@ impl GlobalAnalyzer {
         let mut filtered_archives: Vec<crate::models::Archive> = Vec::new();
 
         let (start_date, end_date, target_pairs) = if let Some(f) = filters {
-            (f.start_date.as_deref(), f.end_date.as_deref(), f.pairs.as_ref())
+            (
+                f.start_date.as_deref(),
+                f.end_date.as_deref(),
+                f.pairs.as_ref(),
+            )
         } else {
             (None, None, None)
         };
@@ -71,9 +88,11 @@ impl GlobalAnalyzer {
                     if !wrapper.analysis_result.symbol.is_empty() {
                         current_analyzable_data = Some(wrapper.analysis_result);
                     }
-                },
+                }
                 Err(_) => {
-                    if let Ok(result) = serde_json::from_str::<AnalyzableArchiveData>(&archive.data_json) {
+                    if let Ok(result) =
+                        serde_json::from_str::<AnalyzableArchiveData>(&archive.data_json)
+                    {
                         if !result.symbol.is_empty() {
                             current_analyzable_data = Some(result);
                         }
@@ -87,7 +106,10 @@ impl GlobalAnalyzer {
 
             if let Some(data) = current_analyzable_data {
                 let weight = calculate_temporal_weight(archive.created_at);
-                info!("Archive {} lue avec succès: {} (poids: {:.2})", archive.id, data.symbol, weight);
+                info!(
+                    "Archive {} lue avec succès: {} (poids: {:.2})",
+                    archive.id, data.symbol, weight
+                );
                 weighted_data.push(WeightedArchiveData {
                     data,
                     weight,
@@ -140,8 +162,12 @@ impl GlobalAnalyzer {
                     }
                 } else {
                     for pair in pairs {
-                        if archive.data_json.contains(&format!("\"pair\":\"{}\"", pair))
-                            || archive.data_json.contains(&format!("\"symbol\":\"{}\"", pair))
+                        if archive
+                            .data_json
+                            .contains(&format!("\"pair\":\"{}\"", pair))
+                            || archive
+                                .data_json
+                                .contains(&format!("\"symbol\":\"{}\"", pair))
                         {
                             found = true;
                             break;

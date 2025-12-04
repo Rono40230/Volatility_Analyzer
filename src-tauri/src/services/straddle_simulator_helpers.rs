@@ -9,9 +9,15 @@ pub fn calculate_atr_mean(candles: &[Candle]) -> f64 {
     for i in 0..candles.len() {
         let high = candles[i].high;
         let low = candles[i].low;
-        let close = if i > 0 { candles[i - 1].close } else { candles[i].close };
+        let close = if i > 0 {
+            candles[i - 1].close
+        } else {
+            candles[i].close
+        };
 
-        let tr = (high - low).max((high - close).abs()).max((low - close).abs());
+        let tr = (high - low)
+            .max((high - close).abs())
+            .max((low - close).abs());
         atr_values.push(tr);
     }
 
@@ -58,13 +64,12 @@ pub fn find_trade_resolution(
     // Chercher dans les 15 MINUTES, pas dans les 15 indices suivants
     let max_time = entry_time + chrono::Duration::minutes(15);
 
-    for check_idx in (start_idx + 1)..candles.len() {
-        let candle = &candles[check_idx];
-        
+    for candle in candles.iter().skip(start_idx + 1) {
+
         if candle.datetime > max_time {
             break;
         }
-        
+
         let duration = candle.datetime.signed_duration_since(entry_time);
         let duration_minutes = duration.num_minutes() as i32;
 

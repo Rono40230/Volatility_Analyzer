@@ -1,5 +1,5 @@
 /// Seuils de scoring pour HourlyStats
-
+///
 /// ATR adapté Forex (30 pts)
 pub const ATR_EXCELLENT: f64 = 0.00025;
 pub const ATR_GOOD: f64 = 0.00015;

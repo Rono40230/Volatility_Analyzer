@@ -58,11 +58,7 @@ impl MetricsAggregator {
                 .map(|h| h.breakout_percentage)
                 .sum::<f64>()
                 / count,
-            mean_range: stats_with_data
-                .iter()
-                .map(|h| h.range_mean)
-                .sum::<f64>()
-                / count,
+            mean_range: stats_with_data.iter().map(|h| h.range_mean).sum::<f64>() / count,
             total_candles,
         }
     }

@@ -1,11 +1,11 @@
 // services/straddle_simulator.rs
 // Simule une stratégie Straddle sur l'historique complet d'un créneau
 
-use crate::models::Candle;
 use super::straddle_adjustments::AdjustedMetrics;
 use super::straddle_simulator_helpers::{
-    calculate_atr_mean, get_whipsaw_coefficient, calculate_risk_level, find_trade_resolution,
+    calculate_atr_mean, calculate_risk_level, find_trade_resolution, get_whipsaw_coefficient,
 };
+use crate::models::Candle;
 
 #[derive(Debug, Clone)]
 pub struct WhipsawDetail {
@@ -30,10 +30,10 @@ pub struct StraddleSimulationResult {
     pub risk_level: String,
     pub risk_color: String,
     // Valeurs pondérées par le whipsaw (Option B - affichage direct)
-    pub win_rate_adjusted: f64,           // Win Rate pondéré par whipsaw
-    pub sl_adjusted_pips: f64,            // SL ajusté par whipsaw
-    pub trailing_stop_adjusted: f64,      // Trailing Stop réduit
-    pub timeout_adjusted_minutes: i32,    // Timeout réduit
+    pub win_rate_adjusted: f64,        // Win Rate pondéré par whipsaw
+    pub sl_adjusted_pips: f64,         // SL ajusté par whipsaw
+    pub trailing_stop_adjusted: f64,   // Trailing Stop réduit
+    pub timeout_adjusted_minutes: i32, // Timeout réduit
     pub whipsaw_details: Vec<WhipsawDetail>, // Détails de chaque whipsaw
 }
 
@@ -46,7 +46,11 @@ pub fn normalize_to_pips(value: f64, symbol: &str) -> f64 {
 /// Retourne la valeur d'1 pip pour une paire donnée
 pub fn get_pip_value(symbol: &str) -> f64 {
     // Indices
-    if symbol.contains("US30") || symbol.contains("DE30") || symbol.contains("NAS100") || symbol.contains("SPX500") {
+    if symbol.contains("US30")
+        || symbol.contains("DE30")
+        || symbol.contains("NAS100")
+        || symbol.contains("SPX500")
+    {
         return 1.0;
     }
     // Crypto
@@ -69,7 +73,7 @@ pub fn get_pip_value(symbol: &str) -> f64 {
 }
 
 /// Simule une stratégie Straddle sur un ensemble de bougies avec tracking temporel du whipsaw
-/// 
+///
 /// Stratégie : Place un ordre Buy Stop et Sell Stop à distance égale du prix d'ouverture
 /// Whipsaw pondéré : Chaque whipsaw reçoit un coefficient selon QUAND il se produit
 pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulationResult {
@@ -182,25 +186,29 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                     whipsaws += 1;
                     let coefficient = get_whipsaw_coefficient(whipsaw_duration_minutes);
                     whipsaw_weight_sum += coefficient;
-                    
+
                     // Enregistrer le détail du whipsaw
                     let buy_stop_detail = open + offset_optimal;
                     let sell_stop_detail = open - offset_optimal;
-                    
+
                     // Chercher les indices de déclenchement réels
                     let max_look = std::cmp::min(i + 15, candles.len());
                     let mut buy_trigger_idx = candles.len();
                     let mut sell_trigger_idx = candles.len();
-                    
+
                     for check_idx in (i + 1)..max_look {
-                        if buy_trigger_idx == candles.len() && candles[check_idx].high >= buy_stop_detail {
+                        if buy_trigger_idx == candles.len()
+                            && candles[check_idx].high >= buy_stop_detail
+                        {
                             buy_trigger_idx = check_idx;
                         }
-                        if sell_trigger_idx == candles.len() && candles[check_idx].low <= sell_stop_detail {
+                        if sell_trigger_idx == candles.len()
+                            && candles[check_idx].low <= sell_stop_detail
+                        {
                             sell_trigger_idx = check_idx;
                         }
                     }
-                    
+
                     whipsaw_details_vec.push(WhipsawDetail {
                         entry_index: i,
                         entry_price: open,

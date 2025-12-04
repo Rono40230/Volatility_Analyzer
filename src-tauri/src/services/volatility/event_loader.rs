@@ -36,7 +36,12 @@ impl EventLoader {
             .get_events_for_period(symbol, start_time, end_time)
             .map_err(|e| VolatilityError::DatabaseError(e.to_string()))?;
 
-        tracing::info!("EventLoader: Found {} events for period {} to {}", events.len(), start_time, end_time);
+        tracing::info!(
+            "EventLoader: Found {} events for period {} to {}",
+            events.len(),
+            start_time,
+            end_time
+        );
 
         // Debug: afficher les heures disponibles dans stats
         let stats_hours: Vec<u8> = hourly_stats.iter().map(|s| s.hour).collect();
@@ -46,9 +51,15 @@ impl EventLoader {
         for (i, event) in events.iter().enumerate() {
             // On utilise l'heure UTC pour matcher les stats UTC
             let event_hour = event.event_time.hour() as u8;
-            
-            if i < 3 { // Logger les 3 premiers pour debug
-                tracing::info!("   Event sample: '{}' at {:?} (UTC Hour: {})", event.description, event.event_time, event_hour);
+
+            if i < 3 {
+                // Logger les 3 premiers pour debug
+                tracing::info!(
+                    "   Event sample: '{}' at {:?} (UTC Hour: {})",
+                    event.description,
+                    event.event_time,
+                    event_hour
+                );
             }
 
             if let Some(stat) = hourly_stats.iter_mut().find(|s| s.hour == event_hour) {
@@ -61,11 +72,14 @@ impl EventLoader {
                 stat.events.push(event_in_hour);
                 associated_count += 1;
             } else if i < 3 {
-                 tracing::warn!("⚠️ Could not find stat for UTC hour {}", event_hour);
+                tracing::warn!("⚠️ Could not find stat for UTC hour {}", event_hour);
             }
         }
-        
-        tracing::info!("✅ [EventLoader] Associated {} events to hourly stats", associated_count);
+
+        tracing::info!(
+            "✅ [EventLoader] Associated {} events to hourly stats",
+            associated_count
+        );
 
         Ok(())
     }
@@ -92,13 +106,23 @@ impl EventLoader {
             VolatilityError::InsufficientData("No candles to determine event period".to_string()),
         )?;
 
-        tracing::info!("🔍 EventLoader 15min starting for {} from {} to {}", symbol, start_time, end_time);
-        
+        tracing::info!(
+            "🔍 EventLoader 15min starting for {} from {} to {}",
+            symbol,
+            start_time,
+            end_time
+        );
+
         // Log des slices disponibles
-        let slice_keys: Vec<String> = stats_15min.iter()
+        let slice_keys: Vec<String> = stats_15min
+            .iter()
             .map(|s| format!("{}:{}", s.hour, s.quarter))
             .collect();
-        tracing::info!("📦 Available 15min slices: {} - First few: {:?}", stats_15min.len(), &slice_keys[..std::cmp::min(10, slice_keys.len())]);
+        tracing::info!(
+            "📦 Available 15min slices: {} - First few: {:?}",
+            stats_15min.len(),
+            &slice_keys[..std::cmp::min(10, slice_keys.len())]
+        );
 
         // Charger événements via EventCorrelationService
         let event_service = crate::services::EventCorrelationService::new(pool);
@@ -106,7 +130,11 @@ impl EventLoader {
             .get_events_for_period(symbol, start_time, end_time)
             .map_err(|e| VolatilityError::DatabaseError(e.to_string()))?;
 
-        tracing::info!("🔍 EventLoader 15min: Loaded {} total events for {}", events.len(), symbol);
+        tracing::info!(
+            "🔍 EventLoader 15min: Loaded {} total events for {}",
+            events.len(),
+            symbol
+        );
 
         // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (Paris)
         const PARIS_OFFSET_HOURS: i32 = 1;
@@ -141,26 +169,45 @@ impl EventLoader {
                 slot.events.push(event_in_hour);
                 matched_count += 1;
                 if matched_count <= 5 {
-                    tracing::debug!("✅ Event matched: {} at {}:{} → Paris {}:{} (quarter {})", 
-                        event.description, utc_hour, utc_minute, paris_hour, paris_minute, quarter);
+                    tracing::debug!(
+                        "✅ Event matched: {} at {}:{} → Paris {}:{} (quarter {})",
+                        event.description,
+                        utc_hour,
+                        utc_minute,
+                        paris_hour,
+                        paris_minute,
+                        quarter
+                    );
                 }
             } else {
                 unmatched_count += 1;
                 if unmatched_count <= 5 {
-                    tracing::debug!("❌ Event NOT matched: {} at UTC {}:{} → Paris {}:{} (quarter {})", 
-                        event.description, utc_hour, utc_minute, paris_hour, paris_minute, quarter);
+                    tracing::debug!(
+                        "❌ Event NOT matched: {} at UTC {}:{} → Paris {}:{} (quarter {})",
+                        event.description,
+                        utc_hour,
+                        utc_minute,
+                        paris_hour,
+                        paris_minute,
+                        quarter
+                    );
                 }
             }
         }
 
-        tracing::info!("📊 EventLoader 15min result: {} matched, {} unmatched", matched_count, unmatched_count);
-        
+        tracing::info!(
+            "📊 EventLoader 15min result: {} matched, {} unmatched",
+            matched_count,
+            unmatched_count
+        );
+
         // Log final: afficher les slices avec events
-        let slices_with_events: Vec<_> = stats_15min.iter()
-            .filter(|s| s.events.len() > 0)
+        let slices_with_events: Vec<_> = stats_15min
+            .iter()
+            .filter(|s| !s.events.is_empty())
             .map(|s| format!("{}:{} ({})", s.hour, s.quarter, s.events.len()))
             .collect();
-        if slices_with_events.len() > 0 {
+        if !slices_with_events.is_empty() {
             tracing::info!("✅ Slices with events: {:?}", slices_with_events);
         } else {
             tracing::warn!("⚠️ NO slices have events after association!");

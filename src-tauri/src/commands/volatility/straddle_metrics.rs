@@ -28,7 +28,7 @@ fn calculate_optimal_entry_minutes(whipsaw_details: &[WhipsawDetailResponse]) ->
     let optimal = (mean_trigger * 0.6) as i32;
 
     // Minimum 0, maximum avant timeout (25 min avec buffer)
-    optimal.max(0).min(25)
+    optimal.clamp(0, 25)
 }
 
 /// Analyse complète Straddle: offset, win_rate, whipsaw
@@ -45,11 +45,11 @@ pub async fn analyze_straddle_metrics(
     use crate::services::slice_metrics_analyzer::analyze_slice_metrics;
 
     // Créer le pool de connexions pour la BD paires
-    let data_dir = dirs::data_local_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())?;
+    let data_dir =
+        dirs::data_local_dir().ok_or_else(|| "Failed to get data directory".to_string())?;
     let pairs_db_path = data_dir.join("volatility-analyzer").join("pairs.db");
     let pairs_db_url = format!("sqlite://{}", pairs_db_path.display());
-    
+
     let pairs_pool = db::create_pool(&pairs_db_url)
         .map_err(|e| format!("Failed to create pairs DB pool: {}", e))?;
 
@@ -63,34 +63,39 @@ pub async fn analyze_straddle_metrics(
         .map_err(|e| format!("Failed to load candles for {}: {}", symbol, e))?;
 
     // Analyser les métriques du créneau et récupérer les bougies
-    let (metrics, candles) = analyze_slice_metrics(&candle_index, &symbol, hour as u32, quarter as u32)?;
+    let (metrics, candles) =
+        analyze_slice_metrics(&candle_index, &symbol, hour as u32, quarter as u32)?;
 
     // Simuler la stratégie Straddle sur les bougies historiques
     use crate::services::straddle_simulator::simulate_straddle;
     let simulation = simulate_straddle(&candles, &symbol);
 
     // Convertir les détails des whipsaws (si disponibles)
-    let whipsaw_details: Vec<WhipsawDetailResponse> = simulation.whipsaw_details.iter().map(|w| {
-        // Calculer trigger_minute par le temps réel, pas par l'index
-        let entry_time = candles[w.entry_index].datetime;
-        let max_trigger_idx = w.buy_trigger_index.max(w.sell_trigger_index);
-        
-        let trigger_minute = if max_trigger_idx < candles.len() {
-            let trigger_time = candles[max_trigger_idx].datetime;
-            let duration = trigger_time.signed_duration_since(entry_time);
-            duration.num_minutes() as i32
-        } else {
-            -1
-        };
-        
-        WhipsawDetailResponse {
-            entry_candle_index: w.entry_index,
-            trigger_minute,
-            entry_price: w.entry_price,
-            buy_stop: w.buy_stop,
-            sell_stop: w.sell_stop,
-        }
-    }).collect();
+    let whipsaw_details: Vec<WhipsawDetailResponse> = simulation
+        .whipsaw_details
+        .iter()
+        .map(|w| {
+            // Calculer trigger_minute par le temps réel, pas par l'index
+            let entry_time = candles[w.entry_index].datetime;
+            let max_trigger_idx = w.buy_trigger_index.max(w.sell_trigger_index);
+
+            let trigger_minute = if max_trigger_idx < candles.len() {
+                let trigger_time = candles[max_trigger_idx].datetime;
+                let duration = trigger_time.signed_duration_since(entry_time);
+                duration.num_minutes() as i32
+            } else {
+                -1
+            };
+
+            WhipsawDetailResponse {
+                entry_candle_index: w.entry_index,
+                trigger_minute,
+                entry_price: w.entry_price,
+                buy_stop: w.buy_stop,
+                sell_stop: w.sell_stop,
+            }
+        })
+        .collect();
 
     // Calculer le meilleur moment d'entrée basé sur les whipsaws
     let optimal_entry_minutes = calculate_optimal_entry_minutes(&whipsaw_details);

@@ -2,19 +2,19 @@
 // Commande pour analyser le meilleur moment d'entrée dans un quarter spécifique
 // Teste chaque minute du quarter sur tout l'historique et retourne l'offset optimal
 
+use super::analyze_quarter_entry_timing_helpers::*;
 use serde::{Deserialize, Serialize};
 use tauri::command;
-use super::analyze_quarter_entry_timing_helpers::{*};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuarterEntryTimingResponse {
     pub symbol: String,
     pub hour: u8,
     pub quarter: u8,
-    pub optimal_offset_minutes: u8,  // 0-14 minutes dans le quarter
-    pub optimal_win_rate: f64,       // 0-1
+    pub optimal_offset_minutes: u8, // 0-14 minutes dans le quarter
+    pub optimal_win_rate: f64,      // 0-1
     pub total_occurrences_analyzed: usize,
-    pub confidence_score: f64,       // 0-100: comment confident on est dans ce résultat
+    pub confidence_score: f64, // 0-100: comment confident on est dans ce résultat
 }
 
 #[command]
@@ -36,8 +36,8 @@ pub async fn analyze_quarter_entry_timing(
     );
 
     // Créer le pool de connexions pour la BD paires
-    let data_dir = dirs::data_local_dir()
-        .ok_or_else(|| "Failed to get data directory".to_string())?;
+    let data_dir =
+        dirs::data_local_dir().ok_or_else(|| "Failed to get data directory".to_string())?;
     let pairs_db_path = data_dir.join("volatility-analyzer").join("pairs.db");
     let pairs_db_url = format!("sqlite://{}", pairs_db_path.display());
 
@@ -67,9 +67,7 @@ pub async fn analyze_quarter_entry_timing(
     if all_quarter_candles.is_empty() {
         return Err(format!(
             "Aucun candle trouvé pour {}:{:02} (quarter {})",
-            hour,
-            start_minute,
-            quarter
+            hour, start_minute, quarter
         ));
     }
 
@@ -100,7 +98,7 @@ pub async fn analyze_quarter_entry_timing(
         // Scorer chaque minute du quarter pour ce jour
         let best_minute = find_best_minute_in_quarter(daily_candles)?;
         offsets.push(best_minute);
-        
+
         // Calculer win-rate pour ce minute
         let win_rate = estimate_win_rate_for_minute(daily_candles)?;
         total_win_rates += win_rate;
@@ -111,7 +109,8 @@ pub async fn analyze_quarter_entry_timing(
     }
 
     // Calculer la moyenne des offsets
-    let avg_offset = (offsets.iter().map(|&o| o as f64).sum::<f64>() / offsets.len() as f64).round() as u8;
+    let avg_offset =
+        (offsets.iter().map(|&o| o as f64).sum::<f64>() / offsets.len() as f64).round() as u8;
 
     // Borner l'offset: [0, 15)
     let optimal_offset = std::cmp::min(avg_offset, 14);

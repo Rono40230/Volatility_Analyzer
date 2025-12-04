@@ -1,7 +1,56 @@
 use csv::ReaderBuilder;
 use std::fs;
 
-/// Importe des fichiers de calendrier économique dans volatility.db
+fn parse_record(record: &csv::StringRecord) -> Option<(String, String, String, String)> {
+    if record[0].contains('-') {
+        if record.len() < 5 {
+            return None;
+        }
+        let date = record[0].trim();
+        let time = record[1].trim();
+        let currency = record[2].trim();
+        let event = record[3].trim();
+        let impact = record[4].trim();
+
+        let date_parts: Vec<&str> = date.split('-').collect();
+        let time_parts: Vec<&str> = time.split(':').collect();
+
+        if date_parts.len() != 3 || time_parts.len() < 2 {
+            return None;
+        }
+
+        let dt = format!(
+            "{}-{:0>2}-{:0>2} {:0>2}:{:0>2}:00",
+            date_parts[0].trim(),
+            date_parts[1].trim(),
+            date_parts[2].trim(),
+            time_parts[0].trim(),
+            time_parts[1].trim()
+        );
+
+        Some((dt, currency.to_string(), impact.to_string(), event.to_string()))
+    } else {
+        if record.len() < 8 {
+            return None;
+        }
+
+        let year = record[0].trim();
+        let month = record[1].trim();
+        let day = record[2].trim();
+        let hour = record[3].trim();
+        let minute = record[4].trim();
+        let symbol = record[5].trim();
+        let impact = record[6].trim();
+        let description = record[7].trim();
+
+        let dt = format!(
+            "{}-{:0>2}-{:0>2} {:0>2}:{:0>2}:00",
+            year, month, day, hour, minute
+        );
+        Some((dt, symbol.to_string(), impact.to_string(), description.to_string()))
+    }
+}
+
 #[tauri::command]
 pub async fn import_calendar_files(paths: Vec<String>) -> Result<String, String> {
     use rusqlite::Connection;
@@ -42,66 +91,10 @@ pub async fn import_calendar_files(paths: Vec<String>) -> Result<String, String>
                 record.len(),
                 record.iter().collect::<Vec<_>>()
             );
-        } else {
-            tracing::debug!(
-                "📝 Line {}: {} fields: {:?}",
-                line_count,
-                record.len(),
-                record.iter().collect::<Vec<_>>()
-            );
         }
 
-        // Détection du format: si le premier champ contient '-', c'est probablement une date YYYY-MM-DD (Format Standard)
-        // Sinon, on suppose le format brut (year, month, day...)
-        
-        let (event_time, symbol_val, impact_val, description_val) = if record[0].contains('-') {
-            // Format Standard: Date,Time,Currency,Event,Impact,...
-            if record.len() < 5 {
-                tracing::debug!("   ⏭️ Skipping standard format (< 5 fields)");
-                continue;
-            }
-            let date = record[0].trim();
-            let time = record[1].trim();
-            let currency = record[2].trim();
-            let event = record[3].trim();
-            let impact = record[4].trim();
-
-            // Reconstruire datetime: YYYY-MM-DD HH:MM:00 avec padding garanti
-            let date_parts: Vec<&str> = date.split('-').collect();
-            let time_parts: Vec<&str> = time.split(':').collect();
-
-            if date_parts.len() != 3 || time_parts.len() < 2 {
-                tracing::debug!("   ⏭️ Skipping invalid date/time format: {} {}", date, time);
-                continue;
-            }
-
-            let dt = format!(
-                "{}-{:0>2}-{:0>2} {:0>2}:{:0>2}:00",
-                date_parts[0].trim(), date_parts[1].trim(), date_parts[2].trim(),
-                time_parts[0].trim(), time_parts[1].trim()
-            );
-            
-            (dt, currency, impact, event)
-        } else {
-            // Format Brut: year,month,day,hour,minute,currency,impact,description
-            if record.len() < 8 {
-                tracing::debug!("   ⏭️ Skipping raw format (< 8 fields)");
-                continue;
-            }
-            let year = record[0].trim();
-            let month = record[1].trim();
-            let day = record[2].trim();
-            let hour = record[3].trim();
-            let minute = record[4].trim();
-            let symbol = record[5].trim();
-            let impact = record[6].trim();
-            let description = record[7].trim();
-
-            let dt = format!(
-                "{}-{:0>2}-{:0>2} {:0>2}:{:0>2}:00",
-                year, month, day, hour, minute
-            );
-            (dt, symbol, impact, description)
+        let Some((event_time, symbol_val, impact_val, description_val)) = parse_record(&record) else {
+            continue;
         };
 
         // Vérifier/mettre à jour les dates min/max

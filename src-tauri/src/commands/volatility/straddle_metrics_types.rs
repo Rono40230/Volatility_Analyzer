@@ -60,5 +60,3 @@ pub struct WhipsawData {
     /// Détails de chaque whipsaw détecté
     pub whipsaw_details: Vec<WhipsawDetailResponse>,
 }
-
-

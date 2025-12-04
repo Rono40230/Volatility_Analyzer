@@ -63,20 +63,27 @@ impl TrueRangeDistribution {
         } else {
             sorted_ranges[median_index]
         };
-        
+
         // Seuil de breakout : 2x la médiane (plus variable que percentile fixe)
         let breakout_threshold = median * 2.0;
 
-        debug!("80th percentile: {:.5}, Median: {:.5}, Breakout threshold (2x median): {:.5}", 
-               percentile_80, median, breakout_threshold);
+        debug!(
+            "80th percentile: {:.5}, Median: {:.5}, Breakout threshold (2x median): {:.5}",
+            percentile_80, median, breakout_threshold
+        );
 
         // Détecte les breakouts (TR > 2x médiane)
-        let is_breakout: Vec<bool> = true_ranges.iter().map(|&tr| tr > breakout_threshold).collect();
+        let is_breakout: Vec<bool> = true_ranges
+            .iter()
+            .map(|&tr| tr > breakout_threshold)
+            .collect();
 
         let breakout_count = is_breakout.iter().filter(|&&b| b).count();
-        debug!("Detected {} breakout candles ({:.1}%)", 
-               breakout_count, 
-               (breakout_count as f64 / true_ranges.len() as f64) * 100.0);
+        debug!(
+            "Detected {} breakout candles ({:.1}%)",
+            breakout_count,
+            (breakout_count as f64 / true_ranges.len() as f64) * 100.0
+        );
 
         Ok(Self {
             true_ranges,

@@ -81,7 +81,7 @@ impl<'a> HourlyStatsCalculator<'a> {
         let tr_dist = calc.calculate_true_range_distribution()?;
 
         // Calcule les moyennes
-        let atr_mean = atr_values.last().copied().unwrap_or(0.0);  // Dernière valeur ATR lissée (Wilder's)
+        let atr_mean = atr_values.last().copied().unwrap_or(0.0); // Dernière valeur ATR lissée (Wilder's)
         let atr_max = max(&atr_values);
         let volatility_mean = mean(&volatility_values);
         // TÂCHE 3: Utiliser True Range au lieu de simple H-L
@@ -89,12 +89,12 @@ impl<'a> HourlyStatsCalculator<'a> {
         let body_range_mean = mean(&body_ranges);
         let shadow_ratio_mean = mean(&shadow_ratios);
         let noise_ratio_mean = mean(&noise_ratios);
-        
+
         // Calculate breakout percentage first
         let breakout_count = tr_dist.is_breakout.iter().filter(|&&b| b).count();
         let breakout_percentage =
             (breakout_count as f64 / tr_dist.is_breakout.len() as f64) * 100.0;
-        
+
         // Direction Strength: Force directionnelle = (|directionalite| * cassures) / 10000
         // Note: Both values are percentages (0-100), so divide by 10000 to get result in 0-100 range
         let direction_strength = (body_range_mean.abs() * breakout_percentage) / 10000.0;
