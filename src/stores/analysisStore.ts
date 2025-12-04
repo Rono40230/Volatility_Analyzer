@@ -162,7 +162,7 @@ export const useAnalysisStore = defineStore('analysis', () => {
     if (!heatmapLoadedFor.value) return true
     if (heatmapLoadedFor.value.calendarId !== calendarId) return true
     if (pairs.length !== heatmapLoadedFor.value.pairs.length) return true
-    return !pairs.every((p, i) => p === heatmapLoadedFor.value!.pairs[i])
+    return !pairs.every((p, i) => p === heatmapLoadedFor.value.pairs[i])
   }
 
   function clearAnalysis() {
