@@ -4,7 +4,7 @@
       <div class="modal-header"><div class="header-title"><span class="icon">🎯</span><h2>Métriques du meilleur moment pour trader</h2></div><button class="close-btn" @click="close">✕</button></div>
       <div class="modal-section">
         <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
-          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis">
+          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis">
             <MetricsGrid :analysis="analysis" :analysis-data="analysisData" />
             <VolatilityDurationSection :volatility-duration="volatilityDuration" :trading-plan="tradingPlan" />
             <BidiParametersSection :slice-analyses="sliceAnalyses" :entry-window-analysis="entryWindowAnalysis" :analysis="analysis" :volatility-duration="volatilityDuration" :whipsaw-analysis="whipsawAnalysis" :offset-optimal="offsetOptimal" :win-rate="winRate" />
@@ -108,7 +108,7 @@ function openArchiveModal() {
     movementQualities: movementQualities.value,
     volatilityDuration: volatilityDuration.value,
     tradingPlan: tradingPlan.value,
-    entryWindowAnalysis: entryWindowAnalysis
+    entryWindowAnalysis: entryWindowAnalysis.value
   })
   
   showArchiveModal.value = true

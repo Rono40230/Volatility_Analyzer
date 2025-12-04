@@ -185,6 +185,7 @@ pub fn run() {
             get_pair_metadata_from_db,   // NEW: métadonnées depuis BD
             get_calendars_metadata,      // NEW: métadonnées calendriers (format UI)
             get_calendar_id_by_filename, // NEW: récupérer ID calendrier depuis nom fichier
+            get_calendar_period_by_id,   // NEW: récupérer dates période du calendrier par ID
             get_pairs_metadata,          // NEW: métadonnées paires (format UI)
             import_calendar_files,       // NEW: importer calendriers
             delete_pair_from_db,         // NEW: supprimer paire de la BD

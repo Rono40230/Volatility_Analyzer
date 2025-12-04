@@ -44,8 +44,10 @@
     <div class="content-area">
       <EventCorrelationHeatmap
         v-if="viewMode === 'heatmap'"
+        ref="heatmapComponentRef"
         :calendar-id="selectedCalendarId"
         :available-pairs="availablePairs"
+        @archive-heatmap="openArchiveModal"
       />
       <RetroactiveAnalysisView
         v-if="viewMode === 'retrospective'"
@@ -54,18 +56,30 @@
         @calendar-selected="handleCalendarSelected"
       />
     </div>
+
+    <!-- Archive Modal -->
+    <ArchiveModal
+      :show="showArchiveModal"
+      :archive-type="'Heatmap'"
+      :period-start="archivePeriodStart"
+      :period-end="archivePeriodEnd"
+      :data-json="archiveDataJson"
+      @close="showArchiveModal = false"
+      @saved="showArchiveModal = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
+import { ref } from 'vue'
 import { useVolatilityStore } from '../stores/volatility'
 import { useAnalysisStore } from '../stores/analysisStore'
-import { useDataRefresh } from '../composables/useDataRefresh'
+import { useHeatmapArchive } from '../composables/useHeatmapArchive'
+import { useHeatmapState } from '../composables/useHeatmapState'
 import EventCorrelationHeatmap from './EventCorrelationHeatmap.vue'
 import CalendarFileSelector from './CalendarFileSelector.vue'
 import RetroactiveAnalysisView from './RetroactiveAnalysisView.vue'
+import ArchiveModal from './ArchiveModal.vue'
 
 interface Props {
   viewMode?: 'heatmap' | 'retrospective'
@@ -77,68 +91,25 @@ const props = withDefaults(defineProps<Props>(), {
 
 const volatilityStore = useVolatilityStore()
 const analysisStore = useAnalysisStore()
-const viewMode = ref<'heatmap' | 'retrospective'>('heatmap')
-const availablePairs = ref<string[]>([])
-const selectedCalendarId = ref<number | null>(null)
+const heatmapComponentRef = ref()
 
-// Si une prop viewMode est passée, l'utiliser au montage
-watch(() => props.viewMode, (newViewMode) => {
-  if (newViewMode) {
-    viewMode.value = newViewMode
-  }
-}, { immediate: true })
+const {
+  viewMode,
+  availablePairs,
+  selectedCalendarId,
+  handleCalendarSelected,
+} = useHeatmapState(props)
 
-onMounted(async () => {
-  // 🔥 PRIORITÉ 1: Restaurer la heatmap AVANT de charger les paires
-  // Sinon le watch se déclenchera avant la restauration
-  const hasRestoredHeatmap = analysisStore.restoreHeatmapFromStorage()
-  if (hasRestoredHeatmap) {
-    // Restaurer aussi le calendrier sélectionné
-    selectedCalendarId.value = analysisStore.getStoredHeatmapCalendarId()
-  }
-  
-  // 🔥 PRIORITÉ 2: Charger les paires APRÈS restauration
-  await loadAvailablePairs()
-})
+const {
+  showArchiveModal,
+  archiveDataJson,
+  archivePeriodStart,
+  archivePeriodEnd,
+  openArchiveModal: openArchiveModalFn,
+} = useHeatmapArchive()
 
-const { onPairDataRefresh } = useDataRefresh()
-const unsubscribe = onPairDataRefresh(loadAvailablePairs)
-onBeforeUnmount(() => unsubscribe())
-
-// Watcher pour reset heatmap seulement si on change VOLONTAIREMENT le calendrier (pas au montage)
-let isFirstCalendarChange = true
-watch(() => selectedCalendarId.value, (newCalendarId) => {
-  if (isFirstCalendarChange) {
-    isFirstCalendarChange = false
-    return
-  }
-  analysisStore.resetHeatmapData()
-}, { immediate: false })
-
-// Watcher pour reset heatmap seulement si on change VOLONTAIREMENT les paires
-let isFirstPairsChange = true
-watch(() => availablePairs.value, (newPairs) => {
-  if (isFirstPairsChange) {
-    isFirstPairsChange = false
-    return
-  }
-  if (newPairs && newPairs.length > 0) {
-    analysisStore.resetHeatmapData()
-  }
-}, { deep: true })
-
-async function handleCalendarSelected(filename: string) {
-  const calendarId = await invoke<number | null>('get_calendar_id_by_filename', { filename })
-  selectedCalendarId.value = calendarId
-}
-
-async function loadAvailablePairs() {
-  try {
-    const data = await invoke<Array<{ symbol: string; file_path: string }>>('load_symbols')
-    availablePairs.value = data.map(item => item.symbol)
-  } catch {
-    availablePairs.value = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD']
-  }
+function openArchiveModal() {
+  openArchiveModalFn(heatmapComponentRef, selectedCalendarId.value)
 }
 </script>
 

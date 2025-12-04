@@ -34,6 +34,13 @@
     >
       🔄 Recharger
     </button>
+    <button 
+      class="archive-button"
+      title="Archiver la heatmap actuelle"
+      @click="$emit('archive-heatmap')"
+    >
+      💾 Archiver
+    </button>
   </div>
 </template>
 
@@ -51,6 +58,7 @@ const emit = defineEmits<{
   'update:maxEvents': [val: number]
   'update:selectedEventType': [val: string]
   'reload-heatmap': []
+  'archive-heatmap': []
 }>()
 
 const minVol = ref(props.minVolatility)
@@ -100,7 +108,21 @@ const availableEventTypes = computed(() => props.availableEventTypes ?? [])
   box-shadow: 0 0 12px rgba(88, 166, 255, 0.4);
   transform: translateY(-2px);
 }
-.reload-button:active {
-  transform: translateY(0);
+.archive-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  border: 2px solid #2ecc71;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.archive-button:hover {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  box-shadow: 0 0 12px rgba(46, 204, 113, 0.4);
+  transform: translateY(-2px);
 }
 </style>

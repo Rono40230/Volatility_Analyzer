@@ -3,7 +3,7 @@
     class="slice-card"
     :class="getRankClass(analysis.rank)"
   >
-    <!-- Rang + Heure + Recommandation -->
+    <!-- Rang + Heure + Score/Whipsaw -->
     <div
       class="slice-header"
       style="display: flex; justify-content: space-between; align-items: center; gap: 20px;"
@@ -19,6 +19,9 @@
           <div class="time">
             {{ analysis.slice.startTime }}
           </div>
+          <div style="font-size: 13px; color: #8b949e; font-weight: 600; margin-top: 4px;">
+            {{ symbol }}
+          </div>
         </div>
       </div>
 
@@ -27,16 +30,6 @@
         :score="adjustedScore"
         :whipsaw-frequency="props.whipsawAnalysis?.whipsaw_frequency_percentage || 0"
       />
-
-      <!-- Recommandation inline -->
-      <div style="flex: 1; padding: 12px 16px; background: rgba(78, 205, 196, 0.1); border: 1px solid rgba(78, 205, 196, 0.3); border-radius: 6px; font-size: 12px;">
-        <div style="color: #4ecdc4; margin-bottom: 6px; font-weight: bold;">
-          🎯 RECOMMANDATION
-        </div>
-        <div style="color: #e0e0e0; line-height: 1.5;">
-          {{ recommendation.emoji }} <strong>{{ recommendation.decision }}</strong> — {{ recommendation.advice }}
-        </div>
-      </div>
     </div>
 
     <!-- Slot pour le contenu (MetricsGrid, etc.) -->
@@ -80,6 +73,7 @@ interface MovementQuality {
 
 const props = defineProps<{
   analysis: Analysis
+  symbol?: string
   volatilityDuration: VolatilityDuration
   movementQualities?: Record<string, MovementQuality>
   whipsawAnalysis?: WhipsawAnalysis

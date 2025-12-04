@@ -11,6 +11,7 @@
       @update:max-events="maxEventsToDisplay = $event"
       @update:selected-event-type="selectedEventType = $event"
       @reload-heatmap="handleReloadHeatmap"
+      @archive-heatmap="emit('archive-heatmap')"
     />
     <HeatmapTable 
       :pairs="heatmapData.pairs" 
@@ -36,9 +37,28 @@ const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?
   calendarId: null
 })
 
+const emit = defineEmits<{
+  'archive-heatmap': []
+}>()
+
 const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
 
 const selectedEventType = ref('')
+
+// Fonction exposée pour archiver la heatmap
+function getHeatmapArchiveData() {
+  return {
+    heatmapData: heatmapData.value,
+    minVolatilityThreshold: minVolatilityThreshold.value,
+    maxEventsToDisplay: maxEventsToDisplay.value,
+    selectedEventType: selectedEventType.value
+  }
+}
+
+// Exposer la fonction
+defineExpose({
+  getHeatmapArchiveData
+})
 
 // Available event types for dropdown
 const availableEventTypes = computed(() => {

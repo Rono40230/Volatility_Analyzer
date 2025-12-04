@@ -46,7 +46,7 @@ pub use file_listing::*;
 pub use global_analysis_commands::*;
 pub use import_clean::import_and_clean_files;
 pub use metadata::{
-    get_calendar_id_by_filename, get_calendars_metadata, get_pair_metadata_from_db,
+    get_calendar_id_by_filename, get_calendar_period_by_id, get_calendars_metadata, get_pair_metadata_from_db,
     get_pairs_metadata,
 };
 pub use movement_analysis_commands::{analyze_movement_quality, get_movement_qualities};
