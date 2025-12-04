@@ -89,6 +89,15 @@ watch(() => props.viewMode, (newViewMode) => {
 }, { immediate: true })
 
 onMounted(async () => {
+  // 🔥 PRIORITÉ 1: Restaurer la heatmap AVANT de charger les paires
+  // Sinon le watch se déclenchera avant la restauration
+  const hasRestoredHeatmap = analysisStore.restoreHeatmapFromStorage()
+  if (hasRestoredHeatmap) {
+    // Restaurer aussi le calendrier sélectionné
+    selectedCalendarId.value = analysisStore.getStoredHeatmapCalendarId()
+  }
+  
+  // 🔥 PRIORITÉ 2: Charger les paires APRÈS restauration
   await loadAvailablePairs()
 })
 
@@ -96,13 +105,23 @@ const { onPairDataRefresh } = useDataRefresh()
 const unsubscribe = onPairDataRefresh(loadAvailablePairs)
 onBeforeUnmount(() => unsubscribe())
 
-// Watcher pour reset heatmap quand calendrier change
+// Watcher pour reset heatmap seulement si on change VOLONTAIREMENT le calendrier (pas au montage)
+let isFirstCalendarChange = true
 watch(() => selectedCalendarId.value, (newCalendarId) => {
+  if (isFirstCalendarChange) {
+    isFirstCalendarChange = false
+    return
+  }
   analysisStore.resetHeatmapData()
 }, { immediate: false })
 
-// Watcher pour reset heatmap quand paires changent
+// Watcher pour reset heatmap seulement si on change VOLONTAIREMENT les paires
+let isFirstPairsChange = true
 watch(() => availablePairs.value, (newPairs) => {
+  if (isFirstPairsChange) {
+    isFirstPairsChange = false
+    return
+  }
   if (newPairs && newPairs.length > 0) {
     analysisStore.resetHeatmapData()
   }

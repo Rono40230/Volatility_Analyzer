@@ -77,6 +77,26 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     return `${eventName} (${translation.fr}) ${translation.flag}`
   }
 
+  async function forceReloadHeatmap(pairs: string[], calendarId: number | null = null) {
+    if (!pairs || pairs.length === 0) {
+      return
+    }
+
+    loadingHeatmap.value = true
+    try {
+      const result = await invoke<HeatmapData>('get_correlation_heatmap', { 
+        pairs: pairs,
+        calendar_id: calendarId
+      })
+      // Forcer la sauvegarde (remplacer l'ancienne)
+      analysisStore.setPersistentHeatmapData(result, pairs, calendarId)
+    } catch {
+      analysisStore.setPersistentHeatmapData({ pairs: [], event_types: [], data: {} }, pairs, calendarId)
+    } finally {
+      loadingHeatmap.value = false
+    }
+  }
+
   return {
     loadingHeatmap,
     heatmapData,
@@ -84,6 +104,7 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     maxEventsToDisplay,
     sortedEventTypes,
     loadHeatmapData,
+    forceReloadHeatmap,
     getHeatmapValue,
     getHeatmapClass,
     getFormattedEventName

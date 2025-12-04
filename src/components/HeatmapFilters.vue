@@ -27,6 +27,13 @@
         </option>
       </select>
     </div>
+    <button 
+      class="reload-button"
+      title="Recharger la heatmap avec les données actuelles"
+      @click="$emit('reload-heatmap')"
+    >
+      🔄 Recharger
+    </button>
   </div>
 </template>
 
@@ -43,6 +50,7 @@ const emit = defineEmits<{
   'update:minVolatility': [val: number]
   'update:maxEvents': [val: number]
   'update:selectedEventType': [val: string]
+  'reload-heatmap': []
 }>()
 
 const minVol = ref(props.minVolatility)
@@ -74,5 +82,25 @@ const availableEventTypes = computed(() => props.availableEventTypes ?? [])
 .filter-select:hover { border-color: #667eea; }
 .filter-select option { 
   color: #000000;
+}
+.reload-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
+  border: 2px solid #58a6ff;
+  color: #ffffff;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+.reload-button:hover {
+  background: linear-gradient(135deg, #388bfd 0%, #1f6feb 100%);
+  box-shadow: 0 0 12px rgba(88, 166, 255, 0.4);
+  transform: translateY(-2px);
+}
+.reload-button:active {
+  transform: translateY(0);
 }
 </style>

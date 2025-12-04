@@ -160,7 +160,7 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives')
                     Choisir un symbole
                   </option>
                   <option 
-                    v-for="symbol in store.symbols" 
+                    v-for="symbol in volatilityStore.symbols" 
                     :key="symbol.symbol" 
                     :value="symbol.symbol"
                   >
@@ -173,7 +173,7 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives')
             <template v-if="!loading && analysisResult">
               <AnalysisPanel 
                 :result="analysisResult" 
-                :symbols="store.symbols"
+                :symbols="volatilityStore.symbols"
                 @symbol-selected="handleSymbolSelected"
               />
               <HourlyTable 

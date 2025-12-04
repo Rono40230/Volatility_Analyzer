@@ -10,6 +10,7 @@
       @update:min-volatility="minVolatilityThreshold = $event" 
       @update:max-events="maxEventsToDisplay = $event"
       @update:selected-event-type="selectedEventType = $event"
+      @reload-heatmap="handleReloadHeatmap"
     />
     <HeatmapTable 
       :pairs="heatmapData.pairs" 
@@ -35,7 +36,7 @@ const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?
   calendarId: null
 })
 
-const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
+const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
 
 const selectedEventType = ref('')
 
@@ -59,9 +60,21 @@ watch(() => props.availablePairs, (newPairs) => {
   }
 }, { deep: true })
 
+async function handleReloadHeatmap() {
+  if (props.availablePairs && props.availablePairs.length > 0) {
+    await forceReloadHeatmap(props.availablePairs, props.calendarId)
+  }
+}
+
 onMounted(() => {
   if (props.isArchiveMode) {
     heatmapData.value = props.archiveData || null
+  } else {
+    // Si heatmapData est déjà cachée (restaurée du localStorage), affiche-la
+    // Sinon, charge-la depuis les paires disponibles
+    if (!heatmapData.value && props.availablePairs && props.availablePairs.length > 0) {
+      loadHeatmapData(props.availablePairs, props.calendarId)
+    }
   }
 })
 </script>
