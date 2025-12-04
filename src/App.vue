@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
 import { useVolatilityStore } from './stores/volatility'
+import { useAnalysisStore } from './stores/analysisStore'
 import SymbolSelector from './components/SymbolSelector.vue'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import HourlyTable from './components/HourlyTable.vue'
@@ -12,8 +13,9 @@ import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
 import ArchivesView from './views/ArchivesView.vue'
 
-const store = useVolatilityStore()
-const { analysisResult, selectedSymbol, loading, error } = storeToRefs(store)
+const volatilityStore = useVolatilityStore()
+const analysisStore = useAnalysisStore()
+const { analysisResult, selectedSymbol, loading, error } = storeToRefs(volatilityStore)
 
 // Restaurer l'onglet depuis localStorage ou utiliser 'heatmap' comme défaut
 const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | null
@@ -36,7 +38,10 @@ onMounted(async () => {
   }
   
   // Charger les symboles au démarrage
-  store.loadSymbols()
+  volatilityStore.loadSymbols()
+  
+  // Restaurer la heatmap depuis localStorage si elle existe
+  analysisStore.restoreHeatmapFromStorage()
 });
 
 // Gestion de la modal Bidi depuis le tableau
@@ -48,12 +53,12 @@ const bidiModalQuarter = ref(0)
 const showFormulasModal = ref(false)
 
 async function handleSymbolSelected(symbol: string) {
-  await store.analyzeSymbol(symbol)
+  await volatilityStore.analyzeSymbol(symbol)
 }
 
 async function handleSymbolChange() {
   if (selectedSymbolLocal.value) {
-    await store.analyzeSymbol(selectedSymbolLocal.value)
+    await volatilityStore.analyzeSymbol(selectedSymbolLocal.value)
   }
 }
 

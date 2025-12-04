@@ -1,6 +1,38 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
+// Fonctions utilitaires pour persistance localStorage
+function saveHeatmapToStorage(data: HeatmapData, pairs: string[], calendarId: number | null) {
+  const heatmapCache = {
+    data,
+    pairs,
+    calendarId,
+    timestamp: Date.now(),
+  }
+  localStorage.setItem('heatmapCache', JSON.stringify(heatmapCache))
+  localStorage.setItem('heatmapCalendarId', String(calendarId || 0))
+}
+
+function loadHeatmapFromStorage(): { data: HeatmapData; pairs: string[]; calendarId: number | null } | null {
+  try {
+    const cached = localStorage.getItem('heatmapCache')
+    if (!cached) return null
+    const parsed = JSON.parse(cached)
+    return {
+      data: parsed.data,
+      pairs: parsed.pairs,
+      calendarId: parsed.calendarId || null,
+    }
+  } catch {
+    return null
+  }
+}
+
+function clearHeatmapFromStorage() {
+  localStorage.removeItem('heatmapCache')
+  localStorage.removeItem('heatmapCalendarId')
+}
+
 export interface EventCorrelation {
   name: string
   count: number
@@ -95,11 +127,35 @@ export const useAnalysisStore = defineStore('analysis', () => {
   function setPersistentHeatmapData(data: HeatmapData | null, pairs: string[], calendarId: number | null) {
     persistentHeatmapData.value = data
     heatmapLoadedFor.value = { pairs, calendarId }
+    if (data) {
+      saveHeatmapToStorage(data, pairs, calendarId)
+    }
   }
 
   function resetHeatmapData() {
     persistentHeatmapData.value = null
     heatmapLoadedFor.value = null
+    clearHeatmapFromStorage()
+  }
+
+  function restoreHeatmapFromStorage() {
+    const cached = loadHeatmapFromStorage()
+    if (cached) {
+      persistentHeatmapData.value = cached.data
+      heatmapLoadedFor.value = { pairs: cached.pairs, calendarId: cached.calendarId }
+      selectedCalendarId.value = cached.calendarId
+      return true
+    }
+    return false
+  }
+
+  function getStoredHeatmapCalendarId(): number | null {
+    try {
+      const calId = localStorage.getItem('heatmapCalendarId')
+      return calId ? parseInt(calId, 10) || null : null
+    } catch {
+      return null
+    }
   }
 
   function shouldReloadHeatmap(pairs: string[], calendarId: number | null): boolean {
@@ -134,6 +190,8 @@ export const useAnalysisStore = defineStore('analysis', () => {
     setHeatmapData,
     setPersistentHeatmapData,
     resetHeatmapData,
+    restoreHeatmapFromStorage,
+    getStoredHeatmapCalendarId,
     shouldReloadHeatmap,
     clearAnalysis,
   }
