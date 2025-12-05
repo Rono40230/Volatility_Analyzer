@@ -14,12 +14,14 @@
         <option v-for="p in pairs" :key="p" :value="p">{{ p }}</option>
       </select>
       <label for="event-type-select">Type d'événement:</label>
-      <select id="event-type-select" v-model="selectedEventType" @change="load" class="pair-select">
-        <option value="">-- Choisir --</option>
-        <option v-for="et in eventTypes" :key="et.name" :value="et.name">
-          {{ getEventLabel(et.name) }} ({{ et.count }} occurrences)
-        </option>
-      </select>
+      <SearchableEventDropdown 
+        id="event-type-select"
+        v-model="selectedEventType"
+        :events="eventTypeOptions"
+        :loading="eventTypesLoading"
+        :error="eventTypesError"
+        @update:modelValue="load"
+      />
       <div v-if="eventTypesError" class="error-small">⚠️ {{ eventTypesError }}</div>
       <div v-if="!eventTypesError && eventTypes.length === 0 && !eventTypesLoading" class="warning-small">📭 Aucun événement trouvé</div>
       <div v-if="eventTypesLoading" class="warning-small">⏳ Chargement des événements...</div>
@@ -61,12 +63,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useRetrospectiveAnalysis } from '../composables/useRetrospectiveAnalysis'
 import ArchiveModal from './ArchiveModal.vue'
 import CalendarFileSelector from './CalendarFileSelector.vue'
 import RetroAnalysisResults from './RetroAnalysisResults.vue'
+import SearchableEventDropdown from './SearchableEventDropdown.vue'
 
 interface Symbol { symbol: string; file_path?: string }
 
@@ -97,6 +100,14 @@ const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
 const archiveDataJson = ref('')
+
+const eventTypeOptions = computed(() =>
+  eventTypes.value.map(et => ({
+    name: et.name,
+    label: getEventLabel(et.name),
+    count: et.count
+  }))
+)
 
 onMounted(async () => {
   try {
