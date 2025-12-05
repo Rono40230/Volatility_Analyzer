@@ -127,16 +127,16 @@ const handleInputBlur = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 2px solid #4a5568;
+  border: 2px solid #ccc;
   border-radius: 8px;
-  background: #2d3748;
+  background: #ffffff;
   transition: all 0.3s;
   overflow: hidden;
 }
 
 .dropdown-header:hover {
-  border-color: #667eea;
-  background: #374151;
+  border-color: #999;
+  background: #f9f9f9;
 }
 
 .dropdown-input {
@@ -144,40 +144,40 @@ const handleInputBlur = () => {
   padding: 12px 16px;
   background: transparent;
   border: none;
-  color: #e2e8f0;
+  color: #000000;
   font-size: 1em;
   outline: none;
   cursor: text;
 }
 
 .dropdown-input::placeholder {
-  color: #8b949e;
+  color: #999999;
 }
 
 .dropdown-toggle {
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #8b949e;
+  color: #666666;
   cursor: pointer;
   transition: transform 0.2s, color 0.2s;
   font-size: 0.8em;
 }
 
 .dropdown-toggle:hover {
-  color: #667eea;
+  color: #000000;
 }
 
 .dropdown-toggle.active {
   transform: rotate(180deg);
-  color: #667eea;
+  color: #000000;
 }
 
 .clear-button {
   padding: 8px 12px;
   background: transparent;
   border: none;
-  color: #8b949e;
+  color: #999999;
   cursor: pointer;
   font-size: 1em;
   transition: color 0.2s;
@@ -185,7 +185,7 @@ const handleInputBlur = () => {
 }
 
 .clear-button:hover {
-  color: #f85149;
+  color: #cc0000;
 }
 
 .dropdown-menu {
@@ -194,19 +194,19 @@ const handleInputBlur = () => {
   left: 0;
   right: 0;
   margin-top: 4px;
-  background: #2d3748;
-  border: 2px solid #4a5568;
+  background: #ffffff;
+  border: 2px solid #ccc;
   border-radius: 8px;
   max-height: 300px;
   overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
 }
 
 .empty-message {
   padding: 16px;
   text-align: center;
-  color: #8b949e;
+  color: #999999;
   font-size: 0.9em;
 }
 
@@ -218,7 +218,7 @@ const handleInputBlur = () => {
   padding: 12px 16px;
   background: transparent;
   border: none;
-  color: #e2e8f0;
+  color: #000000;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s;
@@ -227,8 +227,8 @@ const handleInputBlur = () => {
 
 .dropdown-item:hover,
 .dropdown-item.highlighted {
-  background: #667eea33;
-  color: #667eea;
+  background: #e8f0ff;
+  color: #0066cc;
 }
 
 .event-name {
@@ -237,7 +237,7 @@ const handleInputBlur = () => {
 }
 
 .event-count {
-  color: #8b949e;
+  color: #999999;
   font-size: 0.85em;
   white-space: nowrap;
 }
