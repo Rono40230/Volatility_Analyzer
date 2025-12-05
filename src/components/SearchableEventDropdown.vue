@@ -118,127 +118,20 @@ const handleInputBlur = () => {
 </script>
 
 <style scoped>
-.searchable-dropdown-wrapper {
-  position: relative;
-  width: 232px;
-}
-
-.dropdown-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  background: #ffffff;
-  transition: all 0.3s;
-  overflow: hidden;
-}
-
-.dropdown-header:hover {
-  border-color: #999;
-  background: #f9f9f9;
-}
-
-.dropdown-input {
-  flex: 1;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  color: #000000;
-  font-size: 1em;
-  outline: none;
-  cursor: text;
-}
-
-.dropdown-input::placeholder {
-  color: #999999;
-}
-
-.dropdown-toggle {
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  color: #666666;
-  cursor: pointer;
-  transition: transform 0.2s, color 0.2s;
-  font-size: 0.8em;
-}
-
-.dropdown-toggle:hover {
-  color: #000000;
-}
-
-.dropdown-toggle.active {
-  transform: rotate(180deg);
-  color: #000000;
-}
-
-.clear-button {
-  padding: 8px 12px;
-  background: transparent;
-  border: none;
-  color: #999999;
-  cursor: pointer;
-  font-size: 1em;
-  transition: color 0.2s;
-  line-height: 1;
-}
-
-.clear-button:hover {
-  color: #cc0000;
-}
-
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
-  background: #ffffff;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-}
-
-.empty-message {
-  padding: 16px;
-  text-align: center;
-  color: #999999;
-  font-size: 0.9em;
-}
-
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 12px 16px;
-  background: transparent;
-  border: none;
-  color: #000000;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 0.95em;
-}
-
-.dropdown-item:hover,
-.dropdown-item.highlighted {
-  background: #e8f0ff;
-  color: #0066cc;
-}
-
-.event-name {
-  font-weight: 500;
-  flex: 1;
-}
-
-.event-count {
-  color: #999999;
-  font-size: 0.85em;
-  white-space: nowrap;
-}
+.searchable-dropdown-wrapper { position: relative; }
+.dropdown-header { display: flex; align-items: center; width: 200px; padding: 12px 16px; border: 2px solid #ccc; border-radius: 8px; background: #ffffff; transition: all 0.3s; overflow: hidden; gap: 8px; }
+.dropdown-header:hover { border-color: #999; background: #f9f9f9; }
+.dropdown-input { flex: 1; background: transparent; border: none; color: #000000; font-size: 1em; outline: none; cursor: text; padding: 0; margin: 0; }
+.dropdown-input::placeholder { color: #999999; }
+.dropdown-toggle { padding: 0; margin: 0; background: transparent; border: none; color: #666666; cursor: pointer; transition: transform 0.2s, color 0.2s; font-size: 0.8em; flex-shrink: 0; }
+.dropdown-toggle:hover { color: #000000; }
+.dropdown-toggle.active { transform: rotate(180deg); color: #000000; }
+.clear-button { padding: 0; margin: 0; background: transparent; border: none; color: #999999; cursor: pointer; font-size: 1em; transition: color 0.2s; line-height: 1; flex-shrink: 0; }
+.clear-button:hover { color: #cc0000; }
+.dropdown-menu { position: absolute; top: 100%; left: 0; width: 200px; margin-top: 4px; background: #ffffff; border: 2px solid #ccc; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 10; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); }
+.empty-message { padding: 16px; text-align: center; color: #999999; font-size: 0.9em; }
+.dropdown-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; background: transparent; border: none; color: #000000; text-align: left; cursor: pointer; transition: all 0.2s; font-size: 0.95em; box-sizing: border-box; }
+.dropdown-item:hover, .dropdown-item.highlighted { background: #e8f0ff; color: #0066cc; }
+.event-name { font-weight: 500; flex: 1; }
+.event-count { color: #999999; font-size: 0.85em; white-space: nowrap; }
 </style>
