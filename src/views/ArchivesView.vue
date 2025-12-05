@@ -155,6 +155,22 @@
     />
 
     <div
+      v-else-if="showViewer && (selectedArchive?.archive_type === 'Métriques Rétrospectives' || selectedArchive?.archive_type === 'RETRO_ANALYSIS')"
+      class="viewer-overlay"
+      @click.self="closeViewer"
+    >
+      <div class="viewer-content">
+        <div class="viewer-header">
+          <h2>{{ selectedArchive?.title }}</h2>
+          <button class="close-btn" @click="closeViewer">✕</button>
+        </div>
+        <div class="viewer-body scrollable">
+          <RetroactiveAnalysisResultsViewer :data="viewerData" />
+        </div>
+      </div>
+    </div>
+
+    <div
       v-else-if="showViewer"
       class="viewer-overlay"
       @click.self="closeViewer"
@@ -195,6 +211,7 @@
 import { onMounted, ref } from 'vue'
 import { useArchiveStore, type Archive } from '../stores/archiveStore'
 import MetricsAnalysisModal from '../components/MetricsAnalysisModal.vue'
+import RetroactiveAnalysisResultsViewer from '../components/RetroactiveAnalysisResultsViewer.vue'
 import EventCorrelationHeatmap from '../components/EventCorrelationHeatmap.vue'
 import GlobalAnalysisModal from '../components/GlobalAnalysisModal.vue'
 

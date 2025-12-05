@@ -3,7 +3,7 @@
     <div class="graph-section full-width graph-large">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <h3>📊 Cycle complet de volatilité (Peak + Décroissance)</h3>
-        <button class="btn-archive" @click="$emit('archive')">💾 Archiver</button>
+        <button v-if="!isArchiveMode" class="btn-archive" @click="$emit('archive')">💾 Archiver</button>
       </div>
       <div class="graph-container graph-container-large">
         <svg viewBox="0 0 900 400" class="graph graph-enlarged">
@@ -113,6 +113,7 @@ interface Props {
   confidence: number
   eventCount: number
   entrySeconds: number
+  isArchiveMode?: boolean
 }
 
 const props = defineProps<Props>()
