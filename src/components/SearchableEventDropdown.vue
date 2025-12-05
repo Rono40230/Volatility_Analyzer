@@ -133,6 +133,7 @@ const handleInputBlur = () => {
   background: #ffffff;
   transition: all 0.3s;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .dropdown-header:hover {
