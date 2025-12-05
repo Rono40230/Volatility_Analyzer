@@ -117,7 +117,7 @@
             <span class="meta-label">🕒 Créé le:</span>
             <span class="meta-value">{{ formatDate(archive.created_at) }}</span>
           </div>
-          <div v-if="isRetroAnalysisType(archive)" class="meta-item">
+          <div v-if="archive.archive_type === 'Métriques Rétrospectives'" class="meta-item">
             <span class="meta-label">📊 Événement:</span>
             <span class="meta-value">{{ extractEventLabel(archive) }}</span>
           </div>
@@ -282,14 +282,21 @@ function formatDate(dateStr: string): string {
 }
 
 function isRetroAnalysisType(archive: Archive): boolean {
-  return archive.archive_type === 'Métriques Rétrospectives' || archive.archive_type === 'RETRO_ANALYSIS'
+  try {
+    const data = JSON.parse(archive.data_json)
+    // Vérifier si c'est une archive rétrospective en cherchant les clés spécifiques
+    return archive.archive_type === 'Métriques Rétrospectives' && (data.peakDelayResults || data.eventLabel)
+  } catch {
+    return false
+  }
 }
 
 function extractEventLabel(archive: Archive): string {
   try {
     const data = JSON.parse(archive.data_json)
-    return data.eventLabel || data.eventType || 'Événement inconnu'
-  } catch {
+    const label = data.eventLabel || data.eventType || 'Événement inconnu'
+    return label
+  } catch (e) {
     return 'Événement inconnu'
   }
 }
