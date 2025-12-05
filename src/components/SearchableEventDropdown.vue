@@ -121,6 +121,7 @@ const handleInputBlur = () => {
 .searchable-dropdown-wrapper {
   position: relative;
   width: 200px;
+  box-sizing: border-box;
 }
 
 .dropdown-header {
