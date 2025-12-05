@@ -41,7 +41,7 @@ export function useHeatmapArchive() {
         const period = await invoke<{
           start_date: string | null
           end_date: string | null
-        }>('get_calendar_period_by_id', { calendar_id: selectedCalendarId })
+        }>('get_calendar_period_by_id', { calendarId: selectedCalendarId })
 
         archivePeriodStart.value = period.start_date || ''
         archivePeriodEnd.value = period.end_date || ''

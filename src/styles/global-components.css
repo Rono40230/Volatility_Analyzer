@@ -1,0 +1,126 @@
+/* Styles Partagés pour Composants Globaux */
+
+/* ============= GLASS EFFECT ============= */
+.glass {
+  background: rgba(30, 30, 45, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+/* ============= CARTES GÉNÉRIQUES ============= */
+.card {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(78, 205, 196, 0.3);
+}
+
+/* ============= GRILLES ============= */
+.grid-responsive {
+  display: grid;
+  gap: 20px;
+}
+
+/* ============= TEXTE ============= */
+.label-small {
+  font-size: 11px;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.value-large {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.value-medium {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* ============= COULEURS SCORES ============= */
+.score-excellent {
+  color: #4ecdc4;
+}
+
+.score-good {
+  color: #3b82f6;
+}
+
+.score-average {
+  color: #f59e0b;
+}
+
+.score-poor {
+  color: #ef4444;
+}
+
+/* ============= BOUTONS ============= */
+.button-primary {
+  background: linear-gradient(135deg, #4ecdc4 0%, #2d9ca6 100%);
+  border: none;
+  color: #000;
+  padding: 8px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.button-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+}
+
+/* ============= ICÔNES ============= */
+.icon-circular {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-circular.size-lg {
+  width: 60px;
+  height: 60px;
+  font-size: 32px;
+}
+
+.icon-circular.size-md {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+}
+
+/* ============= BOÎTES D'INSIGHT ============= */
+.insight-box {
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+}
+
+.insight-box h4 {
+  color: #fbbf24;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.insight-box p {
+  margin: 0;
+  font-size: 13px;
+  color: #e2e8f0;
+  line-height: 1.5;
+}

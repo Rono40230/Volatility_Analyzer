@@ -140,9 +140,10 @@ watch(() => props.isOpen, (newVal) => {
   background: #13131f;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  width: 100%;
-  max-width: 1200px;
-  height: 90vh;
+  width: calc(100vw - 32px);
+  max-width: calc(100vw - 32px);
+  height: auto;
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
@@ -186,6 +187,7 @@ watch(() => props.isOpen, (newVal) => {
 
 .modal-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px;
   background: radial-gradient(circle at top right, #1a1a2e 0%, #13131f 100%);
