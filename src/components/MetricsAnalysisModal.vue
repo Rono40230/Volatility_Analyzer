@@ -60,9 +60,10 @@ const archiveDataJson = ref('')
 const loadAnalysis = async () => {
   if (!props.analysisResult) return
   try {
-    // En mode archive, les données sont déjà complètes - pas de recalcul
+    // En mode archive, afficher directement les données sauvegardées
     if (props.isArchiveMode) {
-      // Juste afficher les données sauvegardées sans recalculer
+      // Charger les données sauvegardées directement sans recalculer
+      await updateAnalysis(props.analysisResult)
       return
     }
     // Mode normal: recalculer les analyses
