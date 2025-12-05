@@ -120,8 +120,7 @@ const handleInputBlur = () => {
 <style scoped>
 .searchable-dropdown-wrapper {
   position: relative;
-  width: 200px;
-  box-sizing: border-box;
+  width: 232px;
 }
 
 .dropdown-header {
@@ -133,7 +132,6 @@ const handleInputBlur = () => {
   background: #ffffff;
   transition: all 0.3s;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
 .dropdown-header:hover {
