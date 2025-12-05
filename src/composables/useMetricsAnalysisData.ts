@@ -19,7 +19,7 @@ export function useMetricsAnalysisData() {
   const tradingPlan = ref<any>(null)
   const entryWindowAnalysis = ref<any>({ optimal_offset: 0, optimal_win_rate: 0 })
 
-  async function updateAnalysis(analysisResult: AnalysisResult) {
+  async function updateAnalysis(analysisResult: AnalysisResult, isArchiveMode = false) {
     sliceAnalyses.value = []
     movementQualities.value = {}
     volatilityDuration.value = null
@@ -42,27 +42,30 @@ export function useMetricsAnalysisData() {
     const bestSliceStats = result.stats_15min.find(s => s.hour === bestHour && s.quarter === bestQuarter)
     if (!bestSliceStats) return
 
-    // Load movement quality first
-    const { score: movementQualityScore, qualities } = await loadMovementQuality(
-      result.symbol,
-      bestHour,
-      bestQuarter
-    )
-    movementQualities.value = qualities
+    // En mode archive, ne pas appeler les APIs de recalcul
+    if (!isArchiveMode) {
+      // Load movement quality first
+      const { score: movementQualityScore, qualities } = await loadMovementQuality(
+        result.symbol,
+        bestHour,
+        bestQuarter
+      )
+      movementQualities.value = qualities
+
+      // Load entry window analysis (optimal offset and win rate for entry)
+      const entryAnalysis = await loadEntryWindowAnalysis(result.symbol, bestHour, bestQuarter)
+      if (entryAnalysis) {
+        entryWindowAnalysis.value = entryAnalysis
+      }
+    }
 
     // Create best slice with movement quality score
-    const bestSlice = createBestSlice(bestSliceStats, bestHour, bestQuarter, movementQualityScore)
+    const bestSlice = createBestSlice(bestSliceStats, bestHour, bestQuarter, movementQualities.value?.score ?? 0)
     sliceAnalyses.value = [bestSlice]
     tradingPlan.value = bestSlice.tradingPlan
 
     // Extract volatility duration from table data (no API call, copy/paste from tableau)
     volatilityDuration.value = extractVolatilityDuration(bestSliceStats)
-
-    // Load entry window analysis (optimal offset and win rate for entry)
-    const entryAnalysis = await loadEntryWindowAnalysis(result.symbol, bestHour, bestQuarter)
-    if (entryAnalysis) {
-      entryWindowAnalysis.value = entryAnalysis
-    }
   }
 
   async function updateAnalysisForQuarter(analysisResult: AnalysisResult, selectedHour: number, selectedQuarter: number) {

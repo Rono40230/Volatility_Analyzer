@@ -60,10 +60,10 @@ const archiveDataJson = ref('')
 const loadAnalysis = async () => {
   if (!props.analysisResult) return
   try {
-    // En mode archive, afficher directement les données sauvegardées
+    // En mode archive, afficher directement les données sauvegardées sans recalcul
     if (props.isArchiveMode) {
-      // Charger les données sauvegardées directement sans recalculer
-      await updateAnalysis(props.analysisResult)
+      // Charger les données sauvegardées directement sans appeler les APIs de recalcul
+      await updateAnalysis(props.analysisResult, true)
       return
     }
     // Mode normal: recalculer les analyses
@@ -72,7 +72,7 @@ const loadAnalysis = async () => {
       const symbol = props.analysisResult.symbol || 'EURUSD'
       await analyzeStraddleMetrics(symbol, props.preSelectedHour, props.preSelectedQuarter)
     } else {
-      await updateAnalysis(props.analysisResult)
+      await updateAnalysis(props.analysisResult, false)
     }
   } catch (error) {
     // Error handling
