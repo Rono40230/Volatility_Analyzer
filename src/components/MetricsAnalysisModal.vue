@@ -117,7 +117,10 @@ function openArchiveModal() {
     movementQualities: movementQualities.value,
     volatilityDuration: volatilityDuration.value,
     tradingPlan: tradingPlan.value,
-    entryWindowAnalysis: entryWindowAnalysis.value
+    entryWindowAnalysis: entryWindowAnalysis.value,
+    offsetOptimal: offsetOptimal.value,
+    winRate: winRate.value,
+    whipsawAnalysis: whipsawAnalysis.value
   })
   
   showArchiveModal.value = true
