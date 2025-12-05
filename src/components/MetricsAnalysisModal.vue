@@ -22,11 +22,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, withDefaults } from 'vue'
+import { ref, withDefaults } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import ArchiveModal from './ArchiveModal.vue'
 import { useStraddleAnalysis } from '../composables/useStraddleAnalysis'
-import { useMetricsAnalysisData } from '../composables/useMetricsAnalysisData'
+import { useMetricsModalLoad } from '../composables/useMetricsModalLoad'
 import BestSliceCard from './metrics/BestSliceCard.vue'
 import MetricsGrid from './metrics/MetricsGrid.vue'
 import VolatilityDurationSection from './metrics/VolatilityDurationSection.vue'
@@ -39,6 +39,7 @@ interface Props {
   selectedSymbol?: string
   preSelectedHour?: number
   preSelectedQuarter?: number
+  archivedData?: any
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -49,84 +50,22 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<{ close: [] }>()
 
-const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, updateAnalysis, updateAnalysisForQuarter } = useMetricsAnalysisData()
-const { offsetOptimal, winRate, whipsawAnalysis, analyzeStraddleMetrics } = useStraddleAnalysis()
+const isOpenRef = ref(props.isOpen)
+const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, offsetOptimal, winRate, whipsawAnalysis } = useMetricsModalLoad(props, isOpenRef)
 
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
 const archiveDataJson = ref('')
 
-const loadAnalysis = async () => {
-  if (!props.analysisResult) return
-  try {
-    // En mode archive, afficher directement les données sauvegardées sans recalcul
-    if (props.isArchiveMode) {
-      // Charger les données sauvegardées directement sans appeler les APIs de recalcul
-      await updateAnalysis(props.analysisResult, true)
-      return
-    }
-    // Mode normal: recalculer les analyses
-    if (props.preSelectedHour !== undefined && props.preSelectedQuarter !== undefined) {
-      await updateAnalysisForQuarter(props.analysisResult, props.preSelectedHour, props.preSelectedQuarter)
-      const symbol = props.analysisResult.symbol || 'EURUSD'
-      await analyzeStraddleMetrics(symbol, props.preSelectedHour, props.preSelectedQuarter)
-    } else {
-      await updateAnalysis(props.analysisResult, false)
-      // Aussi analyser les métriques Straddle pour la meilleure heure détectée
-      const symbol = props.analysisResult.symbol || 'EURUSD'
-      const [bestHour, bestQuarter] = props.analysisResult.best_quarter
-      await analyzeStraddleMetrics(symbol, bestHour, bestQuarter)
-    }
-  } catch (error) {
-    // Error handling
-  }
-}
-
-watch(() => props.analysisResult, loadAnalysis)
-watch(() => props.isOpen, (isOpen) => { if (isOpen) loadAnalysis() })
-watch(() => ({ hour: props.preSelectedHour, quarter: props.preSelectedQuarter }), async (newSelection) => {
-  if (newSelection.hour !== undefined && newSelection.quarter !== undefined && props.analysisResult) {
-    // Ne pas recalculer en mode archive
-    if (props.isArchiveMode) return
-    try {
-      await updateAnalysisForQuarter(props.analysisResult, newSelection.hour, newSelection.quarter)
-      const symbol = props.analysisResult.symbol || 'EURUSD'
-      await analyzeStraddleMetrics(symbol, newSelection.hour, newSelection.quarter)
-    } catch (error) {
-      // Error handling
-    }
-  }
-})
-onMounted(loadAnalysis)
-
 const close = () => emit('close')
 
 function openArchiveModal() {
   if (!props.analysisResult) return
   const result = props.analysisResult
-  if (result.period_start && result.period_end) {
-    archivePeriodStart.value = result.period_start
-    archivePeriodEnd.value = result.period_end
-  } else {
-    const now = new Date()
-    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate())
-    archivePeriodStart.value = oneYearAgo.toISOString()
-    archivePeriodEnd.value = now.toISOString()
-  }
-  
-  archiveDataJson.value = JSON.stringify({
-    analysisResult: result,
-    sliceAnalyses: sliceAnalyses.value,
-    movementQualities: movementQualities.value,
-    volatilityDuration: volatilityDuration.value,
-    tradingPlan: tradingPlan.value,
-    entryWindowAnalysis: entryWindowAnalysis.value,
-    offsetOptimal: offsetOptimal.value,
-    winRate: winRate.value,
-    whipsawAnalysis: whipsawAnalysis.value
-  })
-  
+  archivePeriodStart.value = result.period_start || new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()).toISOString()
+  archivePeriodEnd.value = result.period_end || new Date().toISOString()
+  archiveDataJson.value = JSON.stringify({ analysisResult: result, sliceAnalyses: sliceAnalyses.value, movementQualities: movementQualities.value, volatilityDuration: volatilityDuration.value, tradingPlan: tradingPlan.value, entryWindowAnalysis: entryWindowAnalysis.value, offsetOptimal: offsetOptimal.value, winRate: winRate.value, whipsawAnalysis: whipsawAnalysis.value })
   showArchiveModal.value = true
 }
 

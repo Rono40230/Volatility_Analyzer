@@ -150,6 +150,7 @@
       :analysis-result="viewerData.analysisResult"
       :is-open="showViewer"
       :is-archive-mode="true"
+      :archived-data="viewerData"
       @close="closeViewer" 
     />
 
