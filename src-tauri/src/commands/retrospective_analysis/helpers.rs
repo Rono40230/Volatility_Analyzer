@@ -50,16 +50,14 @@ pub fn get_event_types_from_db(
     calendar_id: Option<i32>,
 ) -> Result<Vec<(String, usize)>, String> {
     let conn = rusqlite::Connection::open(db_path).map_err(|e| format!("Open: {}", e))?;
-    let impact_filter = "UPPER(impact) IN ('H', 'HIGH', 'M', 'MEDIUM', 'N')";
     let query = if let Some(cal_id) = calendar_id {
         format!(
-            "SELECT description, COUNT(*) FROM calendar_events WHERE {} AND calendar_import_id = {} GROUP BY description ORDER BY COUNT(*) DESC",
-            impact_filter, cal_id
+            "SELECT description, COUNT(*) FROM calendar_events WHERE calendar_import_id = {} GROUP BY description ORDER BY COUNT(*) DESC",
+            cal_id
         )
     } else {
         format!(
-            "SELECT description, COUNT(*) FROM calendar_events WHERE {} GROUP BY description ORDER BY COUNT(*) DESC",
-            impact_filter
+            "SELECT description, COUNT(*) FROM calendar_events GROUP BY description ORDER BY COUNT(*) DESC"
         )
     };
 
