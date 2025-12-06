@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <div class="analysis-grid-3-cols">
+    <div class="analysis-grid-2-cols">
       <div class="interpretation-block">
         <p><strong>💡 Interprétation</strong></p>
         <ul>
@@ -71,32 +71,6 @@
           <li>Sortie max: <strong>T+{{ maxExit }} min</strong> (avant stabilisation)</li>
         </ul>
       </div>
-
-      <div class="summary-section-inline">
-        <p><strong>📋 Résumé Bidi</strong></p>
-        <div class="summary-grid-inline">
-          <div class="summary-item-inline">
-            <span class="label">Entrée:</span>
-            <span class="value">{{ entrySeconds }} sec</span>
-          </div>
-          <div class="summary-item-inline">
-            <span class="label">SL:</span>
-            <span class="value">{{ slPips }} pips</span>
-          </div>
-          <div class="summary-item-inline">
-            <span class="label">Durée:</span>
-            <span class="value">{{ totalDuration }} min</span>
-          </div>
-          <div class="summary-item-inline">
-            <span class="label">Confiance:</span>
-            <span class="value">{{ confidence }}%</span>
-          </div>
-          <div class="summary-item-inline">
-            <span class="label">TP/SL:</span>
-            <span class="value">1:2</span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -112,7 +86,6 @@ interface Props {
   decaySpeed: string
   confidence: number
   eventCount: number
-  entrySeconds: number
   isArchiveMode?: boolean
   eventLabel?: string
 }
@@ -123,7 +96,6 @@ defineEmits<{ archive: [] }>()
 
 const totalDuration = computed(() => props.peakDelay + props.decayTimeout)
 const maxExit = computed(() => Math.ceil(props.decayTimeout * 1.5))
-const slPips = computed(() => Math.ceil(props.peakAtr * 1.5))
 </script>
 
 <style scoped>
@@ -132,20 +104,14 @@ const slPips = computed(() => Math.ceil(props.peakAtr * 1.5))
 .graph-section h3 { margin: 0 0 20px 0; color: #58a6ff; font-size: 1.1em; }
 .graph-container { width: 100%; background: #0d1117; border-radius: 6px; padding: 10px; height: 100%; }
 .graph { width: 100%; max-width: 100%; aspect-ratio: auto; }
-.analysis-grid-3-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; flex-shrink: 0; height: 30%; min-height: 180px; }
+.analysis-grid-2-cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; flex-shrink: 0; height: 30%; min-height: 180px; }
 .interpretation-block { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; border-left: 3px solid #58a6ff; }
 .interpretation-block p { margin: 0 0 15px 0; color: #58a6ff; font-weight: 600; font-size: 1em; }
 .interpretation-block ul { margin: 0; padding-left: 20px; list-style: none; }
 .interpretation-block li { margin: 10px 0; color: #c9d1d9; line-height: 1.5; font-size: 0.95em; }
-.summary-section-inline { background: #161b22; padding: 20px; border-radius: 8px; border: 1px solid #30363d; border-left: 3px solid #3fb950; }
-.summary-section-inline p { margin: 0 0 15px 0; color: #3fb950; font-weight: 600; }
-.summary-grid-inline { display: flex; flex-direction: column; gap: 12px; }
-.summary-item-inline { display: flex; justify-content: space-between; padding: 10px 12px; background: #0d1117; border-radius: 6px; border-left: 2px solid #3fb950; }
-.summary-item-inline .label { color: #8b949e; font-size: 0.9em; }
-.summary-item-inline .value { color: #3fb950; font-weight: 700; }
+
 .btn-archive { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.95em; }
 .btn-archive:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
 .btn-archive:active { transform: translateY(0); }
-@media (max-width: 1200px) { .analysis-grid-3-cols { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px) { .analysis-grid-3-cols { grid-template-columns: 1fr; } }
+@media (max-width: 768px) { .analysis-grid-2-cols { grid-template-columns: 1fr; } }
 </style>

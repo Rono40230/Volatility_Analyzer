@@ -43,7 +43,6 @@
       :decay-speed="decayResults.decay_speed"
       :confidence="Math.round(peakDelayResults.confidence * 100)"
       :event-count="peakDelayResults.event_count"
-      :entry-seconds="peakDelayResults.optimal_entry_seconds_before"
       :event-label="getEventLabel(selectedEventType)"
       @archive="openArchiveModal"
     />
