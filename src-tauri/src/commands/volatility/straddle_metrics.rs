@@ -2,35 +2,6 @@
 use super::straddle_metrics_types::*;
 use tauri::command;
 
-/// Calcule le meilleur moment d'entrée basé sur les trigger_minutes des whipsaws
-/// Logique: moyenne des moments où les whipsaws se déclenchent
-/// Pour éviter les whipsaws, on entre 1-2 minutes avant ce moment
-fn calculate_optimal_entry_minutes(whipsaw_details: &[WhipsawDetailResponse]) -> i32 {
-    if whipsaw_details.is_empty() {
-        return 1; // Par défaut: 1 minute après le début
-    }
-
-    // Filtrer les trigger_minutes valides (> 0)
-    let valid_triggers: Vec<i32> = whipsaw_details
-        .iter()
-        .filter(|w| w.trigger_minute > 0)
-        .map(|w| w.trigger_minute)
-        .collect();
-
-    if valid_triggers.is_empty() {
-        return 1; // Pas de données valides
-    }
-
-    // Calculer la moyenne des moments de trigger
-    let mean_trigger = valid_triggers.iter().sum::<i32>() as f64 / valid_triggers.len() as f64;
-
-    // Entrer 30-40% avant le moment moyen du whipsaw (sécurité)
-    let optimal = (mean_trigger * 0.6) as i32;
-
-    // Minimum 0, maximum avant timeout (25 min avec buffer)
-    optimal.clamp(0, 25)
-}
-
 /// Analyse complète Straddle: offset, win_rate, whipsaw
 /// Candles doivent être pré-chargées (60x 1min) depuis DB
 #[command]
@@ -97,8 +68,8 @@ pub async fn analyze_straddle_metrics(
         })
         .collect();
 
-    // Calculer le meilleur moment d'entrée basé sur les whipsaws
-    let optimal_entry_minutes = calculate_optimal_entry_minutes(&whipsaw_details);
+    // Le meilleur moment d'entrée est calculé via entryWindowAnalysis (non pondéré)
+    // Ne pas recalculer basé sur les whipsaws pour préserver la stabilité
 
     Ok(StraddleMetricsResponse {
         symbol,
@@ -128,7 +99,6 @@ pub async fn analyze_straddle_metrics(
             win_rate_adjusted: simulation.win_rate_adjusted,
             trailing_stop_adjusted: simulation.trailing_stop_adjusted,
             timeout_adjusted_minutes: simulation.timeout_adjusted_minutes,
-            optimal_entry_minutes,
             whipsaw_details,
         },
     })

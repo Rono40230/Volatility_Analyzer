@@ -97,19 +97,19 @@
             Timeout
           </div>
           <div class="metric-value" style="color: #fff;">
-            {{ props.whipsawAnalysis?.timeout_adjusted_minutes ?? Math.round((props.volatilityDuration?.peak_duration_minutes || 21) * 1.5) }} <span class="unit">min</span>
+            {{ Math.round((props.volatilityDuration?.peak_duration_minutes || 21) * 1.5) }} <span class="unit">min</span>
           </div>
         </div>
         <template #definition>
           <div class="tooltip-section">
             <div class="tooltip-section-title">📖 Définition</div>
-            <div class="tooltip-section-text">Durée maximale du trade, ajustée pour tenir compte du whipsaw et éviter les fermetures prématurées.</div>
+            <div class="tooltip-section-text">Durée maximale du trade, basée sur la décroissance de volatilité du créneau (non pondérée par whipsaw).</div>
           </div>
         </template>
         <template #interpretation>
           <div class="tooltip-section">
             <div class="tooltip-section-title">📊 Explication</div>
-            <div class="tooltip-section-text">{{ props.whipsawAnalysis ? `Valeur pondérée par whipsaw (${props.whipsawAnalysis.whipsaw_frequency_percentage.toFixed(1)}%)` : 'Calculé sur la durée de volatilité du quarter' }}. Formule: 32 min × (1 - whipsaw × 0.5)</div>
+            <div class="tooltip-section-text">Valeur INITIALE calculée sur la durée de volatilité du quarter. Formule: peak_duration × 1.5. Cette valeur reste STABLE et n'est pas affectée par le whipsaw.</div>
           </div>
         </template>
       </MetricTooltip>
@@ -137,7 +137,6 @@ interface EntryWindowAnalysis {
 interface WhipsawAnalysis {
   whipsaw_frequency_percentage: number
   trailing_stop_adjusted: number
-  timeout_adjusted_minutes: number
   optimal_entry_minutes: number
 }
 
@@ -176,8 +175,8 @@ const { calculateExactTime } = useMetricsFormatting()
 const getBestTimeDisplay = () => {
   if (props.sliceAnalyses && props.sliceAnalyses.length > 0) {
     const bestSlice = props.sliceAnalyses[0]
-    // Utiliser le meilleur moment d'entrée calculé par le backend (basé sur whipsaws)
-    const offset = props.whipsawAnalysis?.optimal_entry_minutes ?? props.entryWindowAnalysis?.optimal_offset ?? 0
+    // Utiliser UNIQUEMENT le meilleur moment d'entrée INITIAL (non pondéré par whipsaw)
+    const offset = props.entryWindowAnalysis?.optimal_offset ?? 0
     return calculateExactTime(bestSlice.slice.startTime, offset)
   }
   return props.entryWindowAnalysis?.optimal_offset + ' min'

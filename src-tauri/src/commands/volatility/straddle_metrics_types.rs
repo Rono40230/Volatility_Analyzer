@@ -55,8 +55,6 @@ pub struct WhipsawData {
     pub trailing_stop_adjusted: f64,
     /// Timeout ajusté par whipsaw: 32 min × (1 - whipsaw_frequency × 0.5)
     pub timeout_adjusted_minutes: i32,
-    /// Meilleur moment d'entrée (minutes après début du quarter) basé sur analyse whipsaw
-    pub optimal_entry_minutes: i32,
     /// Détails de chaque whipsaw détecté
     pub whipsaw_details: Vec<WhipsawDetailResponse>,
 }
