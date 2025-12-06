@@ -36,13 +36,14 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps } from 'vue'
+import { defineEmits, defineProps, watch } from 'vue'
 import LoadingState from './global/LoadingState.vue'
 import GlobalStatsBlock from './analysis/GlobalStatsBlock.vue'
 import EventAnalysisBlock from './analysis/EventAnalysisBlock.vue'
 import PairAnalysisBlock from './analysis/PairAnalysisBlock.vue'
 import TimingAnalysisBlock from './analysis/TimingAnalysisBlock.vue'
 import AdviceBlock from './analysis/AdviceBlock.vue'
+import { useArchiveStatistics } from '../composables/useArchiveStatistics'
 
 const props = defineProps<{
   isOpen: boolean
@@ -52,9 +53,18 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { loadAllArchives } = useArchiveStatistics()
+
 function close() {
   emit('close')
 }
+
+// Charger les archives quand la modale s'ouvre
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    loadAllArchives()
+  }
+})
 </script>
 
 <style scoped>

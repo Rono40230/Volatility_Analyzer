@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { parseArchiveByType } from './useArchiveParsers'
 import { calculateEventStatistics, calculatePairStatistics } from './useArchiveMetrics'
@@ -125,11 +125,6 @@ export function useArchiveStatistics() {
       ? (Object.values(eventStatistics.value).reduce((sum, e) => sum + (e.tradabilityScore || 0), 0) / Object.keys(eventStatistics.value).length).toFixed(0)
       : '0'
   }))
-
-  // Charger automatiquement les archives au montage du composable
-  onMounted(() => {
-    loadAllArchives()
-  })
 
   return {
     archives: computed(() => archives.value),
