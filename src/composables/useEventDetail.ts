@@ -7,6 +7,9 @@ export interface EventDetailState {
   avgPeakDelay: number | null
   avgConfidence: number | null
   tradability: 'OPTIMAL' | 'BON' | 'RISQUÉ' | null
+  pair?: string
+  slAdjusted?: number
+  trailingStopCoefficient?: number
 }
 
 export function useEventDetail() {
@@ -18,6 +21,9 @@ export function useEventDetail() {
     avgPeakDelay: null,
     avgConfidence: null,
     tradability: null,
+    pair: undefined,
+    slAdjusted: undefined,
+    trailingStopCoefficient: undefined,
   })
 
   function openDetail(event: EventDetailState) {
@@ -35,6 +41,9 @@ export function useEventDetail() {
         avgPeakDelay: null,
         avgConfidence: null,
         tradability: null,
+        pair: undefined,
+        slAdjusted: undefined,
+        trailingStopCoefficient: undefined,
       }
     }, 300)
   }

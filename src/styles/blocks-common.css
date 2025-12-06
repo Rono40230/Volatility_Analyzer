@@ -1,0 +1,55 @@
+/* Styles partagés pour les blocs d'analyse */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.event-analysis-block,
+.pair-analysis-block,
+.timing-analysis-block,
+.advice-block,
+.global-stats-block {
+  animation: slideIn 0.3s ease-out;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-content h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header-subtitle {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.header-icon {
+  font-size: 32px;
+  opacity: 0.7;
+}
+
+.empty-state {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  color: #a0aec0;
+}

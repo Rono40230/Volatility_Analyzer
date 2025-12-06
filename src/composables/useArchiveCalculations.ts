@@ -1,4 +1,4 @@
-import type { NormalizedArchive, EventStats, PairStats } from './useArchiveStatistics'
+import type { NormalizedArchive, EventStats, PairStats } from './useArchiveTypes'
 
 /**
  * Extraire et normaliser données heatmap

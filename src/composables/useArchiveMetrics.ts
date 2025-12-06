@@ -1,7 +1,9 @@
-import type { NormalizedArchive, EventStats, PairStats } from './useArchiveStatistics'
+import type { NormalizedArchive, EventStats, PairStats, EventPairStats } from './useArchiveTypes'
+import { calculateTrailingStop } from './useTrailingStopCalculation'
+import { calculateTradabilityScore, getPairRating } from './useArchiveScoring'
 
 /**
- * Calculer statistiques par événement
+ * Score de tradabilité (0-100)
  */
 export function calculateEventStatistics(archives: NormalizedArchive[]): Record<string, EventStats> {
   const stats: Record<string, EventStats> = {}
@@ -98,21 +100,45 @@ export function calculatePairStatistics(archives: NormalizedArchive[]): Record<s
 }
 
 /**
- * Score de tradabilité (0-100)
+ * Calculer statistiques par [Événement × Paire]
+ * Chaque paire a son propre ATR selon l'événement
  */
-export function calculateTradabilityScore(eventStats: EventStats): number {
-  const confidenceScore = Math.min(eventStats.avgConfidence, 1) * 100 * 0.4
-  const stability = eventStats.variance ? Math.max(0, 1 - (eventStats.variance / eventStats.avgPeakDelay)) : 1
-  const stabilityScore = stability * 100 * 0.3
-  const impactScore = (eventStats.heatmapImpact || 0) * 0.3
-  const total = confidenceScore + stabilityScore + impactScore
-  return Math.min(Math.max(total, 0), 100)
-}
+export function calculateEventPairStatistics(archives: NormalizedArchive[]): Record<string, EventPairStats> {
+  const stats: Record<string, EventPairStats> = {}
 
-function getPairRating(confidence: number): string {
-  const conf = Math.min(confidence, 1) * 100
-  if (conf >= 80) return '🟢 TRÈS BON'
-  if (conf >= 65) return '🟡 BON'
-  if (conf >= 50) return '🟠 MOYEN'
-  return '🔴 FAIBLE'
+  for (const archive of archives) {
+    const key = `${archive.eventType}|${archive.pair}`
+    
+    if (!stats[key]) {
+      stats[key] = {
+        key,
+        eventType: archive.eventType,
+        pair: archive.pair,
+        avgATR: 0,
+        avgConfidence: 0,
+        count: 0,
+        slAdjusted: 0,
+        trailingStopCoefficient: 0
+      }
+    }
+
+    const stat = stats[key]
+    stat.count++
+    stat.avgATR += archive.peakAtr
+    stat.avgConfidence += archive.confidence
+  }
+
+  // Moyenne + calcul SL/Trailing Stop
+  for (const stat of Object.values(stats)) {
+    stat.avgATR = stat.count > 0 ? stat.avgATR / stat.count : 0
+    stat.avgConfidence = stat.count > 0 ? stat.avgConfidence / stat.count : 0
+    
+    // SL = ATR × 1.5
+    stat.slAdjusted = Math.round((stat.avgATR * 1.5) * 10) / 10
+    
+    // Trailing Stop = ATR × 0.75 (50% du SL)
+    stat.trailingStopCoefficient = calculateTrailingStop(stat.avgATR)
+  }
+
+  return stats
 }

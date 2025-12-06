@@ -66,7 +66,12 @@ const allPairs = computed(() => {
       <EventDetailPairs :pairs="allPairs" />
 
       <!-- Straddle Setup -->
-      <EventDetailStraddle :avg-atr="event.avgATR || 0" :avg-peak-delay="event.avgPeakDelay || 0" />
+      <EventDetailStraddle 
+        :avg-atr="event.avgATR || 0" 
+        :pair="event.pair || 'N/A'"
+        :sl-adjusted="event.slAdjusted || 0"
+        :trailing-stop-coefficient="event.trailingStopCoefficient || 1.5"
+      />
     </div>
   </div>
   </Teleport>

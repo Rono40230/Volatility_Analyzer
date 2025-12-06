@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { calculateTrailingStop } from '../../composables/useArchiveStatistics'
+
 interface Props {
   avgATR: number
-  avgPeakDelay: number
+  pair: string
+  slAdjusted: number
+  trailingStopCoefficient: number
 }
 
 defineProps<Props>()
@@ -9,23 +13,15 @@ defineProps<Props>()
 
 <template>
   <div class="straddle-section">
-    <h3 class="section-title">Straddle Setup</h3>
+    <h3 class="section-title">Straddle Setup ({{ pair }})</h3>
     <div class="setup-grid">
       <div class="setup-item">
         <span class="setup-label">Stop Loss</span>
-        <span class="setup-value">{{ Math.round((avgATR || 0) * 1.5) }}p</span>
+        <span class="setup-value">{{ Math.round(slAdjusted * 10) / 10 }}p</span>
       </div>
       <div class="setup-item">
-        <span class="setup-label">Take Profit</span>
-        <span class="setup-value">{{ Math.round((avgATR || 0) * 3) }}p</span>
-      </div>
-      <div class="setup-item">
-        <span class="setup-label">Ratio</span>
-        <span class="setup-value">1:2</span>
-      </div>
-      <div class="setup-item">
-        <span class="setup-label">Placement</span>
-        <span class="setup-value">{{ Math.round((avgPeakDelay || 0) * 60) }}sec avant</span>
+        <span class="setup-label">Trailing Stop</span>
+        <span class="setup-value">{{ trailingStopCoefficient }}p</span>
       </div>
     </div>
   </div>

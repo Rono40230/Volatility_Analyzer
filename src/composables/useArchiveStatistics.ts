@@ -1,43 +1,13 @@
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { parseArchiveByType } from './useArchiveParsers'
-import { calculateEventStatistics, calculatePairStatistics } from './useArchiveMetrics'
+import { calculateEventStatistics, calculatePairStatistics, calculateEventPairStatistics } from './useArchiveMetrics'
 import { extractHeatmapData, generateAdvice } from './useArchiveCalculations'
+import { calculateTrailingStop } from './useTrailingStopCalculation'
+import { NormalizedArchive, EventStats, PairStats, EventPairStats } from './useArchiveTypes'
 
-export interface NormalizedArchive {
-  id: string
-  type: 'Volatilité' | 'Métriques Rétrospectives' | 'Heatmap'
-  pair: string
-  eventType: string
-  peakAtr: number
-  peakDelay: number
-  decayTimeout: number
-  confidence: number
-  impactScore?: number
-  eventCount?: number
-  timestamp: string
-}
-
-export interface EventStats {
-  eventType: string
-  avgATR: number
-  avgPeakDelay: number
-  avgDecayTimeout: number
-  avgConfidence: number
-  count: number
-  variance?: number
-  heatmapImpact?: number
-  tradabilityScore?: number
-}
-
-export interface PairStats {
-  pair: string
-  avgConfidence: number
-  avgATR: number
-  count: number
-  eventSensitivity: Record<string, number>
-  performanceRating?: string
-}
+export { calculateTrailingStop }
+export { NormalizedArchive, EventStats, PairStats, EventPairStats } from './useArchiveTypes'
 
 export interface RawArchive {
   id: number
@@ -110,6 +80,7 @@ function createArchiveStatistics() {
 
   const eventStatistics = computed(() => calculateEventStatistics(archives.value))
   const pairStatistics = computed(() => calculatePairStatistics(archives.value))
+  const eventPairStatistics = computed(() => calculateEventPairStatistics(archives.value))
   const heatmapData = computed(() => extractHeatmapData(archives.value))
   const dynamicAdvice = computed(() => generateAdvice(eventStatistics.value, pairStatistics.value))
 
@@ -134,6 +105,7 @@ function createArchiveStatistics() {
     archivesByPair,
     eventStatistics,
     pairStatistics,
+    eventPairStatistics,
     heatmapData,
     dynamicAdvice,
     globalStats

@@ -1,4 +1,4 @@
-import type { NormalizedArchive, RawArchive } from './useArchiveStatistics'
+import type { NormalizedArchive, RawArchive } from './useArchiveTypes'
 
 /**
  * Parser une archive selon son type
