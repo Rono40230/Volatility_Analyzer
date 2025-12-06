@@ -105,7 +105,15 @@ impl GlobalAnalyzer {
             }
 
             if let Some(data) = current_analyzable_data {
-                let weight = calculate_temporal_weight(archive.created_at);
+                let created_at_dt = chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
+                    .unwrap_or_else(|_| {
+                        // Fallback: utiliser l'époque Unix (1970-01-01)
+                        chrono::NaiveDateTime::new(
+                            chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+                            chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                        )
+                    });
+                let weight = calculate_temporal_weight(created_at_dt);
                 info!(
                     "Archive {} lue avec succès: {} (poids: {:.2})",
                     archive.id, data.symbol, weight
@@ -113,7 +121,7 @@ impl GlobalAnalyzer {
                 weighted_data.push(WeightedArchiveData {
                     data,
                     weight,
-                    created_at: archive.created_at,
+                    created_at: created_at_dt,
                 });
             }
             filtered_archives.push(archive.clone());
@@ -128,10 +136,18 @@ impl GlobalAnalyzer {
         start_date: Option<&str>,
         end_date: Option<&str>,
     ) -> bool {
+        let archive_dt = chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
+            .unwrap_or_else(|_| {
+                // Fallback: utiliser l'époque Unix (1970-01-01)
+                chrono::NaiveDateTime::new(
+                    chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap(),
+                    chrono::NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                )
+            });
         if let Some(start) = start_date {
             if let Ok(start_dt) = chrono::NaiveDate::parse_from_str(start, "%Y-%m-%d") {
                 let start_datetime = start_dt.and_hms_opt(0, 0, 0).unwrap_or_default();
-                if archive.created_at < start_datetime {
+                if archive_dt < start_datetime {
                     return false;
                 }
             }
@@ -139,7 +155,7 @@ impl GlobalAnalyzer {
         if let Some(end) = end_date {
             if let Ok(end_dt) = chrono::NaiveDate::parse_from_str(end, "%Y-%m-%d") {
                 let end_datetime = end_dt.and_hms_opt(23, 59, 59).unwrap_or_default();
-                if archive.created_at > end_datetime {
+                if archive_dt > end_datetime {
                     return false;
                 }
             }

@@ -4,10 +4,6 @@ import { parseArchiveByType } from './useArchiveParsers'
 import { calculateEventStatistics, calculatePairStatistics } from './useArchiveMetrics'
 import { extractHeatmapData, generateAdvice } from './useArchiveCalculations'
 
-// ============================================================================
-// TYPES (Exportés)
-// ============================================================================
-
 export interface NormalizedArchive {
   id: string
   type: 'Volatilité' | 'Métriques Rétrospectives' | 'Heatmap'
@@ -55,10 +51,12 @@ export interface RawArchive {
 }
 
 // ============================================================================
-// COMPOSABLE
+// COMPOSABLE - Instance globale partagée
 // ============================================================================
 
-export function useArchiveStatistics() {
+let sharedInstance: ReturnType<typeof createArchiveStatistics> | null = null
+
+function createArchiveStatistics() {
   const archives = ref<NormalizedArchive[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -120,7 +118,7 @@ export function useArchiveStatistics() {
     totalEvents: Object.keys(eventStatistics.value).length,
     totalPairs: Object.keys(pairStatistics.value).length,
     avgConfidence: archives.value.length > 0
-      ? (archives.value.reduce((sum, a) => sum + a.confidence, 0) / archives.value.length * 100).toFixed(1)
+      ? (archives.value.reduce((sum, a) => sum + a.confidence, 0) / archives.value.length).toFixed(0)
       : '0',
     estimatedWinRate: archives.value.length > 0
       ? (Object.values(eventStatistics.value).reduce((sum, e) => sum + (e.tradabilityScore || 0), 0) / Object.keys(eventStatistics.value).length).toFixed(0)
@@ -140,4 +138,13 @@ export function useArchiveStatistics() {
     dynamicAdvice,
     globalStats
   }
+}
+
+export function useArchiveStatistics() {
+  if (!sharedInstance) {
+    sharedInstance = createArchiveStatistics()
+    // Auto-load au premier appel du composable
+    sharedInstance.loadAllArchives()
+  }
+  return sharedInstance
 }

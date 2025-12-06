@@ -16,33 +16,40 @@
       </div>
 
       <div class="modal-body">
-        <!-- Statistiques Globales -->
-        <GlobalStatsBlock />
+        <!-- Section: Statistiques Clés -->
+        <section class="content-section">
+          <h3 class="section-title">📊 Statistiques Globales</h3>
+          <GlobalStatsBlock />
+        </section>
 
-        <!-- Événements Tradables -->
-        <EventAnalysisBlock />
+        <!-- Section: Événements Tradables -->
+        <section class="content-section">
+          <h3 class="section-title">📅 Analyse des Événements</h3>
+          <EventAnalysisBlock />
+        </section>
 
-        <!-- Performance par Paire -->
-        <PairAnalysisBlock />
+        <!-- Section: Performance par Paire -->
+        <section class="content-section">
+          <h3 class="section-title">💱 Analyse par Paire</h3>
+          <PairAnalysisBlock />
+        </section>
 
-        <!-- Timing & Setup Straddle -->
-        <TimingAnalysisBlock />
-
-        <!-- Recommandations Stratégiques -->
-        <AdviceBlock />
+        <!-- Section: Timing & Setup Straddle -->
+        <section class="content-section">
+          <h3 class="section-title">⏱️ Timing & Setup Straddle</h3>
+          <TimingAnalysisBlock />
+        </section>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, watch } from 'vue'
-import LoadingState from './global/LoadingState.vue'
+import { defineEmits, defineProps } from 'vue'
 import GlobalStatsBlock from './analysis/GlobalStatsBlock.vue'
 import EventAnalysisBlock from './analysis/EventAnalysisBlock.vue'
 import PairAnalysisBlock from './analysis/PairAnalysisBlock.vue'
 import TimingAnalysisBlock from './analysis/TimingAnalysisBlock.vue'
-import AdviceBlock from './analysis/AdviceBlock.vue'
 import { useArchiveStatistics } from '../composables/useArchiveStatistics'
 
 const props = defineProps<{
@@ -53,18 +60,11 @@ const emit = defineEmits<{
   close: []
 }>()
 
-const { loadAllArchives } = useArchiveStatistics()
+useArchiveStatistics()
 
 function close() {
   emit('close')
 }
-
-// Charger les archives quand la modale s'ouvre
-watch(() => props.isOpen, (newVal) => {
-  if (newVal) {
-    loadAllArchives()
-  }
-})
 </script>
 
 <style scoped>
@@ -136,7 +136,7 @@ watch(() => props.isOpen, (newVal) => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px;
+  padding: 16px;
   background: radial-gradient(circle at top right, #1a1a2e 0%, #13131f 100%);
 }
 
@@ -165,5 +165,29 @@ watch(() => props.isOpen, (newVal) => {
 
 .modal-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+.content-section {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.content-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #4ecdc4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

@@ -43,67 +43,63 @@ const avgPlacement = computed(() => {
 </script>
 
 <template>
-  <div class="timing-analysis-block rounded-lg border border-amber-500/30 bg-amber-950/20 p-6">
+  <div class="timing-analysis-block">
     <!-- Header -->
-    <div class="mb-6 flex items-center justify-between border-b border-amber-500/20 pb-4">
-      <div>
-        <h3 class="text-xl font-bold text-white">Analyse Timing & Setup Straddle</h3>
-        <p class="mt-1 text-sm text-gray-400">
-          Placement moyen: {{ avgPlacement }}sec avant pic • {{ sortedByTiming.length }} événements
-        </p>
+    <div class="header-section">
+      <div class="header-content">
       </div>
-      <div class="text-4xl">⏱️</div>
     </div>
 
-    <!-- Fastest Event -->
-    <div v-if="fastestEvent" class="mb-4 rounded-md border border-emerald-500/30 bg-emerald-950/20 p-4">
-      <div class="mb-2 text-xs font-semibold text-emerald-300">⚡ Réaction la plus rapide</div>
-      <div class="flex items-center justify-between">
-        <h4 class="text-lg font-bold text-white">{{ fastestEvent.eventType }}</h4>
-        <div class="text-right">
-          <div class="text-sm text-gray-400">Pic après placement</div>
-          <div class="text-xl font-bold text-emerald-400">+{{ fastestEvent.peakDelay.toFixed(1) }}min</div>
+    <!-- Fastest & Slowest Events Row -->
+    <div class="fast-slow-row">
+      <!-- Fastest Event -->
+      <div v-if="fastestEvent" class="fastest-event">
+        <div class="fastest-label">⚡ Réaction la plus rapide</div>
+        <div class="fastest-content">
+          <h4 class="fastest-title">{{ fastestEvent.eventType }}</h4>
+          <div class="fastest-value">
+            <div class="fastest-sublabel">Pic après placement</div>
+            <div class="fastest-number">+{{ fastestEvent.peakDelay.toFixed(1) }}min</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slowest Event -->
+      <div v-if="slowestEvent" class="slowest-event">
+        <div class="slowest-label">🐢 Réaction la plus lente</div>
+        <div class="slowest-content">
+          <h4 class="slowest-title">{{ slowestEvent.eventType }}</h4>
+          <div class="slowest-value">
+            <div class="slowest-sublabel">Pic après placement</div>
+            <div class="slowest-number">+{{ slowestEvent.peakDelay.toFixed(1) }}min</div>
+          </div>
         </div>
       </div>
     </div>
-
-    <!-- Timeline Table -->
-    <div v-if="sortedByTiming.length > 0" class="mb-4 overflow-hidden rounded-md bg-gray-900/50">
-      <div class="grid grid-cols-5 gap-2 border-b border-gray-700/50 p-3 text-xs font-semibold text-gray-400">
-        <div>Événement</div>
-        <div class="text-center">Placement</div>
-        <div class="text-center">Durée exit</div>
-        <div class="text-center">Gain estim.</div>
-        <div class="text-center">Score</div>
+    <div v-if="sortedByTiming.length > 0" class="timeline-table">
+      <div class="table-header">
+        <div class="col-event">Événement</div>
+        <div class="col-placement">Placement</div>
+        <div class="col-duration">Durée exit</div>
+        <div class="col-gain">Gain estim.</div>
+        <div class="col-score">Score</div>
       </div>
-      <div v-for="event in sortedByTiming" :key="event.eventType" class="grid grid-cols-5 gap-2 border-b border-gray-800/30 p-3 text-sm transition-colors hover:bg-gray-800/30">
-        <div class="font-semibold text-white">{{ event.eventType }}</div>
-        <div class="text-center text-amber-300">{{ event.placementSeconds }}sec</div>
-        <div class="text-center text-blue-300">{{ event.exitMinutes }}min</div>
-        <div class="text-center font-semibold text-green-400">+{{ event.estimatedGain }}p</div>
-        <div class="text-center">
-          <span v-if="event.tradabilityScore >= 80" class="rounded bg-green-950/50 px-2 py-1 text-green-300">{{ Math.round(event.tradabilityScore) }}</span>
-          <span v-else-if="event.tradabilityScore >= 60" class="rounded bg-yellow-950/50 px-2 py-1 text-yellow-300">{{ Math.round(event.tradabilityScore) }}</span>
-          <span v-else class="rounded bg-red-950/50 px-2 py-1 text-red-300">{{ Math.round(event.tradabilityScore) }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Slowest Event -->
-    <div v-if="slowestEvent" class="rounded-md border border-red-500/30 bg-red-950/20 p-4">
-      <div class="mb-2 text-xs font-semibold text-red-300">🐢 Réaction la plus lente</div>
-      <div class="flex items-center justify-between">
-        <h4 class="text-lg font-bold text-white">{{ slowestEvent.eventType }}</h4>
-        <div class="text-right">
-          <div class="text-sm text-gray-400">Pic après placement</div>
-          <div class="text-xl font-bold text-red-400">+{{ slowestEvent.peakDelay.toFixed(1) }}min</div>
+      <div v-for="event in sortedByTiming" :key="event.eventType" class="table-row">
+        <div class="col-event">{{ event.eventType }}</div>
+        <div class="col-placement">{{ event.placementSeconds }}sec</div>
+        <div class="col-duration">{{ event.exitMinutes }}min</div>
+        <div class="col-gain">+{{ event.estimatedGain }}p</div>
+        <div class="col-score">
+          <span v-if="event.tradabilityScore >= 80" class="score-good">{{ Math.round(event.tradabilityScore) }}</span>
+          <span v-else-if="event.tradabilityScore >= 60" class="score-medium">{{ Math.round(event.tradabilityScore) }}</span>
+          <span v-else class="score-bad">{{ Math.round(event.tradabilityScore) }}</span>
         </div>
       </div>
     </div>
 
     <!-- Empty State -->
-    <div v-if="sortedByTiming.length === 0" class="rounded-md border border-dashed border-gray-600 p-8 text-center">
-      <p class="text-gray-400">Aucune donnée de timing disponible</p>
+    <div v-if="sortedByTiming.length === 0" class="empty-state">
+      <p>Aucune donnée de timing disponible</p>
     </div>
   </div>
 </template>
@@ -111,6 +107,228 @@ const avgPlacement = computed(() => {
 <style scoped>
 .timing-analysis-block {
   animation: slideIn 0.3s ease-out 0.2s both;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(251, 146, 60, 0.3);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.header-content h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header-subtitle {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.header-icon {
+  font-size: 32px;
+  opacity: 0.7;
+}
+
+/* Fast & Slow Row */
+.fast-slow-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.fastest-event {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(52, 211, 153, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.fastest-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #10b981;
+  margin-bottom: 8px;
+}
+
+.fastest-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fastest-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.fastest-value {
+  text-align: right;
+}
+
+.fastest-sublabel {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.fastest-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.timeline-table {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 10px;
+  font-weight: 600;
+  color: #a0aec0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  align-items: center;
+  transition: background 0.2s ease;
+}
+
+.table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.col-event {
+  color: #ffffff;
+  font-weight: 500;
+}
+
+.col-placement {
+  color: #fb923c;
+  text-align: center;
+  font-weight: 600;
+}
+
+.col-duration {
+  color: #60a5fa;
+  text-align: center;
+  font-weight: 600;
+}
+
+.col-gain {
+  color: #10b981;
+  text-align: center;
+  font-weight: 600;
+}
+
+.col-score {
+  text-align: center;
+}
+
+.score-good {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.score-medium {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fb923c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.score-bad {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.slowest-event {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(251, 113, 113, 0.15));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.slowest-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #ef4444;
+  margin-bottom: 8px;
+}
+
+.slowest-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.slowest-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.slowest-value {
+  text-align: right;
+}
+
+.slowest-sublabel {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.slowest-number {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+.empty-state {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  color: #a0aec0;
 }
 
 @keyframes slideIn {

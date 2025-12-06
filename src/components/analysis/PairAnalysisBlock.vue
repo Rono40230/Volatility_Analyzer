@@ -59,57 +59,52 @@ function getTopSensitiveEvent(eventSensitivity: Record<string, number>): { event
 </script>
 
 <template>
-  <div class="pair-analysis-block rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-6">
+  <div class="pair-analysis-block">
     <!-- Header -->
-    <div class="mb-6 flex items-center justify-between border-b border-emerald-500/20 pb-4">
-      <div>
-        <h3 class="text-xl font-bold text-white">Performance par Paire</h3>
-        <p class="mt-1 text-sm text-gray-400">
-          {{ totalPairs }} paires • {{ strongPairs }} très bonnes • ATR moy: {{ avgATR }}p
-        </p>
+    <div class="header-section">
+      <div class="header-content">
       </div>
-      <div class="text-4xl">💱</div>
     </div>
 
     <!-- Pairs Grid -->
-    <div v-if="sortedPairs.length > 0" class="grid gap-4 md:grid-cols-2">
-      <div v-for="pairItem in sortedPairs" :key="pairItem.pair" class="rounded-md bg-gray-900/50 p-4 transition-all hover:bg-gray-900/80">
+    <div v-if="sortedPairs.length > 0" class="pairs-grid">
+      <div v-for="pairItem in sortedPairs" :key="pairItem.pair" class="pair-card">
         <!-- Pair Header -->
-        <div class="mb-3 flex items-center justify-between">
-          <h4 class="text-lg font-semibold text-white">{{ pairItem.pair }}</h4>
-          <span :class="pairItem.performanceColor" class="text-2xl">{{ pairItem.performanceIcon }}</span>
+        <div class="pair-header">
+          <h4 class="pair-name">{{ pairItem.pair }}</h4>
+          <span class="performance-icon">{{ pairItem.performanceIcon }}</span>
         </div>
 
         <!-- Metrics -->
-        <div class="mb-3 space-y-2 text-sm">
-          <div class="flex items-center justify-between">
-            <span class="text-gray-400">Confiance moyenne</span>
-            <span class="font-semibold text-white">{{ Math.round(pairItem.stats.avgConfidence) }}%</span>
+        <div class="metrics-list">
+          <div class="metric-row">
+            <span class="metric-label">Confiance moyenne</span>
+            <span class="metric-value">{{ Math.round(pairItem.stats.avgConfidence) }}%</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-gray-400">Volatilité ATR</span>
-            <span class="font-semibold text-white">{{ Math.round(pairItem.stats.avgATR * 10) / 10 }}p</span>
+          <div class="metric-row">
+            <span class="metric-label">Volatilité ATR</span>
+            <span class="metric-value">{{ Math.round(pairItem.stats.avgATR * 10) / 10 }}p</span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-gray-400">Performance</span>
-            <span class="font-semibold text-white">{{ pairItem.stats.performanceRating }}</span>
+          <div class="metric-row">
+            <span class="metric-label">Performance</span>
+            <span class="metric-value">{{ pairItem.stats.performanceRating }}</span>
           </div>
         </div>
 
         <!-- Top Sensitive Event -->
-        <div v-if="getTopSensitiveEvent(pairItem.stats.eventSensitivity)" class="rounded bg-blue-950/50 p-2">
-          <div class="text-xs text-gray-400">Événement le plus sensible</div>
-          <div class="flex items-center justify-between text-sm">
-            <span class="font-semibold text-white">{{ getTopSensitiveEvent(pairItem.stats.eventSensitivity)?.event }}</span>
-            <span class="text-blue-300">+{{ Math.round((getTopSensitiveEvent(pairItem.stats.eventSensitivity)?.sensitivity ?? 0) * 100) }}%</span>
+        <div v-if="getTopSensitiveEvent(pairItem.stats.eventSensitivity)" class="sensitive-event">
+          <div class="sensitive-label">Événement le plus sensible</div>
+          <div class="sensitive-content">
+            <span class="sensitive-event-name">{{ getTopSensitiveEvent(pairItem.stats.eventSensitivity)?.event }}</span>
+            <span class="sensitive-value">+{{ Math.round((getTopSensitiveEvent(pairItem.stats.eventSensitivity)?.sensitivity ?? 0) * 100) }}%</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Empty State -->
-    <div v-else class="rounded-md border border-dashed border-gray-600 p-8 text-center">
-      <p class="text-gray-400">Aucune paire analysée</p>
+    <div v-else class="empty-state">
+      <p>Aucune paire analysée</p>
     </div>
   </div>
 </template>
@@ -117,6 +112,138 @@ function getTopSensitiveEvent(eventSensitivity: Record<string, number>): { event
 <style scoped>
 .pair-analysis-block {
   animation: slideIn 0.3s ease-out 0.1s both;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.3);
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.header-content h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.header-subtitle {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #a0aec0;
+}
+
+.header-icon {
+  font-size: 32px;
+  opacity: 0.7;
+}
+
+.pairs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.pair-card {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.3s ease;
+}
+
+.pair-card:hover {
+  background: rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.pair-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pair-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.performance-icon {
+  font-size: 20px;
+}
+
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metric-row:last-of-type {
+  border-bottom: none;
+}
+
+.metric-label {
+  color: #a0aec0;
+}
+
+.metric-value {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.sensitive-event {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.sensitive-label {
+  font-size: 10px;
+  color: #a0aec0;
+  margin-bottom: 4px;
+}
+
+.sensitive-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sensitive-event-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.sensitive-value {
+  font-size: 12px;
+  color: #60a5fa;
+  font-weight: 600;
+}
+
+.empty-state {
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  color: #a0aec0;
 }
 
 @keyframes slideIn {

@@ -33,8 +33,8 @@ pub async fn list_archives(
 
 #[tauri::command]
 pub async fn list_all_archives(
-    archive_service: State<'_, ArchiveService>,
-) -> Result<Vec<Archive>, String> {
+    archive_service: State<'_, crate::services::ArchiveService>,
+) -> Result<Vec<crate::models::Archive>, String> {
     archive_service.list_archives()
 }
 

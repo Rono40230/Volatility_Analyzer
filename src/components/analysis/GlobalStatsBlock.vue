@@ -2,10 +2,11 @@
 import { computed } from 'vue'
 import { useArchiveStatistics } from '../../composables/useArchiveStatistics'
 
-const { globalStats, eventStatistics, pairStatistics, archives } = useArchiveStatistics()
+const { globalStats, eventStatistics, pairStatistics } = useArchiveStatistics()
 
 const statsDisplay = computed(() => {
-  if (!globalStats.value) {
+  const stats = globalStats.value
+  if (!stats) {
     return {
       totalArchives: 0,
       avgConfidence: 0,
@@ -15,12 +16,15 @@ const statsDisplay = computed(() => {
     }
   }
 
+  const events = eventStatistics.value || {}
+  const pairs = pairStatistics.value || {}
+
   return {
-    totalArchives: globalStats.value.totalArchives,
-    avgConfidence: Math.round(globalStats.value.avgConfidence),
-    estimatedWinRate: Math.round(globalStats.value.estimatedWinRate),
-    totalEvents: Object.keys(eventStatistics.value || {}).length,
-    totalPairs: Object.keys(pairStatistics.value || {}).length,
+    totalArchives: stats.totalArchives || 0,
+    avgConfidence: parseInt(String(stats.avgConfidence || '0')),
+    estimatedWinRate: parseInt(String(stats.estimatedWinRate || '0')),
+    totalEvents: Object.keys(events).length || 0,
+    totalPairs: Object.keys(pairs).length || 0,
   }
 })
 
@@ -81,94 +85,53 @@ const qualityLabel = computed(() => {
 </script>
 
 <template>
-  <div class="global-stats-block rounded-lg border border-cyan-500/30 bg-cyan-950/20 p-6">
-    <!-- Header -->
-    <div class="mb-6 flex items-center justify-between border-b border-cyan-500/20 pb-4">
-      <div>
-        <h3 class="text-xl font-bold text-white">Statistiques Globales</h3>
-        <p class="mt-1 text-sm text-gray-400">
-          Qualité de l'analyse: {{ qualityLabel }}
-        </p>
-      </div>
-      <div class="text-4xl">🔍</div>
-    </div>
-
-    <!-- Metrics Grid -->
-    <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      <div v-for="metric in metrics" :key="metric.label" :class="`bg-gradient-to-br ${metric.color}`" class="rounded-lg p-4 text-white shadow-lg transition-transform hover:scale-105">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-sm text-gray-100 opacity-90">{{ metric.label }}</div>
-            <div class="mt-1 text-3xl font-bold">{{ metric.value }}</div>
-          </div>
-          <div class="text-3xl opacity-50">{{ metric.icon }}</div>
-        </div>
+  <div class="global-stats-block">
+    <!-- Métriques Grid -->
+    <div class="metrics-grid">
+      <div v-for="metric in metrics" :key="metric.label" class="metric-card">
+        <div class="metric-icon">{{ metric.icon }}</div>
+        <div class="metric-label">{{ metric.label }}</div>
+        <div class="metric-value">{{ metric.value }}</div>
       </div>
     </div>
 
-    <!-- Quality Score Bar -->
-    <div class="mb-6 rounded-lg bg-gray-900/50 p-4">
-      <div class="mb-2 flex items-center justify-between">
-        <span class="text-sm font-semibold text-gray-300">Score de Qualité Général</span>
-        <span class="text-lg font-bold text-cyan-400">{{ qualityScore }}/100</span>
-      </div>
-      <div class="h-3 w-full overflow-hidden rounded-full bg-gray-800">
-        <div :style="{ width: `${qualityScore}%` }" class="h-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-all duration-500"></div>
-      </div>
-      <p class="mt-2 text-xs text-gray-400">
-        Basé sur: confiance moyenne ({{ statsDisplay.avgConfidence }}%), nombre d'événements ({{ statsDisplay.totalEvents }}), nombre de paires ({{ statsDisplay.totalPairs }})
-      </p>
-    </div>
-
-    <!-- Data Coverage -->
-    <div class="rounded-lg bg-gray-900/50 p-4">
-      <h4 class="mb-3 text-sm font-semibold text-white">Couverture des Données</h4>
-      <div class="space-y-2 text-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-gray-400">Archives chargées</span>
-          <span class="font-semibold text-cyan-400">{{ statsDisplay.totalArchives }}/25</span>
+    <!-- Blocs horizontaux -->
+    <div class="blocks-row">
+      <!-- Score de Qualité -->
+      <div class="block-item">
+        <div class="block-title">Score de Qualité</div>
+        <div class="quality-bar">
+          <div class="quality-fill" :style="{ width: `${qualityScore}%` }"></div>
         </div>
-        <div class="h-2 w-full overflow-hidden rounded-full bg-gray-800">
-          <div :style="{ width: `${(statsDisplay.totalArchives / 25) * 100}%` }" class="h-full bg-cyan-500"></div>
-        </div>
-
-        <div class="mt-3 flex items-center justify-between">
-          <span class="text-gray-400">Événements détectés</span>
-          <span class="font-semibold text-purple-400">{{ statsDisplay.totalEvents }} types</span>
-        </div>
-
-        <div class="mt-3 flex items-center justify-between">
-          <span class="text-gray-400">Paires tradées</span>
-          <span class="font-semibold text-green-400">{{ statsDisplay.totalPairs }} paires</span>
-        </div>
+        <div class="block-footer">{{ qualityScore }}/100</div>
       </div>
-    </div>
 
-    <!-- Insights -->
-    <div class="mt-6 grid gap-3 md:grid-cols-2">
-      <div class="rounded-lg border border-blue-500/30 bg-blue-950/20 p-3">
-        <div class="text-xs font-semibold text-blue-300">💡 Insight #1</div>
-        <p class="mt-1 text-sm text-gray-200">
-          {{ statsDisplay.avgConfidence >= 75 ? 'Analyse très solide avec une confiance élevée' : 'Confiance modérée, considérez plus de données' }}
-        </p>
+      <!-- Couverture des Données -->
+      <div class="block-item">
+        <div class="block-title">Archives chargées</div>
+        <div class="coverage-bar">
+          <div class="coverage-fill" :style="{ width: `${(statsDisplay.totalArchives / 25) * 100}%` }"></div>
+        </div>
+        <div class="block-footer">{{ statsDisplay.totalArchives }}/25</div>
       </div>
-      <div class="rounded-lg border border-green-500/30 bg-green-950/20 p-3">
-        <div class="text-xs font-semibold text-green-300">💡 Insight #2</div>
-        <p class="mt-1 text-sm text-gray-200">
-          {{ statsDisplay.totalEvents >= 15 ? 'Bonne diversification événementielle' : 'Augmentez l\'analyse sur plus d\'événements' }}
-        </p>
-      </div>
-    </div>
 
-    <!-- Debug Info -->
-    <div class="mt-4 rounded-lg border border-red-500/30 bg-red-950/20 p-3">
-      <div class="text-xs font-semibold text-red-300">🔴 DEBUG INFO</div>
-      <p class="mt-1 text-xs text-gray-300">
-        Archives chargées: {{ archives.length }} | 
-        Globales: {{ statsDisplay.totalArchives }} | 
-        Événements: {{ statsDisplay.totalEvents }} | 
-        Paires: {{ statsDisplay.totalPairs }}
-      </p>
+      <!-- Événements -->
+      <div class="block-item">
+        <div class="block-title">Événements détectés</div>
+        <div class="event-badge">{{ statsDisplay.totalEvents }} types</div>
+      </div>
+
+      <!-- Paires -->
+      <div class="block-item">
+        <div class="block-title">Paires tradées</div>
+        <div class="pair-badge">{{ statsDisplay.totalPairs }} paires</div>
+      </div>
+
+      <!-- Qualité Label -->
+      <div class="block-item">
+        <div class="block-title">Évaluation</div>
+        <div class="quality-label-badge">{{ qualityLabel }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -176,6 +139,122 @@ const qualityLabel = computed(() => {
 <style scoped>
 .global-stats-block {
   animation: slideIn 0.3s ease-out 0.4s both;
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  background: rgba(30, 70, 100, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metric-card {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(85, 98, 112, 0.15));
+  border: 1px solid rgba(78, 205, 196, 0.3);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(85, 98, 112, 0.2));
+  border-color: rgba(78, 205, 196, 0.5);
+  transform: translateY(-2px);
+}
+
+.metric-icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: #a0aec0;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.metric-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #4ecdc4;
+}
+
+/* Blocs Horizontaux */
+.blocks-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.block-item {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.block-title {
+  font-size: 11px;
+  color: #a0aec0;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+.quality-bar,
+.coverage-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.quality-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4ecdc4, #0eeaf5);
+  transition: width 0.3s ease;
+}
+
+.coverage-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  transition: width 0.3s ease;
+}
+
+.event-badge,
+.pair-badge {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 6px 0;
+}
+
+.event-badge {
+  color: #fb923c;
+}
+
+.pair-badge {
+  color: #10b981;
+}
+
+.quality-label-badge {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.block-footer {
+  font-size: 12px;
+  color: #e2e8f0;
+  font-weight: 600;
 }
 
 @keyframes slideIn {

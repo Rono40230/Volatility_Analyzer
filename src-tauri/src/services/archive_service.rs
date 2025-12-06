@@ -35,15 +35,26 @@ impl ArchiveService {
     }
 
     pub fn list_archives(&self) -> Result<Vec<Archive>, String> {
-        let mut conn = self.pool.get().map_err(|e| e.to_string())?;
+        tracing::debug!("🔍 ArchiveService.list_archives: getting connection");
+        let mut conn = self.pool.get().map_err(|e| {
+            tracing::error!("❌ Pool error: {}", e);
+            e.to_string()
+        })?;
 
-        archives::table
+        tracing::debug!("🔍 ArchiveService.list_archives: executing query");
+        let result = archives::table
             .order(archives::created_at.desc())
-            .load::<Archive>(&mut conn)
-            .map_err(|e| {
-                error!("Error listing archives: {}", e);
-                e.to_string()
-            })
+            .load::<Archive>(&mut conn);
+
+        match &result {
+            Ok(archives) => tracing::info!("✅ ArchiveService.list_archives: {} archives loaded", archives.len()),
+            Err(e) => tracing::error!("❌ ArchiveService.list_archives SQL error: {}", e),
+        }
+
+        result.map_err(|e| {
+            error!("Error listing archives: {}", e);
+            e.to_string()
+        })
     }
 
     pub fn get_archive(&self, archive_id: i32) -> Result<Archive, String> {

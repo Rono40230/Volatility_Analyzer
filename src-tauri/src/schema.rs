@@ -8,7 +8,7 @@ diesel::table! {
         period_start -> Text,
         period_end -> Text,
         comment -> Nullable<Text>,
-        created_at -> Timestamp,
+        created_at -> Text,
         data_json -> Text,
     }
 }

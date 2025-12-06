@@ -1,16 +1,12 @@
 import type { NormalizedArchive, RawArchive } from './useArchiveStatistics'
 
-// ============================================================================
-// PARSEURS D'ARCHIVES PAR TYPE
-// ============================================================================
-
 /**
  * Parser une archive selon son type
  */
 export function parseArchiveByType(raw: RawArchive): NormalizedArchive | NormalizedArchive[] | null {
   const type = raw.archive_type
 
-  if (type === 'Volatilité') {
+  if (type === 'Volatilité' || type === 'Volatilité brute') {
     return parseVolatilityArchive(raw)
   } else if (type === 'Métriques Rétrospectives') {
     return parseRetrospectiveArchive(raw)
@@ -51,32 +47,39 @@ function parseVolatilityArchive(raw: RawArchive): NormalizedArchive | null {
 
 /**
  * Parser type "Métriques Rétrospectives" (20 archives)
+ * Convertit les ATR de décimales en pips (×10000)
  */
 function parseRetrospectiveArchive(raw: RawArchive): NormalizedArchive | null {
   try {
     const data = JSON.parse(raw.data_json)
-    const analysisResult = data.analysisResult || data
-    const symbol = analysisResult.symbol || ''
+    
+    // Les archives Métriques Rétrospectives ont directement les champs au top level
+    const pair = data.pair || data.symbol || ''
 
-    if (!symbol) return null
+    if (!pair) {
+      // Fallback: extraire depuis le titre
+      const titleMatch = raw.title.match(/([A-Z]{6})/)
+      if (!titleMatch) return null
+    }
+
+    // Convertir ATR de décimales en pips (×10000)
+    const peakAtrDecimal = data.peakDelayResults?.peak_atr || 0.004
+    const peakAtrPips = peakAtrDecimal * 10000
 
     const peakDelay = data.peakDelayResults?.peak_delay_minutes || 3.2
     const decayTimeout = data.decayResults?.recommended_timeout_minutes || 18.5
-    const peakAtr = data.peakDelayResults?.peak_atr || 40
-    const confidence = (data.peakDelayResults?.confidence || 0.75) * 100
+    const confidence = ((data.peakDelayResults?.confidence || 0.75) * 100)
 
-    let eventType = 'Non spécifié'
-    if (raw.title) {
-      const match = raw.title.match(/NFP|CPI|BCE|FED|Inflation|PPI|BOE/)
-      if (match) eventType = match[0]
-    }
+    let eventType = data.eventType || 'Non spécifié'
+
+    const finalPair = pair || (raw.title.match(/([A-Z]{6})/)?.[1]) || 'UNKNOWN'
 
     return {
       id: String(raw.id),
       type: 'Métriques Rétrospectives',
-      pair: symbol,
+      pair: finalPair,
       eventType,
-      peakAtr,
+      peakAtr: peakAtrPips,
       peakDelay,
       decayTimeout,
       confidence,
@@ -90,36 +93,48 @@ function parseRetrospectiveArchive(raw: RawArchive): NormalizedArchive | null {
 
 /**
  * Parser type "Heatmap" (1 archive)
+ * Structure réelle sauvegardée:
+ * {
+ *   heatmapData: {
+ *     pairs: ["ADAUSD", "BTCUSD", ...],
+ *     event_types: [{ name: "NFP", count: N, has_data: true }, ...],
+ *     data: {
+ *       "EventName": { "ADAUSD": 12.1, "BTCUSD": 74.5, ... },
+ *       ...
+ *     }
+ *   }
+ * }
  */
 function parseHeatmapArchive(raw: RawArchive): NormalizedArchive[] {
   const results: NormalizedArchive[] = []
 
   try {
     const data = JSON.parse(raw.data_json)
-    const pairs = data.pairs || []
-    const events = data.events || []
-    const impactMatrix = data.impactMatrix || []
-    const volatilityData = data.volatilityData || {}
+    const heatmapData = data.heatmapData || {}
+    const pairs = heatmapData.pairs || []
+    const eventTypes = heatmapData.event_types || []
+    const volatilityMatrix = heatmapData.data || {}
 
-    for (let i = 0; i < pairs.length; i++) {
-      const pair = pairs[i]
-      const pairVolData = volatilityData[pair] || {}
+    // Construire liste d'événements depuis event_types
+    const events = eventTypes.map((et: any) => et.name || String(et))
 
-      for (let j = 0; j < events.length; j++) {
-        const event = events[j]
-        const impact = impactMatrix[i]?.[j] || 0
-        const eventData = pairVolData[event] || {}
+    for (const eventType of events) {
+      const eventData = volatilityMatrix[eventType] || {}
 
+      for (const pair of pairs) {
+        const volatilityValue = eventData[pair] || 0
+
+        // volatilityValue est déjà en pips (ex: 12.1, 74.5)
         results.push({
-          id: `${raw.id}-${i}-${j}`,
+          id: `${raw.id}-${eventType}-${pair}`,
           type: 'Heatmap',
           pair,
-          eventType: event,
-          peakAtr: eventData.volatility_peak || impact / 10 || 30,
-          peakDelay: eventData.avg_peak_time_minutes || 3.2,
+          eventType,
+          peakAtr: volatilityValue || 30,
+          peakDelay: 3.2,
           decayTimeout: 18,
-          confidence: (impact / 100) * 0.8 + 0.2,
-          impactScore: impact,
+          confidence: Math.min(100, (volatilityValue / 100) * 80 + 20),
+          impactScore: volatilityValue,
           timestamp: raw.created_at
         })
       }
