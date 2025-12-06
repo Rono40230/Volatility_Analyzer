@@ -10,7 +10,7 @@ pub struct Archive {
     pub period_start: String,
     pub period_end: String,
     pub comment: Option<String>,
-    pub created_at: chrono::NaiveDateTime,
+    pub created_at: String,
     pub data_json: String,
 }
 
