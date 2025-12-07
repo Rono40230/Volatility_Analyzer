@@ -94,6 +94,37 @@ function parseRetrospectiveArchive(raw: RawArchive): NormalizedArchive | null {
  * Parser type "Heatmap" (1 archive)
  * Volatilité déjà en points MetaTrader 5
  * Structure réelle sauvegardée:
+ * {
+ *   heatmapData: {
+ *     pairs: ["ADAUSD", "BTCUSD", ...],
+ *     event_types: [{ name: "NFP", count: N, has_data: true }, ...],
+ *     data: {
+ *       "EventName": { "ADAUSD": 12.1, "BTCUSD": 74.5, ... },
+ *       ...
+ *     }
+ *   }
+ * }
+ */
+function parseHeatmapArchive(raw: RawArchive): NormalizedArchive[] {
+  const results: NormalizedArchive[] = []
+
+  try {
+    const data = JSON.parse(raw.data_json)
+    const heatmapData = data.heatmapData || {}
+    const pairs = heatmapData.pairs || []
+    const eventTypes = heatmapData.event_types || []
+    const volatilityMatrix = heatmapData.data || {}
+
+    // Construire liste d'événements depuis event_types
+    const events = eventTypes.map((et: any) => et.name || String(et))
+
+    for (const eventType of events) {
+      const eventData = volatilityMatrix[eventType] || {}
+
+      for (const pair of pairs) {
+        const volatilityValue = eventData[pair] || 0
+
+        // volatilityValue est déjà en points MetaTrader 5 (ex: 12.1, 74.5)
         results.push({
           id: `${raw.id}-${eventType}-${pair}`,
           type: 'Heatmap',

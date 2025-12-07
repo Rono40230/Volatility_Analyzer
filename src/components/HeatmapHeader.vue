@@ -1,11 +1,11 @@
 <template>
   <div class="heatmap-header">
     <div class="heatmap-scale">
-      <span class="scale-item"><span class="scale-color heat-very-low" />≥12 pips</span>
-      <span class="scale-item"><span class="scale-color heat-low" />9-11 pips</span>
-      <span class="scale-item"><span class="scale-color heat-medium" />6-8 pips</span>
-      <span class="scale-item"><span class="scale-color heat-high" />3-5 pips</span>
-      <span class="scale-item"><span class="scale-color heat-very-high" />&lt;3 pips</span>
+      <span class="scale-item"><span class="scale-color heat-very-low" />≥12 points</span>
+      <span class="scale-item"><span class="scale-color heat-low" />9-11 points</span>
+      <span class="scale-item"><span class="scale-color heat-medium" />6-8 points</span>
+      <span class="scale-item"><span class="scale-color heat-high" />3-5 points</span>
+      <span class="scale-item"><span class="scale-color heat-very-high" />&lt;3 points</span>
     </div>
   </div>
 </template>

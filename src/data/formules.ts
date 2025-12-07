@@ -136,7 +136,7 @@ export const formules: Record<string, Formule> = {
     titre: 'Volatilité %',
     categorieId: 'volatilite',
     definition: 'ATR normalisé en pourcentage du prix. Permet de comparer volatilité Forex vs Crypto vs Indices.',
-    explication_litterale: 'Cette formule convertit l\'ATR en pourcentage du prix pour pouvoir comparer des marchés différents. Par exemple, si l\'ATR=30 pips et le prix=1.1000, on divise pour obtenir un pourcentage comparable. Utile pour voir: \"est-ce que l\'EUR est plus volatil que l\'OR?\"',
+    explication_litterale: 'Cette formule convertit l\'ATR en pourcentage du prix pour pouvoir comparer des marchés différents. Par exemple, si l\'ATR=30 points et le prix=1.1000, on divise pour obtenir un pourcentage comparable. Utile pour voir: "est-ce que l\'EUR est plus volatil que l\'OR?"',
     formule: 'Vol% = (ATR / Close) × 100',
     inputs: ['ATR moyen', 'Close price estimé'],
     output: {
@@ -144,7 +144,7 @@ export const formules: Record<string, Formule> = {
       range: '0.0 - ∞',
       unite: '%'
     },
-    exemple: 'EURUSD: ATR=12.5 pips, Close≈1.1000 → Vol% = (12.5/11000)×100 ≈ 0.11%',
+    exemple: 'EURUSD: ATR=12.5 points, Close≈1.1000 → Vol% = (12.5/11000)×100 ≈ 0.11%',
     notes: [
       'Prix estimé: Forex=1.0, Indices=10000, Crypto=100000',
       'Permet comparaison multi-assets'
@@ -156,7 +156,7 @@ export const formules: Record<string, Formule> = {
     titre: 'Body % (Directionalité)',
     categorieId: 'volatilite',
     definition: 'Ratio du corps de la candle par rapport au range total. Mesure la directionalité: >50% = fort mouvement directionnel.',
-    explication_litterale: 'Cette formule regarde la force d\'une chandelle. Elle mesure: combien du mouvement total a-t-il été "concluant"? Si la chandelle monte de 100 pips du bas au haut (range=100), mais le corps (ouverture à fermeture) ne bouge que de 10 pips, alors Body%=10% (peu directionnel). Si le corps=90 pips, alors Body%=90% (très directionnel).',
+    explication_litterale: 'Cette formule regarde la force d\'une chandelle. Elle mesure: combien du mouvement total a-t-il été "concluant"? Si la chandelle monte de 100 points du bas au haut (range=100), mais le corps (ouverture à fermeture) ne bouge que de 10 points, alors Body%=10% (peu directionnel). Si le corps=90 points, alors Body%=90% (très directionnel).',
     formule: 'Body% = |Close - Open| / (High - Low) × 100',
     inputs: ['Open', 'Close', 'High', 'Low'],
     output: {
@@ -185,7 +185,7 @@ export const formules: Record<string, Formule> = {
       range: '1.0 - ∞',
       unite: 'ratio'
     },
-    exemple: 'Range=30 pips, Body=10 pips → Noise = 3.0 (bruit modéré)',
+    exemple: 'Range=30 points, Body=10 points → Noise = 3.0 (bruit modéré)',
     notes: [
       '< 2.0 = Excellent (directionnel)',
       '2.0-3.0 = Bon',
@@ -267,9 +267,9 @@ export const formules: Record<string, Formule> = {
     output: {
       type: 'float',
       range: '0.0 - ∞',
-      unite: 'pips'
+      unite: 'points'
     },
-    exemple: 'ATR=24.5 pips → Offset = 24.5 × 1.75 = 42.875 → arrondi = 43 pips',
+    exemple: 'ATR=24.5 points → Offset = 24.5 × 1.75 = 42.875 → arrondi = 43 points',
     notes: [
       'Multiplicateur 1.75 = balance optimal entre:',
       '  - Activations fréquentes (offset petit → mieux)',
@@ -285,20 +285,20 @@ export const formules: Record<string, Formule> = {
     titre: 'Take Profit (TP)',
     categorieId: 'straddle',
     definition: 'Distance du Take Profit depuis l\'entrée. Fixé à 2× l\'offset pour Straddle (rapport Risk:Reward 1:2).',
-    explication_litterale: 'Cette formule décide à quel niveau on ferme notre position en profit. On double la distance de l\'offset: si nos ordres sont à 43 pips, on ferme le profit à 86 pips. C\'est simple: on risque 43 pips (avec le SL) pour gagner 86 pips. C\'est un rapport 1 contre 2, ce qui est équitable.',
+    explication_litterale: 'Cette formule décide à quel niveau on ferme notre position en profit. On double la distance de l\'offset: si nos ordres sont à 43 points, on ferme le profit à 86 points. C\'est simple: on risque 43 points (avec le SL) pour gagner 86 points. C\'est un rapport 1 contre 2, ce qui est équitable.',
     formule: 'TP = Offset × 2.0\n\nArrondissement: .ceil() (pas de décimales)',
     inputs: ['Offset calculé'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
-      unite: 'pips'
+      unite: 'points'
     },
-    exemple: 'Offset=43 pips → TP = 43 × 2.0 = 86 pips (arrondi)',
+    exemple: 'Offset=43 points → TP = 43 × 2.0 = 86 points (arrondi)',
     notes: [
       'Ratio 1:2 = Risk:Reward classique pour Straddle',
       'Risk (SL) doit être ≥ Offset (pour absorber whipsaws)',
       'Reward (TP) = 2× Offset (pour équilibre)',
-      'Exemple complet: Offset=43, SL=77, TP=86'
+      'Exemple complet: Offset=43 points, SL=77 points, TP=86 points'
     ]
   },
 
@@ -335,15 +335,15 @@ export const formules: Record<string, Formule> = {
     output: {
       type: 'float',
       range: '0.0 - ∞',
-      unite: 'pips'
+      unite: 'points'
     },
-    exemple: 'Offset=43 pips, Whipsaw=33.4% → ratio=1.8 → SL_ajusté = 43 × 1.8 = 77 pips (arrondi)',
+    exemple: 'Offset=43 points, Whipsaw=33.4% → ratio=1.8 → SL_ajusté = 43 × 1.8 = 77 points (arrondi)',
     notes: [
       'LOGIQUE: Whipsaw HAUT (30%+) → SL RÉDUIT (1.5×) car trop de faux déclenchements',
       'LOGIQUE: Whipsaw BAS (<5%) → SL AUGMENTÉ (2.8×) car peu de faux déclenchements',
       'Arrondi toujours vers le haut (.ceil()) = pas de décimales',
       'Exemple ancien: 20 × (1 + 0.25×0.3) = 21.5 ❌ OBSOLÈTE',
-      'Maintenant: 20 × 2.2 = 44 pips ✅ PLUS RÉALISTE'
+      'Maintenant: 20 × 2.2 = 44 points ✅ PLUS RÉALISTE'
     ]
   },
 
@@ -521,7 +521,7 @@ export const formules: Record<string, Formule> = {
     titre: 'Volatility Half-life',
     categorieId: 'timing',
     definition: 'Temps jusqu\'à moitié du pic de volatilité. Mesure la décroissance exponentielle.',
-    explication_litterale: 'Cette formule mesure combien de temps il faut pour que la volatilité descende à la moitié du maximum. Si peak=100 pips, half-life=5 minutes = à 5 minutes le marché bouge encore 50 pips en moyenne. À 10 minutes = 25 pips. Elle te dit quand ta position perd de la valeur.',
+    explication_litterale: 'Cette formule mesure combien de temps il faut pour que la volatilité descende à la moitié du maximum. Si peak=100 points, half-life=5 minutes = à 5 minutes le marché bouge encore 50 points en moyenne. À 10 minutes = 25 points. Elle te dit quand ta position perd de la valeur.',
     formule: 'Half_life = t où ATR(t) = peak_ATR / 2',
     inputs: ['ATR decay curve', 'Peak ATR value'],
     output: {
@@ -529,7 +529,7 @@ export const formules: Record<string, Formule> = {
       range: '0 - peak_duration',
       unite: 'minutes'
     },
-    exemple: 'Peak=20 pips à 12min, ATR=10 pips à 18min → Half-life = 6 min (12→18)',
+    exemple: 'Peak=20 points à 12min, ATR=10 points à 18min → Half-life = 6 min (12→18)',
     notes: [
       'Exponentiel: volatilité décline vite puis lentement',
       'Détermine trade expiration logique'
@@ -736,13 +736,13 @@ export const formules: Record<string, Formule> = {
     titre: 'Volatility Decay Profile',
     categorieId: 'retrospectif',
     definition:
-      'Taux de décroissance de la volatilité après le pic (pips/minute).',
+      'Taux de décroissance de la volatilité après le pic (points/minute).',
     explication_litterale:
-      'Cette formule mesure: "Comment vite la volatilité baisse après le mouvement?" Si la volatilité baisse très vite (3 pips/minute), le mouvement est court, donc timeout court. Si elle baisse lentement (0.8 pips/minute), le mouvement dure longtemps, donc timeout long.',
+      'Cette formule mesure: "Comment vite la volatilité baisse après le mouvement?" Si la volatilité baisse très vite (3 points/minute), le mouvement est court, donc timeout court. Si elle baisse lentement (0.8 points/minute), le mouvement dure longtemps, donc timeout long.',
     formule:
       'Decay_Rate = (Peak_ATR - ATR_at_T+10) / 10 min\nDecay_Speed = FAST (>3) | MEDIUM (1.5-3) | SLOW (<1.5)',
     inputs: ['ATR timeseries', 'Peak ATR value'],
-    output: { type: 'float', range: '0.5 to 5.0', unite: 'pips/minute' },
+    output: { type: 'float', range: '0.5 to 5.0', unite: 'points/minute' },
     exemple:
       'Peak 45p → 18p at T+10 → Decay = 2.7p/min = MEDIUM → Timeout = 25 min',
     notes: [

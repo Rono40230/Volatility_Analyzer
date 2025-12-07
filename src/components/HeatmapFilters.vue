@@ -3,10 +3,10 @@
     <div class="filter-group">
       <label for="volatility-threshold">Volatilité minimale :</label>
       <select id="volatility-threshold" v-model.number="minVol" class="filter-select">
-        <option value="3">≥3 pips</option>
-        <option value="6">≥6 pips</option>
-        <option value="9">≥9 pips</option>
-        <option value="12">≥12 pips</option>
+        <option value="3">≥30 points</option>
+        <option value="6">≥60 points</option>
+        <option value="9">≥90 points</option>
+        <option value="12">≥120 points</option>
       </select>
     </div>
     <div class="filter-group">

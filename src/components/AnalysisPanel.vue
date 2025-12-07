@@ -42,9 +42,9 @@
           <template #usage>
             <div class="tooltip-section-title">📊 Codes Couleurs & Signification</div>
             <div class="tooltip-section-text">
-              <strong style="color: #10b981;">✅ SETUP OPTIMAL (Vert)</strong><br>Score 80-100 : Conditions idéales. Offset standard <strong>10-15 pips</strong>.<br><br>
-              <strong style="color: #3b82f6;">🟢 SETUP CORRECT (Bleu)</strong><br>Score 65-80 : Bon setup. Élargir légèrement l'offset à <strong>15-20 pips</strong>.<br><br>
-              <strong style="color: #f59e0b;">🔵 SETUP ACCEPTABLE (Orange)</strong><br>Score 50-65 : Setup moyen. Offset large recommandé <strong>20-30 pips</strong>.<br><br>
+              <strong style="color: #10b981;">✅ SETUP OPTIMAL (Vert)</strong><br>Score 80-100 : Conditions idéales. Offset standard <strong>10-15 points</strong>.<br><br>
+              <strong style="color: #3b82f6;">🟢 SETUP CORRECT (Bleu)</strong><br>Score 65-80 : Bon setup. Élargir légèrement l'offset à <strong>15-20 points</strong>.<br><br>
+              <strong style="color: #f59e0b;">🔵 SETUP ACCEPTABLE (Orange)</strong><br>Score 50-65 : Setup moyen. Offset large recommandé <strong>20-30 points</strong>.<br><br>
               <strong style="color: #f97316;">🟠 SETUP RISQUÉ (Orange foncé)</strong><br>Score 35-50 : Conditions médiocres. Envisager de passer l'événement.<br><br>
               <strong style="color: #ef4444;">❌ NE PAS TRADER (Rouge)</strong><br>Score &lt;35 : Conditions inadaptées.
             </div>
