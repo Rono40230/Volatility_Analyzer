@@ -40,11 +40,6 @@ pub async fn analyze_straddle_metrics(
     // Simuler la stratégie Straddle sur les bougies historiques
     use crate::services::straddle_simulator::simulate_straddle;
     let simulation = simulate_straddle(&candles, &symbol);
-    
-    tracing::debug!(
-        "Straddle analysis completed for {} at {:02}:{:02}, SL={:.0}",
-        symbol, hour, quarter * 15, simulation.sl_adjusted_pips
-    );
 
     // Convertir les détails des whipsaws (si disponibles)
     let whipsaw_details: Vec<WhipsawDetailResponse> = simulation

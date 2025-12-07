@@ -2,7 +2,6 @@
 // Simule une stratégie Straddle sur l'historique complet d'un créneau
 
 use super::straddle_adjustments::AdjustedMetrics;
-use super::straddle_multipliers::calculate_sl_base;
 use super::straddle_simulator_helpers::{
     calculate_atr_mean, calculate_risk_level, find_trade_resolution, get_whipsaw_coefficient,
 };
@@ -45,31 +44,46 @@ pub fn normalize_to_pips(value: f64, symbol: &str) -> f64 {
 }
 
 /// Retourne la valeur d'1 pip pour une paire donnée
+/// 
+/// Règles MT5 (référence officielle):
+/// - Forex 5 décimales (EURUSD, GBPUSD, USDCAD): 1 pip = 10 points → pip_value = 0.0001
+/// - JPY 3 décimales (USDJPY, EURJPY, CADJPY): 1 pip = 10 points → pip_value = 0.01
+/// - Commodités or (XAUUSD, XAUJPY): 1 pip = 10 points → pip_value = 0.1
+/// - Commodités argent (XAGUSD): 1 pip = 1000 points → pip_value = 0.001
+/// - Indices (USA500IDXUSD): 1 pip = 1 point → pip_value = 1.0
+/// - Crypto (BTCUSD): 1 pip = 1 point → pip_value = 1.0
 pub fn get_pip_value(symbol: &str) -> f64 {
-    // Indices
-    if symbol.contains("US30")
-        || symbol.contains("DE30")
-        || symbol.contains("NAS100")
-        || symbol.contains("SPX500")
-    {
-        return 1.0;
-    }
-    // Crypto
-    if symbol.contains("BTC") {
-        return 1.0;
-    }
-    if symbol.contains("ETH") {
-        return 0.1;
-    }
-    // JPY Pairs
+    // JPY pairs (3 décimales): 1 pip = 10 points
     if symbol.contains("JPY") {
         return 0.01;
     }
-    // XAU (Gold)
+    
+    // Commodités or (XAUUSD, XAUJPY): 1 pip = 10 points
     if symbol.contains("XAU") {
-        return 0.01;
+        return 0.1;
     }
-    // Default Forex
+    
+    // Commodités argent (XAGUSD): 1 pip = 1000 points
+    if symbol.contains("XAG") {
+        return 0.001;
+    }
+    
+    // Indices (USA500IDXUSD, US30, NAS100, SPX500): 1 pip = 1 point
+    if symbol.contains("US30") 
+        || symbol.contains("DE30")
+        || symbol.contains("NAS100")
+        || symbol.contains("SPX500")
+        || symbol.contains("USA500")
+    {
+        return 1.0;
+    }
+    
+    // Crypto (BTCUSD, ETHUSD): 1 pip = 1 point
+    if symbol.contains("BTC") || symbol.contains("ETH") {
+        return 1.0;
+    }
+    
+    // Forex 5 décimales par défaut (EURUSD, GBPUSD, USDCAD, etc.): 1 pip = 10 points
     0.0001
 }
 
@@ -134,16 +148,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     let mut whipsaw_details_vec: Vec<WhipsawDetail> = Vec::new();
 
     let tp_distance = offset_optimal * 2.0;
-    // === NOUVEAU : UTILISER LES MULTIPLICATEURS PAIR-SPÉCIFIQUES POUR LE SL ===
-    // Convertir ATR (en points) en valeur de prix pour le calcul du SL
-    let sl_base_distance = calculate_sl_base(atr_mean, symbol, false, None);
-    // Convertir le SL calculé en pips pour cohérence avec les calculs suivants
-    let sl_distance = normalize_to_pips(sl_base_distance, symbol);
-    
-    tracing::info!(
-        "Straddle SL config: pair={}, ATR={:.6}, SL_base={:.0}, SL_pips={:.0}",
-        symbol, atr_mean, sl_base_distance, sl_distance
-    );
+    let sl_distance = offset_optimal;
 
     for (i, candle) in candles.iter().enumerate() {
         let open = candle.open;
@@ -246,12 +251,13 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
     let (risk_level, risk_color) = calculate_risk_level(whipsaw_frequency_percentage);
 
-    // === CALCUL DES VALEURS PONDÉRÉES PAR LE WHIPSAW + VOLATILITÉ ===
-    let adjusted = AdjustedMetrics::new(
+    // === CALCUL DES VALEURS PONDÉRÉES PAR LE WHIPSAW + VOLATILITÉ + MULTIPLICATEURS PAIR-SPÉCIFIQUES ===
+    let adjusted = AdjustedMetrics::new_with_pair(
         win_rate_percentage,
         offset_optimal_pips,
         whipsaw_frequency_percentage,
         atr_mean,
+        symbol,
     );
 
     StraddleSimulationResult {

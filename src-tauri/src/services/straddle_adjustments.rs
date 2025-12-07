@@ -71,4 +71,51 @@ impl AdjustedMetrics {
             timeout_adjusted_minutes,
         }
     }
+
+    /// Nouvelle méthode avec multiplicateurs pair-spécifiques
+    pub fn new_with_pair(
+        win_rate_percentage: f64,
+        offset_optimal_pips: f64,
+        whipsaw_frequency_percentage: f64,
+        atr_mean: f64,
+        symbol: &str,
+    ) -> Self {
+        let whipsaw_factor = whipsaw_frequency_percentage / 100.0;
+
+        let win_rate_adjusted = win_rate_percentage * (1.0 - whipsaw_factor);
+
+        // === NOUVEAU : UTILISER LES MULTIPLICATEURS PAIR-SPÉCIFIQUES POUR SL ===
+        // Au lieu de: SL = offset × ratio_whipsaw (ancien système)
+        // Maintenant: SL = offset × ratio_whipsaw × MUL_PAIR
+        use crate::services::straddle_multipliers::get_sl_multiplier;
+        
+        let pair_multiplier = get_sl_multiplier(symbol, false, None);
+        
+        let whipsaw_adjusted_ratio = match whipsaw_factor {
+            w if w > 0.30 => 1.5,
+            w if w > 0.20 => 1.8,
+            w if w > 0.10 => 2.2,
+            w if w > 0.05 => 2.5,
+            _ => 2.8,
+        };
+        
+        // SL final = offset × ratio_whipsaw × MUL_PAIR
+        let sl_adjusted_pips = (offset_optimal_pips * whipsaw_adjusted_ratio * pair_multiplier).ceil();
+
+        let trailing_stop_brut = 1.59;
+        let trailing_stop_adjusted = trailing_stop_brut * (1.0 - whipsaw_factor / 2.0);
+
+        let atr_normalized = (atr_mean / 0.0008).min(1.0);
+        let timeout_base = 32.0;
+        let timeout_min = 18.0;
+        let timeout_adjusted_minutes =
+            (timeout_base - (atr_normalized * (timeout_base - timeout_min))) as i32;
+
+        AdjustedMetrics {
+            win_rate_adjusted,
+            sl_adjusted_pips,
+            trailing_stop_adjusted,
+            timeout_adjusted_minutes,
+        }
+    }
 }
