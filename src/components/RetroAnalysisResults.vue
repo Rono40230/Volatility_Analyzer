@@ -46,7 +46,7 @@
           <text x="500" y="30" font-size="14" fill="#f85149" font-weight="bold">📉 Phase Décroissance</text>
           <text x="740" y="290" font-size="12" fill="#3fb950">✓ Stabilisé</text>
           <text x="110" y="390" font-size="11" fill="#58a6ff">ATR max: {{ peakAtr.toFixed(4) }}</text>
-          <text x="400" y="390" font-size="11" fill="#f85149">Taux: {{ formatPointsWithPips('EURUSD', decayRate) }}/min</text>
+          <text x="400" y="390" font-size="11" fill="#f85149">Taux: {{ decayRate !== undefined ? formatPointsWithPips('EURUSD', decayRate) : 'N/A' }}/min</text>
           <text x="700" y="390" font-size="11" fill="#3fb950">Demi-vie: ~9 min (50%)</text>
         </svg>
       </div>
@@ -65,7 +65,7 @@
       <div class="interpretation-block">
         <p><strong>⚡ Recommandations Straddle</strong></p>
         <ul>
-          <li>Taux de décroissance: <strong>{{ formatPointsWithPips('EURUSD', decayRate) }}/min</strong> ({{ decaySpeed }})</li>
+          <li>Taux de décroissance: <strong>{{ decayRate !== undefined ? formatPointsWithPips('EURUSD', decayRate) : 'N/A' }}/min</strong> ({{ decaySpeed }})</li>
           <li>Demi-vie: <strong>~9 min</strong> (50% de vol restant)</li>
           <li>TP/SL optimal: À <strong>T+{{ decayTimeout }} min</strong> (vol réduite à ~5%)</li>
           <li>Sortie max: <strong>T+{{ maxExit }} min</strong> (avant stabilisation)</li>

@@ -79,7 +79,12 @@ export function pipsToPoints(symbol: string, pips: number): number {
  * @param decimals Nombre de décimales (défaut: 2)
  * @returns Chaîne formatée
  */
-export function formatPointsWithPips(symbol: string, points: number, decimals = 2): string {
+export function formatPointsWithPips(symbol: string, points: number | undefined, decimals = 2): string {
+  // Gérer les valeurs undefined ou NaN
+  if (points === undefined || points === null || isNaN(points)) {
+    return 'N/A'
+  }
+  
   const pips = pointsToPips(symbol, points)
   const pipsFormatted = pips.toFixed(decimals)
   const pointsFormatted = points.toFixed(1)
