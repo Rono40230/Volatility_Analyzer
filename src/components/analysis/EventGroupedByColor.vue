@@ -11,14 +11,12 @@ interface EventDisplay {
   tradability: 'OPTIMAL' | 'BON' | 'RISQUÉ'
   colorClass: string
   icon: string
+  greenPairCount: number
 }
 
-interface ColorGroup {
-  level: 'OPTIMAL' | 'BON' | 'RISQUÉ'
+interface GreenGroup {
+  greenCount: number
   label: string
-  emoji: string
-  bgColor: string
-  borderColor: string
   events: EventDisplay[]
   isOpen: boolean
 }
@@ -33,57 +31,59 @@ const { openDetail } = useEventDetail()
 const { translateEventName } = useEventTranslation()
 
 // État des accordéons (tous ouverts par défaut)
-const groupStates = ref<Record<string, boolean>>({
-  OPTIMAL: true,
-  BON: true,
-  RISQUÉ: true
+const groupStates = ref<Record<number, boolean>>({})
+
+// Compter les paires vertes par événement
+function countGreenPairs(eventType: string): number {
+  const pairs = getPairsByEvent(eventType)
+  return pairs.filter(p => p.impact >= 80).length
+}
+
+// Enrichir les événements avec le compte de paires vertes, puis trier
+const eventsWithGreenCount = computed(() => {
+  return props.sortedEvents.map(event => ({
+    ...event,
+    greenPairCount: countGreenPairs(event.eventType)
+  })).sort((a, b) => b.greenPairCount - a.greenPairCount)
 })
 
-// Grouper les événements par couleur
-const groupedEvents = computed<ColorGroup[]>(() => {
-  const optimal: EventDisplay[] = []
-  const bon: EventDisplay[] = []
-  const risque: EventDisplay[] = []
-
-  for (const event of props.sortedEvents) {
-    if (event.tradability === 'OPTIMAL') optimal.push(event)
-    else if (event.tradability === 'BON') bon.push(event)
-    else risque.push(event)
+// Grouper par nombre de paires vertes (en ordre descendant)
+const groupedByGreen = computed<GreenGroup[]>(() => {
+  const groupMap = new Map<number, EventDisplay[]>()
+  
+  for (const event of eventsWithGreenCount.value) {
+    const key = event.greenPairCount
+    if (!groupMap.has(key)) {
+      groupMap.set(key, [])
+    }
+    groupMap.get(key)!.push(event)
   }
 
-  return [
-    {
-      level: 'OPTIMAL',
-      label: 'Excellents (Vert)',
-      emoji: '🟢',
-      bgColor: 'rgba(16, 185, 129, 0.1)',
-      borderColor: '#10b981',
-      events: optimal,
-      isOpen: groupStates.value.OPTIMAL ?? true
-    },
-    {
-      level: 'BON',
-      label: 'Bons (Orange)',
-      emoji: '🟡',
-      bgColor: 'rgba(251, 191, 36, 0.1)',
-      borderColor: '#fbbf24',
-      events: bon,
-      isOpen: groupStates.value.BON ?? true
-    },
-    {
-      level: 'RISQUÉ',
-      label: 'Risqués (Rouge)',
-      emoji: '🔴',
-      bgColor: 'rgba(239, 68, 68, 0.1)',
-      borderColor: '#ef4444',
-      events: risque,
-      isOpen: groupStates.value.RISQUÉ ?? true
-    }
-  ].filter(g => g.events.length > 0)
+  // Tri par greenCount descendant
+  const sortedKeys = Array.from(groupMap.keys()).sort((a, b) => b - a)
+  
+  return sortedKeys.map(greenCount => ({
+    greenCount,
+    label: greenCount === 0 ? '❌ Aucune paire verte' : `✅ ${greenCount} paire${greenCount > 1 ? 's' : ''} verte${greenCount > 1 ? 's' : ''}`,
+    events: groupMap.get(greenCount)!,
+    isOpen: groupStates.value[greenCount] ?? true
+  }))
 })
 
-function toggleGroup(level: string) {
-  groupStates.value[level] = !groupStates.value[level]
+function toggleGroup(greenCount: number) {
+  groupStates.value[greenCount] = !groupStates.value[greenCount]
+}
+
+function getGroupBgColor(greenCount: number): string {
+  if (greenCount >= 2) return 'rgba(16, 185, 129, 0.1)' // Vert
+  if (greenCount === 1) return 'rgba(251, 191, 36, 0.1)' // Orange
+  return 'rgba(239, 68, 68, 0.1)' // Rouge
+}
+
+function getGroupBorderColor(greenCount: number): string {
+  if (greenCount >= 2) return '#10b981' // Vert
+  if (greenCount === 1) return '#fbbf24' // Orange
+  return '#ef4444' // Rouge
 }
 
 function getImpactColor(impact: number): string {
@@ -124,26 +124,25 @@ function openEventDetail(eventType: string, pair: string) {
 
 <template>
   <div class="event-grouped-container">
-    <!-- Color Groups (Accordion) -->
-    <div v-for="group in groupedEvents" :key="group.level" class="color-group">
+    <!-- Green Count Groups (Accordion) -->
+    <div v-for="group in groupedByGreen" :key="group.greenCount" class="color-group">
       <!-- Group Header (Accordion Toggle) -->
       <div 
-        class="group-header" 
-        :style="{ backgroundColor: group.bgColor, borderLeftColor: group.borderColor }"
-        @click="toggleGroup(group.level)"
+        class="group-header"
+        :style="{ backgroundColor: getGroupBgColor(group.greenCount), borderLeftColor: getGroupBorderColor(group.greenCount) }"
+        @click="toggleGroup(group.greenCount)"
       >
         <div class="group-title">
-          <span class="group-emoji">{{ group.emoji }}</span>
           <span class="group-label">{{ group.label }}</span>
-          <span class="group-count">{{ group.events.length }}</span>
+          <span class="group-count">{{ group.events.length }} carte{{ group.events.length > 1 ? 's' : '' }}</span>
         </div>
         <div class="group-toggle">
-          <span class="toggle-icon" :class="{ open: groupStates[group.level] }">▶</span>
+          <span class="toggle-icon" :class="{ open: groupStates[group.greenCount] }">▶</span>
         </div>
       </div>
 
       <!-- Group Content (Cards) -->
-      <div v-if="groupStates[group.level]" class="group-content">
+      <div v-if="groupStates[group.greenCount]" class="group-content">
         <div v-for="event in group.events" :key="event.eventType" class="event-card">
           <!-- Event Header -->
           <div class="event-header">
@@ -151,14 +150,8 @@ function openEventDetail(eventType: string, pair: string) {
               <span class="event-icon">{{ event.icon }}</span>
               <div>
                 <h4 class="event-name">{{ translateEventName(event.eventType) }}</h4>
-                <span class="tradability-badge" :data-level="event.tradability.toLowerCase()">
-                  {{ event.tradability }}
-                </span>
+                <span class="green-pairs-badge">✅ {{ event.greenPairCount }} paires vertes</span>
               </div>
-            </div>
-            <div class="event-score">
-              <div class="score-value">{{ Math.round(event.stats.tradabilityScore || 0) }}/100</div>
-              <div class="score-label">Score</div>
             </div>
           </div>
 
