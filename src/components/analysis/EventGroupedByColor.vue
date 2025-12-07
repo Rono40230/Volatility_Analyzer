@@ -96,6 +96,8 @@ function getGroupBorderColor(greenCount: number): string {
   if (greenCount === 1) return '#fbbf24' // Orange
   return '#ef4444' // Rouge
 }
+
+function getImpactColor(impact: number): string {
   if (impact >= 80) return '#10b981'
   if (impact >= 60) return '#fbbf24'
   if (impact >= 40) return '#f97316'
