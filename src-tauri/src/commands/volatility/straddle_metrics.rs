@@ -2,6 +2,32 @@
 use super::straddle_metrics_types::*;
 use tauri::command;
 
+/// Obtenir le nombre de points par pip selon le symbole
+/// Basé sur la norme MT5:
+/// - Forex (EURUSD, CADJPY, USDJPY, etc): 1 pip = 10 points
+/// - Or (XAUUSD, XAUJPY): 1 pip = 10 points
+/// - Argent (XAGUSD): 1 pip = 1000 points
+/// - Indices (USA500IDXUSD, etc): 1 pip = 1 point
+/// - Crypto (BTCUSD, ETHUSD): 1 pip = 1 point
+fn get_points_per_pip(symbol: &str) -> f64 {
+    if symbol.contains("XAU") {
+        10.0  // Or: 1 pip = 10 points
+    } else if symbol.contains("XAG") {
+        1000.0  // Argent: 1 pip = 1000 points
+    } else if symbol.contains("US30") || symbol.contains("DE30") || symbol.contains("NAS100") || symbol.contains("SPX500") || symbol.contains("USA500") {
+        1.0  // Indices: 1 pip = 1 point
+    } else if symbol.contains("BTC") || symbol.contains("ETH") {
+        1.0  // Crypto: 1 pip = 1 point
+    } else {
+        10.0  // Forex par défaut (EURUSD, CADJPY, USDJPY, etc): 1 pip = 10 points
+    }
+}
+
+/// Convertir des pips en points
+fn pips_to_points(pips: f64, symbol: &str) -> f64 {
+    pips * get_points_per_pip(symbol)
+}
+
 /// Analyse complète Straddle: offset, win_rate, whipsaw
 /// Candles doivent être pré-chargées (60x 1min) depuis DB
 #[command]
@@ -72,14 +98,14 @@ pub async fn analyze_straddle_metrics(
     // Ne pas recalculer basé sur les whipsaws pour préserver la stabilité
 
     Ok(StraddleMetricsResponse {
-        symbol,
+        symbol: symbol.clone(),
         hour,
         candle_count: metrics.candle_count,
         offset_optimal: OptimalOffsetData {
-            offset_points: simulation.offset_optimal_pips,
+            offset_points: pips_to_points(simulation.offset_optimal_pips, &symbol),
             percentile_95_wicks: simulation.percentile_95_wicks,
-            with_margin: simulation.offset_optimal_pips * 1.1,
-            sl_adjusted_points: simulation.sl_adjusted_pips,
+            with_margin: pips_to_points(simulation.offset_optimal_pips * 1.1, &symbol),
+            sl_adjusted_points: pips_to_points(simulation.sl_adjusted_pips, &symbol),
         },
         win_rate: WinRateData {
             total_trades: simulation.total_trades,
@@ -95,9 +121,9 @@ pub async fn analyze_straddle_metrics(
             whipsaw_frequency_percentage: simulation.whipsaw_frequency_percentage,
             risk_level: simulation.risk_level,
             risk_color: simulation.risk_color,
-            sl_adjusted_points: simulation.sl_adjusted_pips,
+            sl_adjusted_points: pips_to_points(simulation.sl_adjusted_pips, &symbol),
             win_rate_adjusted: simulation.win_rate_adjusted,
-            trailing_stop_adjusted: simulation.trailing_stop_adjusted,
+            trailing_stop_adjusted: pips_to_points(simulation.trailing_stop_adjusted, &symbol),
             timeout_adjusted_minutes: simulation.timeout_adjusted_minutes,
             whipsaw_details,
         },

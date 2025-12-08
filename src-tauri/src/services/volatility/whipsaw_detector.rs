@@ -1,74 +1,119 @@
 // services/volatility/whipsaw_detector.rs - Détection de fausses cassures (whipsaw)
+// CORRECTION PHASE 8: Simulation réaliste d'un Straddle
 use crate::models::Candle;
+use tracing::{debug, info};
+use super::whipsaw_simulator::{simulate_straddle_trade, TradeResult};
 
-/// Calcule la fréquence des whipsaws (double déclenchement)
+/// Calcule la fréquence des whipsaws de manière réaliste
 ///
-/// Un whipsaw se produit quand :
-/// 1. Buy stop = prix + offset
-/// 2. Sell stop = prix - offset
-/// 3. Les 2 se déclenchent dans les 15 minutes suivantes = PERTE GARANTIE
-///
-/// Formule : whipsaw_frequency = nombre_whipsaws / total_trades
+/// Logique corrigée :
+/// 1. Test UN SEUL trade par jour (à l'heure optimale)
+/// 2. Fenêtre : quarter optimal + 1 heure (60 candles M1)
+/// 3. Whipsaw = Buy + Sell triggers + au moins 1 SL hit
+/// 4. Compte win/loss réels avec TP/SL dynamiques
 pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> WhipsawAnalysis {
-    if candles.len() < 16 {
+    if candles.len() < 61 {
+        // Besoin au moins 61 candles (1 min entry + 60 min test window)
         return WhipsawAnalysis::default();
     }
 
-    let mut whipsaw_count = 0;
-    let mut total_trades = 0;
-    let mut whipsaws = Vec::new();
+    info!("🔄 Calculant whipsaw frequency (mode réaliste)");
+    info!("   - Offset: {} pips", offset_pips);
+    info!("   - Fenêtre: 60 candles (quarter + 1h)");
 
-    // Parcourir chaque candle comme point d'entrée potentiel
-    for i in 0..candles.len() - 15 {
-        let entry_candle = &candles[i];
-        let entry_price = entry_candle.close;
+    let mut daily_groups: std::collections::HashMap<String, Vec<&Candle>> =
+        std::collections::HashMap::new();
 
-        // Ordres Straddle
-        let buy_stop = entry_price + (offset_pips / 10000.0);
-        let sell_stop = entry_price - (offset_pips / 10000.0);
-
-        // Analyser les 15 candles suivantes
-        let follow_up_candles = &candles[i + 1..=i + 15];
-
-        // Vérifier déclenchements
-        let buy_triggered = follow_up_candles.iter().any(|c| c.high >= buy_stop);
-        let sell_triggered = follow_up_candles.iter().any(|c| c.low <= sell_stop);
-
-        total_trades += 1;
-
-        if buy_triggered && sell_triggered {
-            whipsaw_count += 1;
-
-            // Enregistrer le détail du whipsaw
-            let buy_trigger_time = follow_up_candles
-                .iter()
-                .position(|c| c.high >= buy_stop)
-                .unwrap_or(0);
-            let sell_trigger_time = follow_up_candles
-                .iter()
-                .position(|c| c.low <= sell_stop)
-                .unwrap_or(0);
-
-            whipsaws.push(WhipsawDetail {
-                entry_index: i,
-                entry_price,
-                buy_stop,
-                sell_stop,
-                buy_trigger_index: i + 1 + buy_trigger_time,
-                sell_trigger_index: i + 1 + sell_trigger_time,
-            });
-        }
+    // Grouper par jour
+    for candle in candles.iter() {
+        let day_key = candle.datetime.format("%Y-%m-%d").to_string();
+        daily_groups.entry(day_key).or_insert_with(Vec::new).push(candle);
     }
 
+    let mut win_count = 0;
+    let mut loss_count = 0;
+    let mut whipsaws = Vec::new();
+    let mut simulated_trades = Vec::new();
+
+    // Pour chaque jour, simuler UN trade au quarter optimal
+    for (day_key, day_candles) in daily_groups.iter() {
+        if day_candles.len() < 61 {
+            continue; // Pas assez de candles dans la journée
+        }
+
+        // Tester le trade à l'index 0 de la journée (quarter optimal)
+        // Dans une vraie implémentation, on choisirait l'ATR peak de la journée
+        let entry_index = 0;
+        let entry_candle = day_candles[entry_index];
+        let entry_price = entry_candle.close;
+
+        // Fenêtre de test : 60 candles suivantes (quarter + 1h)
+        let window_end = (entry_index + 61).min(day_candles.len());
+        if window_end - entry_index < 61 {
+            continue; // Pas assez de candles après l'entrée
+        }
+
+        let test_window = &day_candles[entry_index + 1..window_end];
+
+        // Paramètres dynamiques basés sur ATR (simplifié pour cette version)
+        // ATR moyen = offset_pips / 1.5 (estimation)
+        let atr_estimate = offset_pips / 1.5;
+        let sl_pips = atr_estimate * 0.5; // SL = ATR * 0.5
+        let tp_pips = atr_estimate * 1.0; // TP = ATR * 1.0
+
+        // Simuler le Straddle
+        let result = simulate_straddle_trade(
+            entry_price,
+            offset_pips,
+            sl_pips,
+            tp_pips,
+            test_window,
+        );
+
+        debug!(
+            "📊 {}: Trade simulation - entry={:.4}, offset={}, SL={}, TP={}, result={:?}",
+            day_key, entry_price, offset_pips, sl_pips, tp_pips, result
+        );
+
+        match result {
+            TradeResult::Win => win_count += 1,
+            TradeResult::Loss => {
+                loss_count += 1;
+                whipsaws.push(WhipsawDetail {
+                    entry_index,
+                    entry_price,
+                    buy_stop: entry_price + (offset_pips / 10000.0),
+                    sell_stop: entry_price - (offset_pips / 10000.0),
+                    buy_trigger_index: 0,
+                    sell_trigger_index: 0,
+                });
+            }
+            TradeResult::Timeout => {
+                // Timeout = pas de décision, ne compte pas
+            }
+        }
+
+        simulated_trades.push((day_key.clone(), result));
+    }
+
+    let total_trades = win_count + loss_count;
     let whipsaw_frequency = if total_trades > 0 {
-        whipsaw_count as f64 / total_trades as f64
+        loss_count as f64 / total_trades as f64
     } else {
         0.0
     };
 
+    info!(
+        "✅ Résultats: {} wins, {} losses ({:.1}% whipsaw), {} timeouts",
+        win_count,
+        loss_count,
+        whipsaw_frequency * 100.0,
+        daily_groups.len() - total_trades
+    );
+
     WhipsawAnalysis {
         total_trades,
-        whipsaw_count,
+        whipsaw_count: loss_count,
         whipsaw_frequency,
         offset_pips,
         candles_analyzed: candles.len(),
@@ -77,16 +122,17 @@ pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> Whip
     }
 }
 
-/// Évalue le niveau de risque basé sur la fréquence de whipsaw
+/// Évalue le niveau de risque basé sur la fréquence de whipsaw (réaliste)
+/// CORRECTION: Seuils ajustés pour simulation réaliste (pas 1425 tests/jour)
 fn calculate_risk_level(whipsaw_frequency: f64) -> WhipsawRiskLevel {
-    if whipsaw_frequency < 0.1 {
-        WhipsawRiskLevel::VeryLow // < 10%
-    } else if whipsaw_frequency < 0.2 {
-        WhipsawRiskLevel::Low // 10-20%
-    } else if whipsaw_frequency < 0.35 {
-        WhipsawRiskLevel::Moderate // 20-35%
-    } else if whipsaw_frequency < 0.5 {
-        WhipsawRiskLevel::High // 35-50%
+    if whipsaw_frequency < 0.05 {
+        WhipsawRiskLevel::VeryLow // < 5%
+    } else if whipsaw_frequency < 0.15 {
+        WhipsawRiskLevel::Low // 5-15%
+    } else if whipsaw_frequency < 0.30 {
+        WhipsawRiskLevel::Moderate // 15-30%
+    } else if whipsaw_frequency < 0.50 {
+        WhipsawRiskLevel::High // 30-50%
     } else {
         WhipsawRiskLevel::VeryHigh // > 50%
     }
@@ -132,13 +178,14 @@ pub struct WhipsawDetail {
 }
 
 /// Niveau de risque basé sur la fréquence de whipsaw
+/// CORRECTION PHASE 8: Seuils réalistes (simulation 1 trade/jour, 60 min window)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WhipsawRiskLevel {
-    VeryLow,  // < 10%
-    Low,      // 10-20%
-    Moderate, // 20-35%
-    High,     // 35-50%
-    VeryHigh, // > 50%
+    VeryLow,  // < 5%   - Excellent, très peu de fausses sorties
+    Low,      // 5-15%  - Bon, fausses sorties rares
+    Moderate, // 15-30% - Acceptable, quelques fausses sorties
+    High,     // 30-50% - Risqué, beaucoup de fausses sorties
+    VeryHigh, // > 50%  - Très risqué, la majorité sont des whipsaws
     Unknown,  // Données insuffisantes
 }
 

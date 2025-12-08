@@ -4,8 +4,12 @@
 use crate::models::Candle;
 
 /// Calcule l'ATR moyen (Average True Range) pour une liste de candles
+/// Utilise une EMA(14) des True Ranges pour être conforme au standard MT5
+/// et donner plus de poids aux mouvements récents
 pub fn calculate_atr_mean(candles: &[Candle]) -> f64 {
-    let mut atr_values: Vec<f64> = Vec::new();
+    let mut tr_values: Vec<f64> = Vec::new();
+    
+    // Calcul du True Range pour chaque candle
     for i in 0..candles.len() {
         let high = candles[i].high;
         let low = candles[i].low;
@@ -18,14 +22,38 @@ pub fn calculate_atr_mean(candles: &[Candle]) -> f64 {
         let tr = (high - low)
             .max((high - close).abs())
             .max((low - close).abs());
-        atr_values.push(tr);
+        tr_values.push(tr);
     }
 
-    if !atr_values.is_empty() {
-        atr_values.iter().sum::<f64>() / atr_values.len() as f64
-    } else {
-        0.0
+    if tr_values.is_empty() {
+        return 0.0;
     }
+
+    // Calcul de l'EMA(14) des True Ranges
+    calculate_ema(&tr_values, 14)
+}
+
+/// Calcule l'EMA (Exponential Moving Average) avec une période donnée
+pub fn calculate_ema(values: &[f64], period: usize) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+
+    let period = period.min(values.len()); // Limiter la période au nombre de valeurs disponibles
+    
+    // Coefficient de lissage EMA = 2 / (period + 1)
+    let multiplier = 2.0 / (period as f64 + 1.0);
+    
+    // Initialiser avec la SMA des premières valeurs
+    let sma_init: f64 = values[0..period].iter().sum::<f64>() / period as f64;
+    let mut ema = sma_init;
+    
+    // Appliquer l'EMA sur les valeurs restantes
+    for i in period..values.len() {
+        ema = values[i] * multiplier + ema * (1.0 - multiplier);
+    }
+    
+    ema
 }
 
 /// Retourne le coefficient de pondération selon la durée du whipsaw

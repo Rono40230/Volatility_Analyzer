@@ -15,6 +15,7 @@ mod utils;
 mod volatility_duration_analyzer;
 mod volatility_heuristics;
 mod whipsaw_detector;
+mod whipsaw_simulator;
 mod win_rate_calculator;
 
 // Ré-exporte l'analyseur principal

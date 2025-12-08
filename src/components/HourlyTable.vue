@@ -67,7 +67,7 @@
                 <span style="font-size: 0.8em; opacity: 0.7;">{{ stat.body_range_mean >= 0 ? '↗' : '↘' }}</span>
               </td>
               <td>{{ (stat.volume_imbalance_mean * 100).toFixed(2) }}%</td>
-              <td>{{ stat.noise_ratio_mean.toFixed(2) }}</td>
+              <td>{{ stat.noise_ratio_mean.toFixed(2) }}%</td>
               <td>{{ stat.breakout_percentage.toFixed(2) }}%</td>
               <td class="events-cell">
                 <button
@@ -142,7 +142,7 @@
                           <span style="font-size: 0.8em; opacity: 0.7;">{{ quarter.body_range_mean >= 0 ? '↗' : '↘' }}</span>
                         </td>
                         <td>{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
-                        <td>{{ quarter.noise_ratio_mean.toFixed(2) }}</td>
+                        <td>{{ quarter.noise_ratio_mean.toFixed(2) }}%</td>
                         <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
                         <td
                           class="duration-cell"
@@ -256,11 +256,9 @@ function getEstimatedPrice(): number {
   return 1.0                     // Forex (EURUSD ~1.0)
 }
 
-// Formatte l'ATR en % du prix
+// Formatte l'ATR en points (arrondir à l'unité supérieure) au lieu du pourcentage
 function formatATR(atr: number): string {
-  const price = getEstimatedPrice()
-  const atrPercent = (atr / price) * 100
-  return `${atrPercent.toFixed(2)}%`
+  return `${Math.ceil(atr)} pts`
 }
 
 // Formate le label de quarter avec gestion du changement d'heure

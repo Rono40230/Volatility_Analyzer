@@ -139,10 +139,10 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     // === CALCUL DE L'ATR (VOLATILITÉ) POUR DÉTERMINER LE TIMEOUT ===
     let atr_mean = calculate_atr_mean(candles);
 
-    // Simuler les trades avec pondération temporelle du whipsaw
+    // CORRECTION PHASE 8: Simuler UN SEUL trade avec fenêtre 60 min
+    // (Au lieu de tester chaque candle comme point d'entrée)
     let mut total_trades = 0;
-    let mut wins = 0;
-    let mut losses = 0;
+    let mut total_trades = 0;
     let mut whipsaws = 0;
     let mut whipsaw_weight_sum = 0.0;
     let mut whipsaw_details_vec: Vec<WhipsawDetail> = Vec::new();
@@ -150,101 +150,73 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     let tp_distance = offset_optimal * 2.0;
     let sl_distance = offset_optimal;
 
-    for (i, candle) in candles.iter().enumerate() {
+    // CORRECTION PHASE 8: Compter les double-triggers (whipsaw) en 60 min
+    // Ne pas calculer win/loss car TP est dynamique (trailing stop)
+    if candles.len() >= 61 {
+        let i = 0; // Trade au début du quarter optimal
+        let candle = &candles[i];
         let open = candle.open;
-        let high = candle.high;
-        let low = candle.low;
-        let _close = candle.close;
-        let entry_time = candle.datetime;
 
         let buy_stop = open + offset_optimal;
         let sell_stop = open - offset_optimal;
 
-        let mut trade_triggered = false;
-        let mut is_win = false;
-        let mut is_whipsaw = false;
-        let mut whipsaw_duration_minutes = 0;
+        // Test fenêtre 60 min
+        let window_end = std::cmp::min(i + 61, candles.len());
+        let test_window = &candles[i + 1..window_end];
 
-        // ===== BUY STOP =====
-        if high >= buy_stop {
-            trade_triggered = true;
-            let buy_tp = buy_stop + tp_distance;
-            let buy_sl = buy_stop - sl_distance;
+        let mut buy_triggered = false;
+        let mut sell_triggered = false;
+        let mut buy_trigger_idx = candles.len();
+        let mut sell_trigger_idx = candles.len();
 
-            // TOUJOURS chercher la résolution complète dans les 15 minutes suivantes
-            // Même si le SL/TP est touché dans la bougie d'entrée, il faut voir ce qui se passe après
-            let result = find_trade_resolution(candles, i, entry_time, buy_tp, buy_sl, true);
-            is_win = result.0;
-            is_whipsaw = result.1;
-            whipsaw_duration_minutes = result.2;
-        }
-        // ===== SELL STOP =====
-        else if low <= sell_stop {
-            trade_triggered = true;
-            let sell_tp = sell_stop - tp_distance;
-            let sell_sl = sell_stop + sl_distance;
-
-            // TOUJOURS chercher la résolution complète dans les 15 minutes suivantes
-            let result = find_trade_resolution(candles, i, entry_time, sell_tp, sell_sl, false);
-            is_win = result.0;
-            is_whipsaw = result.1;
-            whipsaw_duration_minutes = result.2;
-        }
-
-        if trade_triggered {
-            total_trades += 1;
-            if is_win {
-                wins += 1;
-            } else {
-                losses += 1;
-                if is_whipsaw {
-                    whipsaws += 1;
-                    let coefficient = get_whipsaw_coefficient(whipsaw_duration_minutes);
-                    whipsaw_weight_sum += coefficient;
-
-                    // Enregistrer le détail du whipsaw
-                    let buy_stop_detail = open + offset_optimal;
-                    let sell_stop_detail = open - offset_optimal;
-
-                    // Chercher les indices de déclenchement réels
-                    let max_look = std::cmp::min(i + 15, candles.len());
-                    let mut buy_trigger_idx = candles.len();
-                    let mut sell_trigger_idx = candles.len();
-
-                    for check_idx in (i + 1)..max_look {
-                        if buy_trigger_idx == candles.len()
-                            && candles[check_idx].high >= buy_stop_detail
-                        {
-                            buy_trigger_idx = check_idx;
-                        }
-                        if sell_trigger_idx == candles.len()
-                            && candles[check_idx].low <= sell_stop_detail
-                        {
-                            sell_trigger_idx = check_idx;
-                        }
-                    }
-
-                    whipsaw_details_vec.push(WhipsawDetail {
-                        entry_index: i,
-                        entry_price: open,
-                        buy_stop: buy_stop_detail,
-                        sell_stop: sell_stop_detail,
-                        buy_trigger_index: buy_trigger_idx,
-                        sell_trigger_index: sell_trigger_idx,
-                    });
-                }
+        // Parcourir la fenêtre de 60 minutes
+        for (idx, check_candle) in test_window.iter().enumerate() {
+            // ===== BUY STOP =====
+            if !buy_triggered && check_candle.high >= buy_stop {
+                buy_triggered = true;
+                buy_trigger_idx = i + 1 + idx;
             }
+
+            // ===== SELL STOP =====
+            if !sell_triggered && check_candle.low <= sell_stop {
+                sell_triggered = true;
+                sell_trigger_idx = i + 1 + idx;
+            }
+
+            // ===== Double Trigger = Whipsaw =====
+            // Si les 2 se sont déclenchés dans la fenêtre 60min
+            if buy_triggered && sell_triggered {
+                whipsaws = 1;
+                total_trades = 1;
+                let whipsaw_duration_minutes = (buy_trigger_idx.max(sell_trigger_idx) - buy_trigger_idx.min(sell_trigger_idx)) as i32;
+                let coefficient = get_whipsaw_coefficient(whipsaw_duration_minutes);
+                whipsaw_weight_sum = coefficient;
+
+                whipsaw_details_vec.push(WhipsawDetail {
+                    entry_index: i,
+                    entry_price: open,
+                    buy_stop,
+                    sell_stop,
+                    buy_trigger_index: buy_trigger_idx,
+                    sell_trigger_index: sell_trigger_idx,
+                });
+                break;
+            }
+        }
+
+        // Si pas de double trigger = pas de trade comptabilisé
+        if total_trades == 0 {
+            total_trades = 0;
         }
     }
 
-    let win_rate_percentage = if total_trades > 0 {
-        (wins as f64 / total_trades as f64) * 100.0
-    } else {
-        0.0
-    };
-
-    let whipsaw_frequency_percentage = if total_trades > 0 {
-        (whipsaw_weight_sum / total_trades as f64) * 100.0
+    let mut wins = 0;
+    let mut losses = 0;
+    let win_rate_percentage = 0.0; // Pas calculable avec TP dynamique
+    
+    // Whipsaw frequency = si double trigger détecté = 100%, sinon 0%
+    let whipsaw_frequency_percentage = if whipsaws > 0 {
+        whipsaw_weight_sum * 100.0
     } else {
         0.0
     };

@@ -79,7 +79,7 @@ fn calculate_metrics_from_candles(
     }
 
     let count = candles.len();
-    let mut atr_sum = 0.0;
+    let mut atr_values: Vec<f64> = Vec::new();
     let mut atr_max = 0.0;
     let mut range_sum = 0.0;
     let mut body_range_sum = 0.0;
@@ -87,10 +87,19 @@ fn calculate_metrics_from_candles(
     let mut volume_imbalance_sum = 0.0;
     let mut shadow_ratio_sum = 0.0;
 
-    for candle in candles {
-        // ATR (True Range)
-        let tr = candle.high - candle.low;
-        atr_sum += tr;
+    for (i, candle) in candles.iter().enumerate() {
+        // ATR (True Range) - Inclure les gaps
+        let close_prev = if i > 0 {
+            candles[i - 1].close
+        } else {
+            candle.close
+        };
+        
+        let tr = (candle.high - candle.low)
+            .max((candle.high - close_prev).abs())
+            .max((candle.low - close_prev).abs());
+        
+        atr_values.push(tr);
         if tr > atr_max {
             atr_max = tr;
         }
@@ -128,7 +137,13 @@ fn calculate_metrics_from_candles(
         shadow_ratio_sum += shadow_ratio;
     }
 
-    let atr_mean = atr_sum / count as f64;
+    // Calculer l'ATR moyen (moyenne simple des True Ranges)
+    let atr_mean = if !atr_values.is_empty() {
+        atr_values.iter().sum::<f64>() / atr_values.len() as f64
+    } else {
+        0.0
+    };
+    
     let range_mean = range_sum / count as f64;
     let body_range_mean = body_range_sum / count as f64;
     let noise_ratio_mean = noise_ratio_sum / count as f64;

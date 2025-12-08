@@ -35,14 +35,15 @@ impl AdjustedMetrics {
         let win_rate_adjusted = win_rate_percentage * (1.0 - whipsaw_factor);
 
         // === FORMULE SL CORRIGÉE ===
-        // Logique: Plus whipsaw est élevé, plus le SL doit être RÉDUIT (moins d'espace)
-        // Plus whipsaw est bas, plus le SL peut être LARGE (plus d'espace pour capturer mouvements)
+        // Logique: Plus whipsaw est élevé, plus le SL doit être AUGMENTÉ (plus d'espace contre le bruit)
+        // Plus whipsaw est bas, plus le SL peut être RÉDUIT (conditions propres, peu de faux mouvements)
         let whipsaw_adjusted_ratio = match whipsaw_factor {
-            w if w > 0.30 => 1.5, // Whipsaw 30%+ → ratio 1.5× (trop de faux mouvements)
-            w if w > 0.20 => 1.8, // Whipsaw 20-30% → ratio 1.8× (équilibre)
-            w if w > 0.10 => 2.2, // Whipsaw 10-20% → ratio 2.2× (augmente SL)
-            w if w > 0.05 => 2.5, // Whipsaw 5-10% → ratio 2.5× (SL large)
-            _ => 2.8,             // Whipsaw <5% → ratio 2.8× (SL très large, peu de whipsaws)
+            w if w > 0.50 => 3.5,  // Whipsaw 50%+ → ratio 3.5× (énorme SL)
+            w if w > 0.30 => 3.0,  // Whipsaw 30-50% → ratio 3.0×
+            w if w > 0.20 => 2.5,  // Whipsaw 20-30% → ratio 2.5×
+            w if w > 0.10 => 2.0,  // Whipsaw 10-20% → ratio 2.0×
+            w if w > 0.05 => 1.5,  // Whipsaw 5-10% → ratio 1.5×
+            _ => 1.2,              // Whipsaw <5% → ratio 1.2× (petit SL)
         };
         // Arrondir à l'unité supérieure (pas de décimales pour les pips)
         let sl_adjusted_pips = (offset_optimal_pips * whipsaw_adjusted_ratio).ceil();
@@ -92,18 +93,23 @@ impl AdjustedMetrics {
         let pair_multiplier = get_sl_multiplier(symbol, false, None);
         
         let whipsaw_adjusted_ratio = match whipsaw_factor {
-            w if w > 0.30 => 1.5,
-            w if w > 0.20 => 1.8,
-            w if w > 0.10 => 2.2,
-            w if w > 0.05 => 2.5,
-            _ => 2.8,
+            w if w > 0.50 => 3.5,  // Whipsaw 50%+ → ratio 3.5× (énorme SL, beaucoup de bruit)
+            w if w > 0.30 => 3.0,  // Whipsaw 30-50% → ratio 3.0×
+            w if w > 0.20 => 2.5,  // Whipsaw 20-30% → ratio 2.5×
+            w if w > 0.10 => 2.0,  // Whipsaw 10-20% → ratio 2.0×
+            w if w > 0.05 => 1.5,  // Whipsaw 5-10% → ratio 1.5×
+            _ => 1.2,              // Whipsaw <5% → ratio 1.2× (petit SL, peu de bruit)
         };
         
         // SL final = offset × ratio_whipsaw × MUL_PAIR
         let sl_adjusted_pips = (offset_optimal_pips * whipsaw_adjusted_ratio * pair_multiplier).ceil();
 
-        let trailing_stop_brut = 1.59;
-        let trailing_stop_adjusted = trailing_stop_brut * (1.0 - whipsaw_factor / 2.0);
+        // === TRAILING STOP BASÉ SUR ATR (NOUVEAU) ===
+        // TS = ATR × 0.75 × (1 + whipsaw_factor × 0.3)
+        // ATR est en points, convertir en pips selon le symbole
+        let points_per_pip = get_points_per_pip(symbol);
+        let atr_pips = atr_mean / points_per_pip;
+        let trailing_stop_adjusted = (atr_pips * 0.75 * (1.0 + whipsaw_factor * 0.3)).max(0.1);
 
         let atr_normalized = (atr_mean / 0.0008).min(1.0);
         let timeout_base = 32.0;
@@ -117,5 +123,20 @@ impl AdjustedMetrics {
             trailing_stop_adjusted,
             timeout_adjusted_minutes,
         }
+    }
+}
+
+/// Obtenir le nombre de points par pip selon le symbole
+fn get_points_per_pip(symbol: &str) -> f64 {
+    if symbol.contains("XAU") {
+        10.0  // Or: 1 pip = 10 points
+    } else if symbol.contains("XAG") {
+        1000.0  // Argent: 1 pip = 1000 points
+    } else if symbol.contains("US30") || symbol.contains("DE30") || symbol.contains("NAS100") || symbol.contains("SPX500") || symbol.contains("USA500") {
+        1.0  // Indices: 1 pip = 1 point
+    } else if symbol.contains("BTC") || symbol.contains("ETH") {
+        1.0  // Crypto: 1 pip = 1 point
+    } else {
+        10.0  // Forex par défaut (EURUSD, CADJPY, USDJPY, etc): 1 pip = 10 points
     }
 }

@@ -42,21 +42,21 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
   return [
     {
       label: 'ATR Moyen',
-      value15: (stats.atr_mean / price) * 100,
-      valueGlobal: ((globals.mean_atr ?? 0) / price) * 100,
-      goodThreshold: 1.5,
-      excellentThreshold: 2.0,
-      suffix: '%',
-      decimals: 2
+      value15: Math.ceil(stats.atr_mean),
+      valueGlobal: Math.ceil(globals.mean_atr ?? 0),
+      goodThreshold: 50,
+      excellentThreshold: 100,
+      suffix: 'pts',
+      decimals: 0
     },
     {
       label: 'True Range',
-      value15: (stats.range_mean / price) * 100,
-      valueGlobal: ((globals.mean_range ?? 0) / price) * 100,
-      goodThreshold: 1.5,
-      excellentThreshold: 2.5,
-      suffix: '%',
-      decimals: 2
+      value15: Math.ceil(stats.range_mean),
+      valueGlobal: Math.ceil(globals.mean_range ?? 0),
+      goodThreshold: 40,
+      excellentThreshold: 80,
+      suffix: 'pts',
+      decimals: 0
     },
     {
       label: 'Volatilité %',
@@ -91,6 +91,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       valueGlobal: globals.mean_noise_ratio ?? 0,
       goodThreshold: 2.0,
       excellentThreshold: 1.5,
+      suffix: '%',
       decimals: 2
     },
     {

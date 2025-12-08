@@ -11,34 +11,6 @@
         </div>
       </div>
       <MetricTooltip
-        title="Winrate"
-        direction="top"
-      >
-        <div class="metric-card">
-          <div class="metric-label">
-            Winrate
-          </div>
-          <div class="metric-value" :style="{ color: getWinrateColor(props.winRate?.win_rate_adjusted || 0) }">
-            {{ props.winRate?.win_rate_adjusted?.toFixed(1) ?? 'N/A' }}% <span class="unit">(pondéré)</span>
-          </div>
-        </div>
-        <template #definition>
-          <div class="tooltip-section">
-            <div class="tooltip-section-title">📖 Définition</div>
-            <div class="tooltip-section-text">Taux de gain réaliste ajusté pour tenir compte de la fréquence whipsaw. Formule: Win Rate × (1 - whipsaw_frequency)</div>
-          </div>
-        </template>
-        <template #interpretation>
-          <div class="tooltip-section">
-            <div class="tooltip-section-title">📊 Interprétation</div>
-            <div class="interpretation-item"><strong>🟢 Excellent:</strong> ≥50% → Très fiable</div>
-            <div class="interpretation-item"><strong>🔵 Bon:</strong> 40-49% → Profitable</div>
-            <div class="interpretation-item"><strong>🟡 Acceptable:</strong> 30-39% → Margin serré</div>
-            <div class="interpretation-item"><strong>🔴 Faible:</strong> &lt;30% → Risqué</div>
-          </div>
-        </template>
-      </MetricTooltip>
-      <MetricTooltip
         title="Stop Loss"
         direction="top"
       >
@@ -121,14 +93,12 @@
 import MetricTooltip from '../MetricTooltip.vue'
 import { useMetricsFormatting } from '../../composables/useMetricsFormatting'
 import { calculateTrailingStop } from '../../composables/useTrailingStopCalculation'
-import { getWinrateColor } from './BidiParametersSection.helpers'
 import { formatPointsWithPips } from '../../utils/pipConverter'
 
 interface SliceAnalysis { slice: { startTime: string; hour: number; quarter: number } }
 interface EntryWindowAnalysis { optimal_offset: number }
 interface WhipsawAnalysis { whipsaw_frequency_percentage: number; trailing_stop_adjusted: number; optimal_entry_minutes: number }
 interface OffsetOptimal { sl_adjusted_points: number }
-interface WinRate { win_rate_adjusted: number }
 interface VolatilityDuration { peak_duration_minutes: number }
 interface TradingPlan { trailingStopCoefficient: number }
 interface Analysis { tradingPlan: TradingPlan }
@@ -140,7 +110,6 @@ const props = defineProps<{
   volatilityDuration: VolatilityDuration
   whipsawAnalysis?: WhipsawAnalysis
   offsetOptimal?: OffsetOptimal
-  winRate?: WinRate
   symbol?: string
 }>()
 
@@ -158,13 +127,8 @@ const getBestTimeDisplay = () => {
 
 // Calcul du Trailing Stop avec la nouvelle formule unifiée + whipsaw
 const trailingStopValue = () => {
-  if (!props.offsetOptimal?.sl_adjusted_points) return 'N/A'
-  // Retrouver ATR à partir du SL: ATR = SL / 1.5
-  const atr = props.offsetOptimal.sl_adjusted_points / 1.5
-  // Whipsaw en décimal (ex: 33% = 0.33)
-  const whipsawFreq = (props.whipsawAnalysis?.whipsaw_frequency_percentage ?? 0) / 100
-  // Appliquer la formule unifiée avec whipsaw: TS = ATR × 0.75 × (1 + whipsaw × 0.3)
-  return calculateTrailingStop(atr, whipsawFreq).toFixed(1)
+  // Utiliser directement la valeur du backend au lieu de recalculer
+  return props.whipsawAnalysis?.trailing_stop_adjusted?.toFixed(1) ?? 'N/A'
 }
 </script>
 
