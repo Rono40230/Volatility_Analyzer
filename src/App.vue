@@ -16,8 +16,8 @@ const volatilityStore = useVolatilityStore()
 const analysisStore = useAnalysisStore()
 const { analysisResult, loading, error } = storeToRefs(volatilityStore)
 
-const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | null
-const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives'>(savedTab || 'heatmap')
+const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | null
+const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar'>(savedTab || 'heatmap')
 const selectedSymbolLocal = ref('')
 
 watch(activeTab, (newTab) => {
@@ -56,7 +56,7 @@ function handleOpenBidiParams(data: { hour: number; quarter: number }) {
   showBidiModal.value = true
 }
 
-function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives') {
+function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar') {
   activeTab.value = tab
 }
 </script>
@@ -230,67 +230,69 @@ body {
 
 <style scoped>
 .app {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #0f1419 0%, #1c2128 100%);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-tabs {
   display: flex;
   gap: 10px;
-  padding: 15px 20px;
+  padding: 10px 20px;
   background: #161b22;
   box-shadow: 0 2px 8px rgba(0,0,0,0.4);
   border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  color: #8b949e;
+  padding: 8px 16px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  background: rgba(177, 186, 196, 0.12);
+  color: #c9d1d9;
+}
+
+.tab-button.active {
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
 }
 
 .tab-spacer {
   flex: 1;
 }
 
-.tab-button {
-  padding: 12px 24px;
-  border: 2px solid #30363d;
-  background: #0d1117;
-  color: #8b949e;
-  border-radius: 8px;
-  font-size: 1em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.tab-button:hover {
-  background: #161b22;
-  border-color: #58a6ff;
-  color: #58a6ff;
-}
-
-.tab-button.active {
-  background: linear-gradient(135deg, #1f6feb 0%, #388bfd 100%);
-  color: #ffffff;
-  border-color: #58a6ff;
-  box-shadow: 0 0 12px rgba(88, 166, 255, 0.3);
-}
-
 .formulas-btn {
-  margin-left: auto;
-  border-color: #667eea;
-  color: #a78bfa;
+  color: #d29922;
 }
 
 .formulas-btn:hover {
-  background: #161b22;
-  border-color: #a78bfa;
-  color: #c4b5fd;
-  box-shadow: 0 0 8px rgba(102, 126, 234, 0.2);
+  background: rgba(210, 153, 34, 0.15);
+  color: #e3b341;
 }
 
 .app-main {
   flex: 1;
-  padding: 20px;
+  padding: 10px;
   width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .main-container {
@@ -299,6 +301,9 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   border: 1px solid #30363d;
   overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .content-area {

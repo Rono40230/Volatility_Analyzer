@@ -119,7 +119,7 @@ const handleInputBlur = () => {
 
 <style scoped>
 .searchable-dropdown-wrapper { position: relative; }
-.dropdown-header { display: flex; align-items: center; width: 200px; padding: 12px 16px; border: 2px solid #ccc; border-radius: 8px; background: #ffffff; transition: all 0.3s; overflow: hidden; gap: 8px; box-sizing: border-box; }
+.dropdown-header { display: flex; align-items: center; width: 700px; padding: 12px 16px; border: 2px solid #ccc; border-radius: 8px; background: #ffffff; transition: all 0.3s; overflow: hidden; gap: 8px; box-sizing: border-box; }
 .dropdown-header:hover { border-color: #999; background: #f9f9f9; }
 .dropdown-input { flex: 1; background: transparent; border: none; color: #000000; font-size: 1em; outline: none; cursor: text; padding: 0; margin: 0; }
 .dropdown-input::placeholder { color: #999999; }
@@ -128,7 +128,7 @@ const handleInputBlur = () => {
 .dropdown-toggle.active { transform: rotate(180deg); color: #000000; }
 .clear-button { padding: 0; margin: 0; background: transparent; border: none; color: #999999; cursor: pointer; font-size: 1em; transition: color 0.2s; line-height: 1; flex-shrink: 0; }
 .clear-button:hover { color: #cc0000; }
-.dropdown-menu { position: absolute; top: 100%; left: 0; width: 200px; margin-top: 4px; background: #ffffff; border: 2px solid #ccc; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 10; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); }
+.dropdown-menu { position: absolute; top: 100%; left: 0; width: 700px; margin-top: 4px; background: #ffffff; border: 2px solid #ccc; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 10; box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); }
 .empty-message { padding: 16px; text-align: center; color: #999999; font-size: 0.9em; }
 .dropdown-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; background: transparent; border: none; color: #000000; text-align: left; cursor: pointer; transition: all 0.2s; font-size: 0.95em; box-sizing: border-box; }
 .dropdown-item:hover, .dropdown-item.highlighted { background: #e8f0ff; color: #0066cc; }

@@ -1,19 +1,12 @@
 <template>
   <div class="graph-section">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; flex-wrap: wrap;">
-      <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
-        <h3>📊 Impact de l'événement {{ eventLabel ? eventLabel : eventType }}{{ pair ? ' sur la volatilité de ' + pair : '' }}</h3>
-        <div class="quick-conclusion">
-          <span v-if="volatilityIncreasePercent > 0" class="conclusion-positive">
-            ✅ Événement génère {{ (volatilityIncreasePercent).toFixed(1) }}% de volatilité {{ noiseQualityAfter === 'clean' ? 'directionnelle' : 'avec bruit' }}
-          </span>
-          <span v-else class="conclusion-negative">
-            ⚠️ Événement peu corrélé à la volatilité sur {{ pair }}
-          </span>
-        </div>
-      </div>
-      <button v-if="!isArchiveMode" class="btn-archive" @click="$emit('archive')">💾 Archiver</button>
-    </div>
+    <RetroAnalysisGraphMetrics
+      :noise-ratio-before="noiseRatioBefore"
+      :noise-ratio-during="noiseRatioDuring"
+      :noise-ratio-after="noiseRatioAfter"
+      :volatility-increase-percent="volatilityIncreasePercent"
+      :event-count="eventCount"
+    />
 
     <!-- Graphique 2 courbes comparatives -->
     <div class="graph-container">
@@ -74,8 +67,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRetroGraphDataPoints } from '../../composables/useRetroGraphDataPoints'
+import RetroAnalysisGraphMetrics from './RetroAnalysisGraphMetrics.vue'
 
 interface Props {
   atrTimelineBefore?: number[]
@@ -115,8 +108,6 @@ const props = withDefaults(defineProps<Props>(), {
   meilleurMoment: 0
 })
 
-defineEmits<{ archive: [] }>()
-
 const {
   svgMargins,
   yAxisBaseline,
@@ -139,24 +130,58 @@ const {
   meilleurMoment: props.meilleurMoment,
   eventDatetime: props.eventDatetime
 })
-
-const noiseQualityAfter = computed(() => {
-  return props.noiseRatioAfter < 1.5 ? 'clean' : props.noiseRatioAfter < 2.5 ? 'mixed' : 'choppy'
-})
 </script>
 
 <style scoped>
-.graph-section { background: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
+.graph-section {
+  background: #161b22;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #30363d;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
 .graph-section h3 { margin: 0; color: #58a6ff; font-size: 1em; white-space: nowrap; }
 .quick-conclusion { font-size: 0.85em; font-weight: 600; margin: 0; white-space: nowrap; }
 .quick-conclusion .conclusion-positive { color: #3fb950; }
 .quick-conclusion .conclusion-negative { color: #f85149; }
-.graph-container { width: 100%; background: #0d1117; border-radius: 6px; padding: 10px; aspect-ratio: 2 / 1; min-height: 350px; max-height: 500px; border: 1px solid #30363d; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+
+.graph-container {
+  width: 100%;
+  background: #0d1117;
+  border-radius: 6px;
+  padding: 10px;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #30363d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
 .graph { width: 100%; height: 100%; }
 .btn-archive { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9em; flex-shrink: 0; }
 .btn-archive:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
 .btn-archive:active { transform: translateY(0); }
-@media (max-width: 1024px) { .graph-container { min-height: 320px; padding: 8px; } }
-@media (max-width: 768px) { .graph-section { padding: 12px; } .graph-section h3 { font-size: 0.9em; } .graph-container { aspect-ratio: 1.5 / 1; min-height: 280px; max-height: 400px; padding: 6px; margin-bottom: 10px; } .btn-archive { padding: 6px 12px; font-size: 0.8em; } }
-@media (max-width: 480px) { .graph-section { padding: 10px; } .graph-section h3 { font-size: 0.8em; } .graph-container { aspect-ratio: 4 / 3; min-height: 240px; max-height: 300px; padding: 4px; margin-bottom: 8px; } .btn-archive { padding: 6px 10px; font-size: 0.75em; } }
+
+@media (max-width: 1024px) {
+  .graph-container { min-height: 320px; padding: 8px; }
+}
+@media (max-width: 768px) {
+  .graph-section { padding: 12px; }
+  .graph-section h3 { font-size: 0.9em; }
+  .graph-container { min-height: 280px; padding: 6px; margin-bottom: 10px; }
+  .btn-archive { padding: 6px 12px; font-size: 0.8em; }
+}
+@media (max-width: 480px) {
+  .graph-section { padding: 10px; }
+  .graph-section h3 { font-size: 0.8em; }
+  .graph-container { min-height: 240px; padding: 4px; margin-bottom: 8px; }
+  .btn-archive { padding: 6px 10px; font-size: 0.75em; }
+}
 </style>

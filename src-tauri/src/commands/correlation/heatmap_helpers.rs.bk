@@ -76,7 +76,7 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
     calendar_id: Option<i32>,
     candle_index: &crate::services::candle_index::CandleIndex,
 ) -> Result<VolatilityResult, String> {
-    use super::volatility_helpers::{calculate_volatilities_optimized, parse_sqlite_datetime};
+    use super::volatility_helpers::{calculer_volatilites_optimise, parse_sqlite_datetime};
 
     let query = if let Some(cal_id) = calendar_id {
         format!(
@@ -129,7 +129,7 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
 
         has_data_found = true;
 
-        let metrics = calculate_volatilities_optimized(
+        let metrics = calculer_volatilites_optimise(
             candle_index,
             pair,
             event_datetime,

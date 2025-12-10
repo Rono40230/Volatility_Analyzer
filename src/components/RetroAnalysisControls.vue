@@ -74,7 +74,7 @@ const handleEventTypeChange = () => { emit('load') }
 </script>
 
 <style scoped>
-.controls { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; padding: 15px; background: #161b22; border-radius: 8px; border: 1px solid #30363d; }
+.controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; padding: 10px; background: #161b22; border-radius: 8px; border: 1px solid #30363d; }
 .control-group { display: flex; align-items: center; gap: 8px; }
 label { color: #8b949e; font-weight: 600; font-size: 0.95em; white-space: nowrap; }
 .pair-select { padding: 10px 14px; border: 2px solid #30363d; border-radius: 8px; background: #ffffff; color: #000000; cursor: pointer; transition: all 0.3s; }

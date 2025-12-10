@@ -58,14 +58,17 @@ const data = computed(() => props.data)
 .retro-viewer {
   width: 100%;
   height: 100%;
-  overflow-y: auto;
-  padding: 20px;
+  overflow: hidden;
+  padding: 10px;
   background: #0d1117;
   color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
 }
 
 .results-section {
   width: 100%;
-  max-width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 </style>

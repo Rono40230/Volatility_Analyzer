@@ -123,6 +123,7 @@ function openArchiveModal() {
   color: #e2e8f0;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 
 .header-section {
@@ -206,8 +207,11 @@ function openArchiveModal() {
 }
 
 .content-area {
-  padding: 30px;
+  padding: 0;
   flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 :deep(.file-selector-right) {

@@ -68,7 +68,7 @@ pub fn get_pip_value(symbol: &str) -> f64 {
 
 /// Version OPTIMISÉE: utilise CandleIndex pour requêtes rapides
 /// Au lieu d'itérer 970k candles, on cherche par plage de dates = O(log n)
-pub fn calculate_volatilities_optimized(
+pub fn calculer_volatilites_optimise(
     candle_index: &CandleIndex,
     pair_symbol: &str,
     event_datetime: NaiveDateTime,
@@ -156,7 +156,7 @@ pub fn calculate_batch_volatilities_optimized(
     let mut results = Vec::new();
 
     for event_dt in event_datetimes {
-        let metrics = calculate_volatilities_optimized(
+        let metrics = calculer_volatilites_optimise(
             candle_index,
             pair_symbol,
             *event_dt,
