@@ -2,59 +2,57 @@
   <div class="container">
     <RetroAnalysisControls
       :pairs="pairs"
-      :selected-pair="selected"
-      :selected-event-type="selectedEventType"
+      :selected-pair="store.selectedPair"
+      :selected-event-type="store.selectedEventType"
       :event-types="eventTypeOptions"
       :event-types-loading="eventTypesLoading"
       :event-types-error="eventTypesError"
       :show-calendar-selector="props.showCalendarSelector"
-      @update:selected-pair="selected = $event"
-      @update:selected-event-type="selectedEventType = $event"
+      @update:selected-pair="store.selectedPair = $event"
+      @update:selected-event-type="store.selectedEventType = $event"
       @calendar-selected="onCalendarSelected"
       @load="load"
     />
 
-    <div v-if="loading" class="spinner">⏳ Chargement...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else-if="peakDelayLoading || decayLoading" class="spinner">⏳ Chargement des analyses...</div>
-    <div v-else-if="peakDelayError" class="error">❌ Erreur Peak Delay: {{ peakDelayError }}</div>
-    <div v-else-if="decayError" class="error">❌ Erreur Décroissance: {{ decayError }}</div>
-    <div v-else-if="!peakDelayResults || !decayResults" class="empty">📭 Chargez une paire et sélectionnez un événement</div>
+    <div v-if="store.loading" class="spinner">⏳ Chargement...</div>
+    <div v-else-if="store.error" class="error">{{ store.error }}</div>
+    <div v-else-if="!store.peakDelayResults || !store.decayResults" class="empty">📭 Chargez une paire et sélectionnez un événement</div>
 
     <RetroAnalysisResults
       v-else
-      :atr-timeline-before="graphData?.atr_timeline_before"
-      :atr-timeline-after="graphData?.atr_timeline_after"
-      :body-timeline-before="graphData?.body_timeline_before"
-      :body-timeline-after="graphData?.body_timeline_after"
-      :noise-ratio-before="graphData?.noise_ratio_before ?? 0"
-      :noise-ratio-during="graphData?.noise_ratio_during ?? 0"
-      :noise-ratio-after="graphData?.noise_ratio_after ?? 0"
-      :volatility-increase-percent="graphData?.volatility_increase_percent ?? 0"
-      :event-count="graphData?.event_count ?? 0"
-      :event-type="selectedEventType"
-      :pair="selected"
-      :event-datetime="graphData?.event_datetime"
-      :timezone-offset="graphData?.timezone_offset"
-      :meilleur-moment="graphData?.meilleur_moment ?? 0"
-      :stop-loss="graphData?.stop_loss ?? 0"
-      :trailing-stop="graphData?.trailing_stop ?? 0"
-      :timeout="graphData?.timeout ?? 60"
-      :offset="graphData?.offset ?? 0"
-      :stop-loss-recovery="graphData?.stop_loss_recovery ?? 0"
-      :event-label="getEventLabel(selectedEventType)"
+      :atr-timeline-before="store.graphData?.atr_timeline_before"
+      :atr-timeline-after="store.graphData?.atr_timeline_after"
+      :body-timeline-before="store.graphData?.body_timeline_before"
+      :body-timeline-after="store.graphData?.body_timeline_after"
+      :noise-ratio-before="store.graphData?.noise_ratio_before ?? 0"
+      :noise-ratio-during="store.graphData?.noise_ratio_during ?? 0"
+      :noise-ratio-after="store.graphData?.noise_ratio_after ?? 0"
+      :volatility-increase-percent="store.graphData?.volatility_increase_percent ?? 0"
+      :event-count="store.graphData?.event_count ?? 0"
+      :event-type="store.selectedEventType"
+      :pair="store.selectedPair"
+      :event-datetime="store.graphData?.event_datetime"
+      :timezone-offset="store.graphData?.timezone_offset"
+      :meilleur-moment="store.graphData?.meilleur_moment ?? 0"
+      :stop-loss="store.graphData?.stop_loss ?? 0"
+      :trailing-stop="store.graphData?.trailing_stop ?? 0"
+      :timeout="store.graphData?.timeout ?? 60"
+      :offset="store.graphData?.offset ?? 0"
+      :stop-loss-recovery="store.graphData?.stop_loss_recovery ?? 0"
+      :event-label="getEventLabel(store.selectedEventType)"
       @archive="openArchiveModal"
     />
 
     <ArchiveModal 
       :show="showArchiveModal" 
-      archive-type="Métriques Rétrospectives" 
+      archive-type="Correlation de la volatilité Paire/Evenement" 
       :period-start="archivePeriodStart" 
       :period-end="archivePeriodEnd" 
-      :symbol="selected" 
-      :event-name="selectedEventType" 
-      :event-name-fr="getEventLabel(selectedEventType)" 
+      :symbol="store.selectedPair" 
+      :event-name="store.selectedEventType" 
+      :event-name-fr="getEventLabel(store.selectedEventType)" 
       :data-json="archiveDataJson" 
+      :default-title="archiveDefaultTitle"
       @close="showArchiveModal = false" 
       @saved="handleArchiveSaved" 
     />
@@ -66,6 +64,8 @@ import { ref, onMounted, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useRetrospectiveAnalysis } from '../composables/useRetrospectiveAnalysis'
 import { useRetroAnalysisGraphData } from '../composables/useRetroAnalysisGraphData'
+import { useRetroAnalysisStore } from '../stores/retroAnalysisStore'
+import { eventTranslations } from '../stores/eventTranslations'
 import ArchiveModal from './ArchiveModal.vue'
 import RetroAnalysisControls from './RetroAnalysisControls.vue'
 import RetroAnalysisResults from './RetroAnalysisResults.vue'
@@ -81,20 +81,19 @@ const emit = defineEmits<{
   'calendar-selected': [filename: string]
 }>()
 
+const store = useRetroAnalysisStore()
+
 const { peakDelayLoading, peakDelayError, peakDelayResults, analyzePeakDelay,
          decayLoading, decayError, decayResults, analyzeDecayProfile,
          eventTypes, eventTypesError, eventTypesLoading, loadEventTypes, getEventLabel } = useRetrospectiveAnalysis()
 const { graphData, loading: graphLoading, chargerDonnéesGraph } = useRetroAnalysisGraphData()
 
 const pairs = ref<string[]>([])
-const selected = ref('')
-const selectedEventType = ref('')
-const loading = ref(false)
-const error = ref<string | null>(null)
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
 const archiveDataJson = ref('')
+const archiveDefaultTitle = ref('')
 
 const eventTypeOptions = computed(() =>
   eventTypes.value.map(et => ({ name: et.name, label: getEventLabel(et.name), count: et.count }))
@@ -113,37 +112,65 @@ onMounted(async () => {
 })
 
 async function load() {
-  if (!selected.value || !selectedEventType.value) return
-  loading.value = true
-  error.value = null
+  if (!store.selectedPair || !store.selectedEventType) return
+  store.loading = true
+  store.error = null
   try {
-    await analyzePeakDelay(selected.value, selectedEventType.value)
-    await analyzeDecayProfile(selected.value, selectedEventType.value)
-    await chargerDonnéesGraph(selected.value, selectedEventType.value)
+    await analyzePeakDelay(store.selectedPair, store.selectedEventType)
+    await analyzeDecayProfile(store.selectedPair, store.selectedEventType)
+    await chargerDonnéesGraph(store.selectedPair, store.selectedEventType)
+    
+    // Sync to store
+    store.peakDelayResults = peakDelayResults.value
+    store.decayResults = decayResults.value
+    store.graphData = graphData.value
   } catch (e) {
-    error.value = String(e)
+    store.error = String(e)
   } finally {
-    loading.value = false
+    store.loading = false
   }
 }
 
 function openArchiveModal() {
-  if (!graphData.value || !selected.value || !selectedEventType.value) return
-  archivePeriodStart.value = graphData.value.event_type
-  archivePeriodEnd.value = graphData.value.pair
+  if (!store.graphData || !store.selectedPair || !store.selectedEventType) return
+  
+  // Utiliser les dates min/max de l'analyse si disponibles, sinon fallback
+  if (store.peakDelayResults?.event_date_min && store.peakDelayResults?.event_date_max) {
+    archivePeriodStart.value = store.peakDelayResults.event_date_min
+    archivePeriodEnd.value = store.peakDelayResults.event_date_max
+  } else {
+    // Fallback si pas de dates (ne devrait pas arriver avec une analyse valide)
+    archivePeriodStart.value = new Date().toISOString()
+    archivePeriodEnd.value = new Date().toISOString()
+  }
+
+  // Construction du titre personnalisé
+  const eventName = store.selectedEventType
+  const eventNameFr = getEventLabel(eventName)
+  const translation = eventTranslations[eventName]
+  const flag = translation ? translation.flag : ''
+  
+  archiveDefaultTitle.value = `📊 Impact de l'événement ${eventName} (${eventNameFr}) ${flag} sur la volatilité de ${store.selectedPair}`
+
   archiveDataJson.value = JSON.stringify({
-    atrTimelineBefore: graphData.value.atr_timeline_before,
-    atrTimelineAfter: graphData.value.atr_timeline_after,
-    bodyTimelineBefore: graphData.value.body_timeline_before,
-    bodyTimelineAfter: graphData.value.body_timeline_after,
-    noiseRatioBefore: graphData.value.noise_ratio_before,
-    noiseRatioDuring: graphData.value.noise_ratio_during,
-    noiseRatioAfter: graphData.value.noise_ratio_after,
-    volatilityIncreasePercent: graphData.value.volatility_increase_percent,
-    eventCount: graphData.value.event_count,
-    pair: selected.value,
-    eventType: selectedEventType.value,
-    eventLabel: getEventLabel(selectedEventType.value)
+    atrTimelineBefore: store.graphData.atr_timeline_before,
+    atrTimelineAfter: store.graphData.atr_timeline_after,
+    bodyTimelineBefore: store.graphData.body_timeline_before,
+    bodyTimelineAfter: store.graphData.body_timeline_after,
+    noiseRatioBefore: store.graphData.noise_ratio_before,
+    noiseRatioDuring: store.graphData.noise_ratio_during,
+    noiseRatioAfter: store.graphData.noise_ratio_after,
+    volatilityIncreasePercent: store.graphData.volatility_increase_percent,
+    eventCount: store.graphData.event_count,
+    pair: store.selectedPair,
+    eventType: store.selectedEventType,
+    eventLabel: getEventLabel(store.selectedEventType),
+    meilleurMoment: store.graphData.meilleur_moment,
+    stopLoss: store.graphData.stop_loss,
+    trailingStop: store.graphData.trailing_stop,
+    timeout: store.graphData.timeout,
+    offset: store.graphData.offset,
+    stopLossRecovery: store.graphData.stop_loss_recovery
   })
   showArchiveModal.value = true
 }

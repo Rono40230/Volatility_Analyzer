@@ -76,14 +76,14 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' 
         :class="{ active: activeTab === 'volatility' }"
         @click="switchTab('volatility')"
       >
-        📊 Volatilité brute
+        📊 Volatilité brute Paire/Période
       </button>
       <button 
         class="tab-button" 
         :class="{ active: activeTab === 'retrospective' }"
         @click="switchTab('retrospective')"
       >
-        📊 Métriques Rétrospectives
+        📊 Correlation de la volatilité Paire/Evénement
       </button>
       <button 
         class="tab-button" 
@@ -207,10 +207,6 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' 
       :is-open="showFormulasModal"
       @close="showFormulasModal = false"
     />
-
-    <footer class="app-footer">
-      <p>Powered by Rust + Tauri 2.0 + Vue 3</p>
-    </footer>
   </div>
 </template>
 
@@ -431,14 +427,5 @@ body {
   outline: none;
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-}
-
-.app-footer {
-  background: #0d1117;
-  color: #8b949e;
-  text-align: center;
-  padding: 20px;
-  margin-top: 40px;
-  border-top: 1px solid #30363d;
 }
 </style>

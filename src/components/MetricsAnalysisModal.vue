@@ -18,7 +18,7 @@
       <div class="modal-footer"><button v-if="!isArchiveMode" class="btn-archive" @click="openArchiveModal">💾 Archiver</button><button class="btn-primary" @click="close">Fermer l'analyse</button></div>
     </div>
   </div>
-  <ArchiveModal :show="showArchiveModal" archive-type="Volatilité brute" :period-start="archivePeriodStart" :period-end="archivePeriodEnd" :symbol="analysisData?.symbol" :timeframe="'M1'" :data-json="archiveDataJson" @close="showArchiveModal = false" @saved="handleArchiveSaved" />
+  <ArchiveModal :show="showArchiveModal" archive-type="Volatilité brute Paire/Période" :period-start="archivePeriodStart" :period-end="archivePeriodEnd" :symbol="analysisData?.symbol" :timeframe="'M1'" :data-json="archiveDataJson" :default-title="archiveDefaultTitle" @close="showArchiveModal = false" @saved="handleArchiveSaved" />
 </template>
 
 <script setup lang="ts">
@@ -57,6 +57,7 @@ const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
 const archiveDataJson = ref('')
+const archiveDefaultTitle = ref('')
 
 const close = () => emit('close')
 
@@ -65,6 +66,11 @@ function openArchiveModal() {
   const result = props.analysisResult
   archivePeriodStart.value = result.period_start || new Date(new Date().getFullYear() - 1, new Date().getMonth(), new Date().getDate()).toISOString()
   archivePeriodEnd.value = result.period_end || new Date().toISOString()
+  
+  // Titre personnalisé
+  const symbol = analysisData.value?.symbol || 'EURUSD'
+  archiveDefaultTitle.value = `Métriques du meilleur moment pour trader ${symbol}`
+
   archiveDataJson.value = JSON.stringify({ analysisResult: result, sliceAnalyses: sliceAnalyses.value, movementQualities: movementQualities.value, volatilityDuration: volatilityDuration.value, tradingPlan: tradingPlan.value, entryWindowAnalysis: entryWindowAnalysis.value, offsetOptimal: offsetOptimal.value, whipsawAnalysis: whipsawAnalysis.value })
   showArchiveModal.value = true
 }

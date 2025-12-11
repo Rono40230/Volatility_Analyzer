@@ -28,6 +28,7 @@ interface Props {
   eventNameFr?: string
   eventFlag?: string
   dataJson: string
+  defaultTitle?: string
 }
 
 const props = defineProps<Props>()
@@ -64,6 +65,12 @@ const periodLabel = computed(() => {
 // Générer le titre par défaut
 watch(() => props.show, (newVal) => {
   if (newVal) {
+    if (props.defaultTitle) {
+      archiveTitle.value = props.defaultTitle
+      comment.value = ''
+      return
+    }
+
     const periodStr = `(${periodLabel.value})`
     
     if (props.symbol && props.timeframe) {
