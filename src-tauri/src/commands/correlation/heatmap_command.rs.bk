@@ -146,7 +146,11 @@ pub async fn get_correlation_heatmap(
                 candle_index,
             )?;
 
-            let avg_vol_rounded = (vol_result.value * 10.0).round() / 10.0;
+            let avg_vol_rounded = if vol_result.has_data {
+                (vol_result.value * 10.0).round() / 10.0
+            } else {
+                -1.0 // Indicateur de "Pas de données"
+            };
 
             // Marquer has_data au moins une fois si vrai
             if vol_result.has_data {

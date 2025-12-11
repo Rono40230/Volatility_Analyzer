@@ -1,19 +1,6 @@
 <template>
   <div class="main-container">
-    <!-- Header et boutons : affichés SEULEMENT en mode standalone (sans prop viewMode) -->
-    <div v-if="!props.viewMode" class="header-section">
-      <div class="header-left">
-        <h1 class="main-title">
-          <span class="icon">📈</span>
-          Corrélation Événements - Paires
-        </h1>
-        <p class="main-subtitle">Visualisez la Heatmap ou analysez les métriques rétrospectives en détail</p>
-      </div>
-      <CalendarFileSelector 
-        class="file-selector-right"
-        @file-selected="handleCalendarSelected"
-      />
-    </div>
+    <!-- Header et boutons : SUPPRIMÉS -->
 
     <div v-if="!props.viewMode" class="view-modes">
       <button 
@@ -32,13 +19,7 @@
       </button>
     </div>
 
-    <!-- Sélecteur calendrier simplifié : affiché SEULEMENT en mode intégré (avec prop viewMode) et en mode heatmap -->
-    <div v-if="props.viewMode && viewMode === 'heatmap'" class="simple-calendar-selector">
-      <CalendarFileSelector 
-        class="file-selector-simple"
-        @file-selected="handleCalendarSelected"
-      />
-    </div>
+    <!-- Sélecteur calendrier simplifié : SUPPRIMÉ car inutile (un seul calendrier) -->
 
     <!-- Contenu principal : toujours affiché -->
     <div class="content-area">
@@ -72,12 +53,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useVolatilityStore } from '../stores/volatility'
-import { useAnalysisStore } from '../stores/analysisStore'
 import { useHeatmapArchive } from '../composables/useHeatmapArchive'
 import { useHeatmapState } from '../composables/useHeatmapState'
 import EventCorrelationHeatmap from './EventCorrelationHeatmap.vue'
-import CalendarFileSelector from './CalendarFileSelector.vue'
 import RetroactiveAnalysisView from './RetroactiveAnalysisView.vue'
 import ArchiveModal from './ArchiveModal.vue'
 
@@ -89,8 +67,6 @@ const props = withDefaults(defineProps<Props>(), {
   viewMode: undefined
 })
 
-const volatilityStore = useVolatilityStore()
-const analysisStore = useAnalysisStore()
 const heatmapComponentRef = ref()
 
 const {
@@ -126,56 +102,12 @@ function openArchiveModal() {
   height: 100%;
 }
 
-.header-section {
-  background: linear-gradient(135deg, #1c2128 0%, #161b22 100%);
-  padding: 30px;
-  border-bottom: 2px solid #30363d;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 30px;
-}
-
-.header-left {
-  flex: 1;
-}
-
-.main-title {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  color: #e6edf3;
-  font-size: 2em;
-  margin: 0 0 10px 0;
-  font-weight: 700;
-}
-
-.main-title .icon {
-  font-size: 1.2em;
-}
-
-.main-subtitle {
-  color: #8b949e;
-  font-size: 1.1em;
-  margin: 0;
-  line-height: 1.5;
-}
-
 .view-modes {
   display: flex;
   gap: 15px;
   padding: 20px;
   background: #0d1117;
   border-bottom: 1px solid #30363d;
-}
-
-.simple-calendar-selector {
-  padding: 15px 30px;
-  background: #161b22;
-  border-bottom: 1px solid #30363d;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
 }
 
 .mode-button {
@@ -209,16 +141,8 @@ function openArchiveModal() {
 .content-area {
   padding: 0;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto; /* Enable vertical scrolling */
   display: flex;
   flex-direction: column;
-}
-
-:deep(.file-selector-right) {
-  margin-left: auto;
-}
-
-:deep(.file-selector-simple) {
-  margin: 0;
 }
 </style>

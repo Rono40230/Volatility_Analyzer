@@ -76,7 +76,8 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
     calendar_id: Option<i32>,
     candle_index: &crate::services::candle_index::CandleIndex,
 ) -> Result<VolatilityResult, String> {
-    use super::volatility_helpers::{calculer_volatilites_optimise, parse_sqlite_datetime};
+    use super::utils::parse_sqlite_datetime;
+    use super::volatility_helpers::calculer_volatilites_optimise;
 
     let query = if let Some(cal_id) = calendar_id {
         format!(
@@ -114,7 +115,7 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
         });
     }
 
-    let mut total_volatility = 0.0;
+    let mut total_score = 0.0;
     let mut valid_count = 0;
     let mut has_data_found = false;
 
@@ -133,31 +134,34 @@ pub fn calculate_avg_volatility_for_event_pair_optimized(
             candle_index,
             pair,
             event_datetime,
-            30,
+            90, // Élargi à 90 min pour capturer les candles H1 qui commencent avant
             7,
-            super::volatility_helpers::get_pip_value(pair),
+            super::utils::get_pip_value(pair),
         )
         .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
+            straddle_score: 0.0,
+            directionality: 0.0,
+            whipsaw_risk: 0.0,
         });
 
-        let event_volatility = metrics.event_volatility;
+        let score = metrics.straddle_score;
 
-        if event_volatility > 0.0 {
-            total_volatility += event_volatility;
+        if score > 0.0 {
+            total_score += score;
             valid_count += 1;
         }
     }
 
-    let avg_vol = if valid_count == 0 {
+    let avg_score = if valid_count == 0 {
         0.0
     } else {
-        total_volatility / valid_count as f64
+        total_score / valid_count as f64
     };
 
     Ok(VolatilityResult {
-        value: avg_vol,
+        value: avg_score,
         has_data: has_data_found,
     })
 }

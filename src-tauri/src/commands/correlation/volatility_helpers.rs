@@ -6,64 +6,18 @@
 // utiliser des BTreeMap pour recherche O(log n)
 
 use crate::services::candle_index::CandleIndex;
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Timelike, Utc};
+use crate::services::straddle_scoring::StraddleScoreCalculator;
+use chrono::{Duration, NaiveDateTime, TimeZone, Timelike, Utc};
 
 #[derive(Debug)]
 pub struct VolatilityMetrics {
     pub event_volatility: f64,
     pub baseline_volatility: f64,
-}
-
-/// Parse une datetime depuis SQLite qui peut être soit un string formaté, soit un timestamp Unix
-pub fn parse_sqlite_datetime(s: &str) -> Result<NaiveDateTime, String> {
-    // Essayer d'abord comme timestamp Unix (nombre de secondes)
-    if let Ok(timestamp) = s.parse::<i64>() {
-        return DateTime::from_timestamp(timestamp, 0)
-            .map(|dt| dt.naive_utc())
-            .ok_or_else(|| format!("Invalid Unix timestamp: {}", s));
-    }
-
-    // Sinon, essayer les formats de date classiques
-    let formats = vec![
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d",
-    ];
-
-    for format in formats {
-        if let Ok(dt) = NaiveDateTime::parse_from_str(s, format) {
-            return Ok(dt);
-        }
-    }
-
-    Err(format!(
-        "Cannot parse datetime from any known format: '{}'",
-        s
-    ))
-}
-
-/// Retourne la valeur d'1 pip pour une paire donnée
-pub fn get_pip_value(symbol: &str) -> f64 {
-    match symbol {
-        "ADAUSD" => 0.0001,
-        "BTCUSD" => 1.00,
-        "CADJPY" => 0.01,
-        "CHFJPY" => 0.01,
-        "ETHUSD" => 0.01,
-        "GBPJPY" => 0.01,
-        "LINKUSD" => 0.001,
-        "LTCUSD" => 0.01,
-        "UNIUSD" => 0.001,
-        "USDCAD" => 0.0001,
-        "USDJPY" => 0.01,
-        "XAGUSD" => 0.001,
-        "XAUUSD" => 0.01,
-        "XLMUSD" => 0.00001,
-        "EURUSD" => 0.0001,
-        "GBPUSD" => 0.0001,
-        _ => 0.0001, // valeur par défaut
-    }
+    pub straddle_score: f64,
+    #[allow(dead_code)]
+    pub directionality: f64,
+    #[allow(dead_code)]
+    pub whipsaw_risk: f64,
 }
 
 /// Version OPTIMISÉE: utilise CandleIndex pour requêtes rapides
@@ -88,7 +42,7 @@ pub fn calculer_volatilites_optimise(
     // OPTIMISATION 1: Récupérer candles pour la fenêtre EVENT par plage de dates
     // Au lieu de parcourir 970k, on récupère ~60 candles (30 min avant + 30 min après)
     let event_candles = candle_index
-        .get_candles_in_range(
+        .get_full_candles_in_range(
             pair_symbol,
             event_window_start.date_naive(),
             event_window_end.date_naive(),
@@ -97,14 +51,26 @@ pub fn calculer_volatilites_optimise(
 
     let mut event_volatility_sum = 0.0;
     let mut event_count = 0;
+    
+    let mut candles_before = Vec::new();
+    let mut candles_after = Vec::new();
 
-    for (candle_dt, high, low) in &event_candles {
-        if candle_dt >= &event_window_start && candle_dt <= &event_window_end {
-            let pips = (high - low) / pip_value; // ✅ CORRECTION: division au lieu de multiplication
+    for candle in &event_candles {
+        if candle.datetime >= event_window_start && candle.datetime <= event_window_end {
+            let pips = (candle.high - candle.low) / pip_value; // ✅ CORRECTION: division au lieu de multiplication
             event_volatility_sum += pips;
             event_count += 1;
+            
+            if candle.datetime < event_dt {
+                candles_before.push(candle.clone());
+            } else {
+                candles_after.push(candle.clone());
+            }
         }
     }
+    
+    // Calcul du Straddle Score
+    let score_metrics = StraddleScoreCalculator::calculate(&candles_before, &candles_after, pip_value);
 
     // OPTIMISATION 2: Récupérer candles pour la BASELINE
     // Utiliser la méthode spécialisée du CandleIndex qui filtre par:
@@ -135,6 +101,9 @@ pub fn calculer_volatilites_optimise(
         } else {
             baseline_volatility_sum / baseline_count as f64
         },
+        straddle_score: score_metrics.total_score,
+        directionality: score_metrics.directionality_score,
+        whipsaw_risk: score_metrics.whipsaw_risk,
     })
 }
 
@@ -179,8 +148,12 @@ mod tests {
         let metrics = VolatilityMetrics {
             event_volatility: 100.0,
             baseline_volatility: 50.0,
+            straddle_score: 75.0,
+            directionality: 80.0,
+            whipsaw_risk: 10.0,
         };
         assert_eq!(metrics.event_volatility, 100.0);
         assert_eq!(metrics.baseline_volatility, 50.0);
+        assert_eq!(metrics.straddle_score, 75.0);
     }
 }

@@ -4,7 +4,8 @@ pub use types::{PairEventHistory, PairEventHistoryItem, TopEvent};
 use rusqlite::{Connection, Result as SqliteResult};
 use tauri::State;
 
-use super::volatility_helpers::{calculer_volatilites_optimise, parse_sqlite_datetime};
+use super::utils::parse_sqlite_datetime;
+use super::volatility_helpers::calculer_volatilites_optimise;
 use crate::commands::candle_index_commands::CandleIndexState;
 
 #[tauri::command]
@@ -83,11 +84,14 @@ pub async fn get_pair_event_history(
             event_datetime,
             30,
             7,
-            super::volatility_helpers::get_pip_value(&pair_symbol),
+            super::utils::get_pip_value(&pair_symbol),
         )
         .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
             baseline_volatility: 0.0,
+            straddle_score: 0.0,
+            directionality: 0.0,
+            whipsaw_risk: 0.0,
         });
 
         let event_volatility = metrics.event_volatility;

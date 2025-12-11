@@ -20,8 +20,11 @@ pub fn has_candles_for_event(
     pair_symbol: &str,
     event_dt: NaiveDateTime,
 ) -> bool {
-    let event_window_start = event_dt - Duration::minutes(30);
-    let event_window_end = event_dt + Duration::minutes(30);
+    // Élargir la fenêtre pour inclure les candles qui ont COMMENCÉ avant l'événement
+    // mais qui le couvrent (ex: H1). On regarde 2h avant et 1h après.
+    // Cela permet de capturer une candle H1 de 14:00 pour un événement à 14:59.
+    let event_window_start = event_dt - Duration::hours(2);
+    let event_window_end = event_dt + Duration::hours(1);
 
     // Chercher les candles dans la fenêtre
     let candles = candle_index.get_candles_in_range(
@@ -36,7 +39,7 @@ pub fn has_candles_for_event(
             let window_start_utc = Utc.from_utc_datetime(&event_window_start);
             let window_end_utc = Utc.from_utc_datetime(&event_window_end);
 
-            // Vérifier qu'au moins une candle est dans la fenêtre exacte
+            // Vérifier qu'au moins une candle est dans la fenêtre élargie
             candle_list.iter().any(|(candle_dt, _, _)| {
                 *candle_dt >= window_start_utc && *candle_dt <= window_end_utc
             })

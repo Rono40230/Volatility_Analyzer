@@ -4,16 +4,36 @@
       <thead>
         <tr>
           <th class="header-corner">Type d'événement</th>
-          <th v-for="pair in pairs" :key="pair">{{ pair }}</th>
+          <th 
+            v-for="pair in pairs" 
+            :key="pair"
+            class="sortable-header"
+            @click="toggleSort(pair)"
+            :title="`Trier par ${pair}`"
+          >
+            <div class="header-content">
+              {{ pair }}
+              <span class="sort-icon" v-if="currentSortPair === pair">
+                {{ currentSortDir === 'desc' ? '↓' : '↑' }}
+              </span>
+              <span class="sort-icon placeholder" v-else>↕</span>
+            </div>
+          </th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="eventType in sortedEventTypes" :key="eventType.name">
+        <tr v-for="eventType in processedEventTypes" :key="eventType.name">
           <td class="event-type-cell" :class="{ 'no-data': eventType.has_data === false }">
-            <div class="event-type-name">{{ getFormattedEventName(eventType.name) }}</div>
+            <div class="event-type-name">
+              {{ getFormattedEventName(eventType.name) }}
+              <span class="event-count" title="Nombre d'occurrences">({{ eventType.count }} occurrences)</span>
+            </div>
           </td>
-          <td v-for="pair in pairs" :key="`${eventType.name}-${pair}`" :class="['heatmap-cell', getHeatmapValue(eventType.name, pair) >= minVolatility ? getHeatmapClass(getHeatmapValue(eventType.name, pair)) : 'empty-cell']">
-            <span v-if="getHeatmapValue(eventType.name, pair) >= minVolatility" class="cell-value">{{ getHeatmapValue(eventType.name, pair).toFixed(1) }}</span>
+          <td v-for="pair in pairs" :key="`${eventType.name}-${pair}`" :class="['heatmap-cell', getCellClass(eventType.name, pair)]">
+            <span v-if="shouldShowValue(eventType.name, pair)" class="cell-value">
+              {{ getHeatmapValue(eventType.name, pair).toFixed(1) }}<span class="unit">pts</span>
+            </span>
+            <span v-else-if="getHeatmapValue(eventType.name, pair) === -1" class="no-data-indicator">N/A</span>
           </td>
         </tr>
       </tbody>
@@ -22,12 +42,15 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+
 interface EventTypeEntry {
   name: string
+  count: number
   has_data?: boolean
 }
 
-defineProps<{
+const props = defineProps<{
   pairs: string[]
   sortedEventTypes: EventTypeEntry[]
   minVolatility: number
@@ -35,6 +58,59 @@ defineProps<{
   getHeatmapClass: (v: number) => string
   getFormattedEventName: (e: string) => string
 }>()
+
+const currentSortPair = ref<string | null>(null)
+const currentSortDir = ref<'asc' | 'desc'>('desc')
+
+const processedEventTypes = computed(() => {
+  if (!currentSortPair.value) {
+    return props.sortedEventTypes
+  }
+
+  const sorted = [...props.sortedEventTypes]
+  sorted.sort((a, b) => {
+    const valA = props.getHeatmapValue(a.name, currentSortPair.value!)
+    const valB = props.getHeatmapValue(b.name, currentSortPair.value!)
+    
+    // Gérer les cas N/A (-1) pour qu'ils soient toujours à la fin
+    if (valA === -1 && valB === -1) return 0
+    if (valA === -1) return 1
+    if (valB === -1) return -1
+
+    if (currentSortDir.value === 'asc') {
+      return valA - valB
+    } else {
+      return valB - valA
+    }
+  })
+  return sorted
+})
+
+function toggleSort(pair: string) {
+  if (currentSortPair.value === pair) {
+    if (currentSortDir.value === 'desc') {
+      currentSortDir.value = 'asc'
+    } else {
+      currentSortPair.value = null
+      currentSortDir.value = 'desc'
+    }
+  } else {
+    currentSortPair.value = pair
+    currentSortDir.value = 'desc'
+  }
+}
+
+function shouldShowValue(eventName: string, pair: string): boolean {
+  const val = props.getHeatmapValue(eventName, pair)
+  return val !== -1 && val >= props.minVolatility
+}
+
+function getCellClass(eventName: string, pair: string): string {
+  const val = props.getHeatmapValue(eventName, pair)
+  if (val === -1) return 'no-data-cell'
+  if (val < props.minVolatility) return 'filtered-cell'
+  return props.getHeatmapClass(val)
+}
 </script>
 
 <style scoped>
@@ -42,16 +118,24 @@ defineProps<{
 .heatmap-table { width: 100%; border-collapse: collapse; background: #0d1117; border: 1px solid #30363d; }
 .heatmap-table thead { background: #161b22; }
 .heatmap-table th { padding: 12px; text-align: center; color: #8b949e; font-weight: 600; border-bottom: 1px solid #30363d; }
+.sortable-header { cursor: pointer; user-select: none; transition: background 0.2s; }
+.sortable-header:hover { background: #1c2128; color: #58a6ff; }
+.header-content { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.sort-icon { font-size: 0.8em; opacity: 0.7; }
+.sort-icon.placeholder { opacity: 0.2; }
 .header-corner { text-align: left; }
 .event-type-cell { background: #0d1117; padding: 12px; font-weight: 600; color: #c9d1d9; border-bottom: 1px solid #30363d; }
 .event-type-cell.no-data { opacity: 0.6; }
-.event-type-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.event-type-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+.event-count { font-size: 0.85em; color: #8b949e; font-weight: 400; }
 .heatmap-cell { padding: 12px; text-align: center; border: 1px solid #30363d; }
 .heatmap-cell.empty-cell { background: #0d1117; color: #6e7681; }
+.heatmap-cell.no-data-cell { background: #161b22; color: #484f58; font-style: italic; font-size: 0.8em; }
+.heatmap-cell.filtered-cell { background: #0d1117; color: #484f58; }
 .cell-value { font-weight: 600; font-size: 0.9em; }
-.heat-very-high { background: #f5222d; color: white; }
-.heat-high { background: #ff7a45; color: white; }
-.heat-medium { background: #fadb14; color: black; }
-.heat-low { background: #95de64; color: black; }
-.heat-very-low { background: #52c41a; color: white; }
+.unit { font-size: 0.7em; opacity: 0.7; margin-left: 2px; font-weight: 400; }
+.no-data-indicator { opacity: 0.5; }
+.heat-very-high { background: #238636; color: white; } /* Excellent (Vert) */
+.heat-medium { background: #d29922; color: black; }    /* Moyen (Orange) */
+.heat-very-low { background: #da3633; color: white; }  /* Faible (Rouge) */
 </style>

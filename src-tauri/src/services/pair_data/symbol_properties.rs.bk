@@ -50,6 +50,7 @@ pub fn get_point_value(symbol: &str) -> f64 {
 /// Retourne la valeur d'un Pip standard
 /// - Forex: 10 points
 /// - Indices/Crypto: 1 point (souvent)
+#[allow(dead_code)]
 pub fn get_pip_value(symbol: &str) -> f64 {
     let point = get_point_value(symbol);
     let s = symbol.to_uppercase();
@@ -71,6 +72,7 @@ pub fn get_pip_value(symbol: &str) -> f64 {
 }
 
 /// Détermine si c'est une paire Forex
+#[allow(dead_code)]
 fn is_forex_pair(symbol: &str) -> bool {
     let s = symbol.to_uppercase();
     // Liste non exhaustive mais couvre les majeurs

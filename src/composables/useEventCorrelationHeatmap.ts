@@ -5,7 +5,7 @@ import { useAnalysisStore } from '../stores/analysisStore'
 
 export interface HeatmapData {
   pairs: string[]
-  event_types: Array<{ name: string; has_data?: boolean }>
+  event_types: Array<{ name: string; count: number; has_data?: boolean }>
   data: Record<string, Record<string, number>>
 }
 
@@ -18,8 +18,8 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     return analysisStore.persistentHeatmapData
   })
 
-  const minVolatilityThreshold = ref(3)
-  const maxEventsToDisplay = ref(10)
+  const minVolatilityThreshold = ref(0)
+  // const maxEventsToDisplay = ref(10) // Removed as we want to show all events
 
   async function loadHeatmapData(pairs: string[], calendarId: number | null = null) {
     if (!pairs || pairs.length === 0) {
@@ -60,16 +60,15 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
   const sortedEventTypes = computed(() => {
     if (!heatmapData.value) return []
     let sorted = [...heatmapData.value.event_types].sort((a, b) => getEventAverage(b.name) - getEventAverage(a.name))
-    sorted = sorted.slice(0, maxEventsToDisplay.value)
+    // sorted = sorted.slice(0, maxEventsToDisplay.value) // Show all events
     return sorted
   })
 
   function getHeatmapClass(value: number): string {
-    if (value >= 12) return 'heat-very-low'
-    if (value >= 9) return 'heat-low'
-    if (value >= 6) return 'heat-medium'
-    if (value >= 3) return 'heat-high'
-    return 'heat-very-high'
+    // Score Straddle (0-100)
+    if (value >= 70) return 'heat-very-high' // Excellent (Vert)
+    if (value >= 40) return 'heat-medium'    // Moyen (Orange)
+    return 'heat-very-low'                   // Faible (Rouge)
   }
 
   function getFormattedEventName(eventName: string): string {
@@ -101,7 +100,7 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     loadingHeatmap,
     heatmapData,
     minVolatilityThreshold,
-    maxEventsToDisplay,
+    // maxEventsToDisplay,
     sortedEventTypes,
     loadHeatmapData,
     forceReloadHeatmap,

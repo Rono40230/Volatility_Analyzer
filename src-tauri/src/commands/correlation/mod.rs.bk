@@ -8,6 +8,7 @@ mod heatmap_helpers;
 mod pair_history;
 mod past_events;
 mod types;
+mod utils;
 mod volatility_helpers;
 
 // Ré-exporter les commandes Tauri

@@ -2,17 +2,13 @@
   <div v-if="loadingHeatmap" class="loading"><span class="spinner">⏳</span><p>Génération de la heatmap...</p></div>
 
   <div v-if="heatmapData && !loadingHeatmap" class="heatmap-container">
-    <HeatmapHeader />
-    <HeatmapFilters 
-      :min-volatility="minVolatilityThreshold" 
-      :max-events="maxEventsToDisplay" 
-      :available-event-types="availableEventTypes"
-      @update:min-volatility="minVolatilityThreshold = $event" 
-      @update:max-events="maxEventsToDisplay = $event"
-      @update:selected-event-type="selectedEventType = $event"
-      @reload-heatmap="handleReloadHeatmap"
-      @archive-heatmap="emit('archive-heatmap')"
+    <HeatmapHeader 
+      :current-filter="minVolatilityThreshold"
+      @filter-click="minVolatilityThreshold = $event"
+      @reload="handleReloadHeatmap"
+      @archive="emit('archive-heatmap')"
     />
+    <!-- Filtres supprimés -->
     <HeatmapTable 
       :pairs="heatmapData.pairs" 
       :sorted-event-types="filteredEventTypes" 
@@ -28,7 +24,6 @@
 import { ref, onMounted, watch, computed } from 'vue'
 import { useEventCorrelationHeatmap, type HeatmapData } from '../composables/useEventCorrelationHeatmap'
 import HeatmapHeader from './HeatmapHeader.vue'
-import HeatmapFilters from './HeatmapFilters.vue'
 import HeatmapTable from './HeatmapTable.vue'
 
 const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?: HeatmapData; isArchiveMode?: boolean; calendarId?: number | null }>(), {
@@ -41,7 +36,7 @@ const emit = defineEmits<{
   'archive-heatmap': []
 }>()
 
-const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
+const { loadingHeatmap, heatmapData, minVolatilityThreshold, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
 
 const selectedEventType = ref('')
 
@@ -50,19 +45,15 @@ function getHeatmapArchiveData() {
   return {
     heatmapData: heatmapData.value,
     minVolatilityThreshold: minVolatilityThreshold.value,
-    maxEventsToDisplay: maxEventsToDisplay.value,
+    // maxEventsToDisplay removed
     selectedEventType: selectedEventType.value
   }
 }
 
 // Exposer la fonction
 defineExpose({
-  getHeatmapArchiveData
-})
-
-// Available event types for dropdown
-const availableEventTypes = computed(() => {
-  return sortedEventTypes.value?.map(et => et.name) ?? []
+  getHeatmapArchiveData,
+  handleReloadHeatmap
 })
 
 // Filter event types based on selected filter

@@ -153,6 +153,22 @@ impl CandleIndex {
         })
     }
 
+    /// Récupère les candles COMPLÈTES dans une plage de dates (pour Straddle Score)
+    pub fn get_full_candles_in_range(
+        &self,
+        symbol: &str,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Option<Vec<Candle>> {
+        self.data.get(symbol).map(|date_map| {
+            date_map
+                .range(start_date..=end_date)
+                .flat_map(|(_, candles)| candles.iter())
+                .cloned()
+                .collect()
+        })
+    }
+
     /// Récupère les candles pour UN JOUR SPÉCIFIQUE
     /// NOTE: Cette fonction est conservée pour usage futur
     #[allow(dead_code)]

@@ -6,11 +6,11 @@ interface HeatmapComponentInstance {
   getHeatmapArchiveData: () => {
     heatmapData: {
       pairs: string[]
-      event_types: Array<{ name: string; has_data?: boolean }>
+      event_types: Array<{ name: string; count: number; has_data?: boolean }>
       data: Record<string, Record<string, number>>
     }
     minVolatilityThreshold: number
-    maxEventsToDisplay: number
+    // maxEventsToDisplay: number
     selectedEventType: string
   }
 }
@@ -32,7 +32,7 @@ export function useHeatmapArchive() {
     archiveDataJson.value = JSON.stringify({
       heatmapData: archiveData.heatmapData,
       minVolatilityThreshold: archiveData.minVolatilityThreshold,
-      maxEventsToDisplay: archiveData.maxEventsToDisplay,
+      // maxEventsToDisplay: archiveData.maxEventsToDisplay,
       selectedEventType: archiveData.selectedEventType,
     })
 
