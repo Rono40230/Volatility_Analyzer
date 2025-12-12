@@ -8,7 +8,6 @@ mod correlation;
 mod event_loader;
 mod hourly_stats;
 mod metrics;
-mod offset_calculator;
 mod quarterly_aggregator;
 mod stats_15min;
 mod utils;
@@ -20,7 +19,6 @@ mod win_rate_calculator;
 
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;
-pub use offset_calculator::calculate_optimal_offset;
 pub use volatility_duration_analyzer::VolatilityDurationAnalyzer;
 pub use whipsaw_detector::calculate_whipsaw_frequency;
 pub use win_rate_calculator::simulate_straddle_win_rate;

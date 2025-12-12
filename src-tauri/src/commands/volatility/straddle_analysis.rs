@@ -1,8 +1,11 @@
 // commands/volatility/straddle_analysis.rs - Commands pour calculs Straddle
 use crate::models::Candle;
+use crate::services::pair_data::get_point_value;
+use crate::services::straddle_simulator_helpers::calculate_atr_mean;
 use crate::services::volatility::{
-    calculate_optimal_offset, calculate_whipsaw_frequency, simulate_straddle_win_rate,
+    calculate_whipsaw_frequency, simulate_straddle_win_rate,
 };
+use crate::services::StraddleParameterService;
 use serde::{Deserialize, Serialize};
 use tauri::command;
 
@@ -44,9 +47,47 @@ pub fn calculate_offset_optimal(
         candles.len()
     );
 
-    let offset_pips = calculate_optimal_offset(&candles);
+    if candles.is_empty() {
+        return Ok(OptimalOffsetResponse {
+            offset_pips: 0.0,
+            percentile_95_wicks: 0.0,
+            with_margin: 0.0,
+        });
+    }
 
-    // Calculer aussi les stats détaillées
+    // 1. Récupérer les infos du symbole
+    let symbol = &candles[0].symbol;
+    let point_value = get_point_value(symbol);
+
+    // 2. Calculer les métriques nécessaires
+    let atr_mean = calculate_atr_mean(&candles);
+    
+    // Calcul du Noise Ratio moyen
+    let noise_ratio_mean: f64 = if !candles.is_empty() {
+        let sum: f64 = candles.iter().map(|c| {
+            let range = c.high - c.low;
+            let body = (c.open - c.close).abs();
+            if body < point_value * 0.1 {
+                if range < point_value * 0.1 { 1.0 } else { 5.0 }
+            } else {
+                range / body
+            }
+        }).sum();
+        sum / candles.len() as f64
+    } else {
+        1.0
+    };
+
+    // 3. Utiliser le service unifié pour calculer l'offset
+    let params = StraddleParameterService::calculate_parameters(
+        atr_mean,
+        noise_ratio_mean,
+        point_value
+    );
+    
+    let offset_pips = params.offset_pips;
+
+    // Calculer aussi les stats détaillées (Percentile 95 des mèches)
     let wicks: Vec<f64> = candles
         .iter()
         .flat_map(|c| {
@@ -66,10 +107,13 @@ pub fn calculate_offset_optimal(
     let p95_index = p95_index.min(sorted_wicks.len().saturating_sub(1));
     let percentile_95 = sorted_wicks.get(p95_index).copied().unwrap_or(0.0);
 
+    // Conversion correcte en pips via point_value
+    let p95_pips = percentile_95 / point_value;
+
     Ok(OptimalOffsetResponse {
         offset_pips,
-        percentile_95_wicks: percentile_95 * 10000.0,
-        with_margin: percentile_95 * 1.1 * 10000.0,
+        percentile_95_wicks: p95_pips,
+        with_margin: p95_pips * 1.1,
     })
 }
 
