@@ -6,7 +6,7 @@
     <!-- Rang + Heure + Score/Whipsaw -->
     <div
       class="slice-header"
-      style="display: flex; justify-content: space-between; align-items: center; gap: 20px;"
+      style="display: flex; justify-content: space-between; align-items: center; gap: 12px;"
     >
       <div style="display: flex; gap: 12px; align-items: center;">
         <div
@@ -25,6 +25,12 @@
         </div>
       </div>
 
+      <!-- Analysis Comment -->
+      <div class="analysis-comment" style="flex: 1; text-align: center; color: #94a3b8; font-size: 0.95em; font-style: italic; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <span style="font-style: normal;">{{ recommendation.emoji }}</span>
+        <span>{{ recommendation.advice }}</span>
+      </div>
+
       <!-- Score & Whipsaw Blocs (extracted component) -->
       <ScoreWhipsawBadges
         :score="adjustedScore"
@@ -33,7 +39,9 @@
     </div>
 
     <!-- Slot pour le contenu (MetricsGrid, etc.) -->
-    <slot></slot>
+    <div style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+      <slot></slot>
+    </div>
   </div>
 </template>
 
@@ -100,8 +108,12 @@ const recommendation = computed(() => {
   background: rgba(30, 30, 45, 0.6);
   border: 1px solid #2d3748;
   border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 8px;
+  margin-bottom: 0; /* Removed margin */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Important for nested flex */
 }
 
 .slice-card.rank-1 {
@@ -111,13 +123,13 @@ const recommendation = computed(() => {
 }
 
 .rank-badge {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 16px;
   background: #2d3748;
   border: 2px solid #4a5568;
 }
@@ -130,11 +142,11 @@ const recommendation = computed(() => {
 }
 
 .slice-time .time {
-  font-size: 24px;
+  font-size: 18px;
   font-weight: 800;
   color: #fff;
   line-height: 1;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .slice-time .score {

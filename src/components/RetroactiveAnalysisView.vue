@@ -14,7 +14,7 @@
       @load="load"
     />
 
-    <div v-if="store.loading" class="spinner">⏳ Chargement...</div>
+    <div v-if="store.loading" class="spinner">Chargement...</div>
     <div v-else-if="store.error" class="error">{{ store.error }}</div>
     <div v-else-if="!store.peakDelayResults || !store.decayResults" class="empty">📭 Chargez une paire et sélectionnez un événement</div>
 

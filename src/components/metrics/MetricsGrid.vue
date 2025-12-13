@@ -72,28 +72,30 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
 <style scoped>
 .metrics-section {
   background: #0d1117;
-  padding: 20px;
+  padding: 12px;
   border-radius: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 0; /* Removed margin */
   border: 1px solid #30363d;
+  flex-shrink: 0; /* Don't shrink */
 }
 
 .metrics-section h4 {
-  margin: 0 0 15px 0;
+  margin: 0 0 8px 0;
   color: #e2e8f0;
+  font-size: 0.9em;
 }
 
 .metrics-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9em;
+  font-size: 0.8em; /* Reduced font size */
 }
 
 .metrics-table th {
   background: #1a1f2e;
   color: #e2e8f0;
   font-weight: 600;
-  padding: 12px 8px;
+  padding: 8px 4px;
   text-align: center;
   border: 1px solid #30363d;
   font-size: 0.85em;
@@ -106,14 +108,14 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
 }
 
 .metrics-table td {
-  padding: 10px 8px;
+  padding: 4px 6px;
   text-align: center;
   border: 1px solid #30363d;
 }
 
 .row-label {
   text-align: left;
-  padding: 10px 12px;
+  padding: 4px 8px;
   font-weight: 500;
   color: #cbd5e0;
   font-size: 0.85em;
@@ -129,7 +131,7 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
 
 .value-cell {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 2px 4px;
   border-radius: 4px;
 }
 
@@ -179,12 +181,12 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
 }
 
 .status-row .metric-status {
-  padding: 6px 8px;
+  padding: 2px 4px;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.85em;
   font-weight: 500;

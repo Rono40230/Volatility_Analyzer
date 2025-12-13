@@ -1,13 +1,22 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="close">
     <div class="modal-content">
-      <div class="modal-header"><div class="header-title"><span class="icon">🎯</span><h2>Métriques du meilleur moment pour trader</h2></div><button class="close-btn" @click="close">✕</button></div>
+      <div class="modal-header"><div class="header-title"></div><button class="close-btn" @click="close">✕</button></div>
       <div class="modal-section">
         <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
           <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis">
-            <MetricsGrid :analysis="analysis" :analysis-data="analysisData" />
-            <VolatilityDurationSection :volatility-duration="volatilityDuration" :trading-plan="tradingPlan" />
-            <BidiParametersSection :slice-analyses="sliceAnalyses" :entry-window-analysis="entryWindowAnalysis" :analysis="analysis" :volatility-duration="volatilityDuration" :whipsaw-analysis="whipsawAnalysis" :offset-optimal="offsetOptimal" :symbol="analysisData?.symbol || 'EURUSD'" />
+            <BidiParametersSection 
+              :slice-analyses="sliceAnalyses" 
+              :entry-window-analysis="entryWindowAnalysis" 
+              :analysis="analysis" 
+              :analysis-data="analysisData"
+              :volatility-duration="volatilityDuration" 
+              :trading-plan="tradingPlan"
+              :whipsaw-analysis="whipsawAnalysis" 
+              :offset-optimal="offsetOptimal" 
+              :symbol="analysisData?.symbol || 'EURUSD'"
+              :point-value="props.analysisResult?.point_value"
+            />
           </BestSliceCard>
         </div>
         <div v-if="!sliceAnalyses || sliceAnalyses.length === 0" class="loading-state">
@@ -87,81 +96,81 @@ function handleArchiveSaved() {
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100vw;
+  height: 100vh;
   background: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  z-index: 9999; /* Increased z-index */
+  padding: 0;
 }
 
 .modal-content {
   background: #1a1f2e;
-  border: 2px solid #2d3748;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 1600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+  border: none;
+  border-radius: 0;
+  width: 100%; /* Changed to 100% */
+  height: 100%; /* Changed to 100% */
+  max-width: none; /* Removed max-width */
+  max-height: none; /* Removed max-height */
+  overflow: hidden;
+  box-shadow: none;
   color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  margin: 0; /* Ensure no margin */
 }
 
 .modal-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid #2d3748;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end; /* Pushes content (close button) to the right */
   align-items: center;
-  padding: 24px;
-  border-bottom: 2px solid #2d3748;
-  background: linear-gradient(135deg, #1a1f2e 0%, #2d3748 100%);
-}
-
-.header-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-title .icon {
-  font-size: 24px;
-}
-
-.header-title h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #fff;
+  background: rgba(26, 32, 44, 0.5);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #cbd5e0;
+  color: #a0aec0;
   font-size: 24px;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  transition: color 0.2s;
+  padding: 4px;
+  line-height: 1;
 }
 
 .close-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
 .modal-section {
-  padding: 24px;
+  padding: 8px;
   border-bottom: 1px solid #2d3748;
+  flex: 1;
+  overflow: hidden; /* Prevent scroll here, let children handle it or fit */
+  display: flex;
+  flex-direction: column;
+}
+
+.slices-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Important for nested flex scrolling/sizing */
 }
 
 /* Modal Footer */
 .modal-footer {
-  padding: 20px 24px;
+  padding: 8px 16px;
   border-top: 1px solid #2d3748;
   background: rgba(45, 55, 72, 0.3);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .btn-primary {

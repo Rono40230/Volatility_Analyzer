@@ -1,7 +1,8 @@
 import { invoke } from '@tauri-apps/api/core'
-import type { Stats15Min } from '../stores/volatility'
+import type { Stats15Min } from '../stores/volatilityTypes'
 import { calculateStraddleScore, calculateTradingPlan } from '../utils/straddleAnalysis'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
+export { getStitchedVolatilityProfile } from '../utils/volatilityProfile'
 
 export interface VolatilityDuration {
   peak_duration_minutes: number
@@ -72,7 +73,7 @@ export async function loadEntryWindowAnalysis(
   symbol: string,
   hour: number,
   quarter: number
-): Promise<{ optimal_offset: number; optimal_win_rate: number } | null> {
+): Promise<{ optimal_offset: number; optimal_win_rate: number; optimal_entry_minutes: number } | null> {
   try {
     const result = await invoke<any>('analyze_quarter_entry_timing', { 
       symbol, 
@@ -82,8 +83,9 @@ export async function loadEntryWindowAnalysis(
     
     if (result) {
       return {
-        optimal_offset: result.optimal_offset_minutes ?? 0,
-        optimal_win_rate: result.optimal_win_rate ?? 0
+        optimal_offset: 0, // Deprecated: was holding time erroneously
+        optimal_win_rate: result.optimal_win_rate ?? 0,
+        optimal_entry_minutes: result.optimal_offset_minutes ?? 0 // Correct mapping: Time in minutes
       }
     }
   } catch (error) {
@@ -134,3 +136,4 @@ export function createBestSlice(
     tradingPlan: calculateTradingPlan(bestSliceStats, 100000, finalScore)
   }
 }
+

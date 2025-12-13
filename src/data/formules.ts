@@ -42,7 +42,7 @@ export const categories: Categorie[] = [
     titre: 'Paramètres Straddle',
     emoji: '🎯',
     description: 'Configuration optimale du Straddle',
-    formules: ['offset', 'take_profit', 'offset_ajuste', 'risk_level', 'meilleur_moment', 'win_rate_ajuste', 'trailing_stop', 'timeout']
+    formules: ['offset', 'take_profit', 'offset_ajuste', 'risk_level', 'meilleur_moment', 'win_rate_ajuste', 'trailing_stop', 'sl_recovery', 'timeout']
   },
   {
     id: 'whipsaw',
@@ -176,21 +176,21 @@ export const formules: Record<string, Formule> = {
     id: 'noise_ratio',
     titre: 'Noise Ratio',
     categorieId: 'mouvement',
-    definition: 'Ratio Range / Body. Mesure le "bruit" (mèches) vs signal (direction). >3 = trop de bruit.',
-    explication_litterale: 'Cette formule regarde si une chandelle a beaucoup de "queues" (wicks) par rapport à son corps. Si beaucoup de queues = marché bruyant (faux mouvements). Si peu de queues et corps gros = marché directionnel (vrai mouvement). Ratio > 3 = très bruyant (mauvais pour trader). Ratio < 1.5 = très directionnel (bon pour trader).',
-    formule: 'Noise = (High - Low) / |Close - Open|',
-    inputs: ['High', 'Low', 'Close', 'Open'],
+    definition: 'Ratio True Range / Mouvement Net. Mesure le "bruit" (mèches/gaps) vs signal (direction). >3 = trop de bruit.',
+    explication_litterale: 'Cette formule regarde si une chandelle a beaucoup de "bruit" (mèches, gaps) par rapport à son mouvement net (Close à Close). Si beaucoup de bruit = marché chaotique. Si peu de bruit = marché directionnel propre. Ratio > 3 = très bruyant (mauvais pour trader). Ratio < 1.5 = très directionnel (bon pour trader).',
+    formule: 'Noise = True Range / |Close - Open|',
+    inputs: ['True Range', 'Close', 'Open'],
     output: {
       type: 'float',
       range: '1.0 - ∞',
       unite: 'ratio'
     },
-    exemple: 'Range=30 points, Body=10 points → Noise = 3.0 (bruit modéré)',
+    exemple: 'TR=30 points, Body=10 points → Noise = 3.0 (bruit modéré)',
     notes: [
       '< 2.0 = Excellent (directionnel)',
       '2.0-3.0 = Bon',
       '> 3.0 = À éviter (trop chaotique)',
-      'Anti-pattern Straddle: filter si > 3.0'
+      'Utilisé pour adapter Offset et SL'
     ]
   },
 
@@ -260,45 +260,42 @@ export const formules: Record<string, Formule> = {
     id: 'offset',
     titre: 'Offset (Distance ordres)',
     categorieId: 'straddle',
-    definition: 'Distance des ordres Buy Stop et Sell Stop par rapport au prix d\'entrée. Basé sur ATR pour adapter à la volatilité. Fondation de tous les autres calculs (TP, SL, entrée).',
-    explication_litterale: 'Cette formule calcule à quelle distance on place nos ordres d\'achat et de vente par rapport au prix actuel. On utilise la volatilité (ATR) pour adapter la distance: si le marché est très volatil, on met les ordres plus loin (pour éviter les faux déclenchements), si le marché est calme, on les met plus près (pour déclencher plus souvent).',
-    formule: 'Offset = ATR_mean × 1.75\n\nArrondissement: .ceil() (pas de décimales)',
-    inputs: ['ATR mean (moyenne volatilité 1h)', 'Arrondir vers le haut'],
+    definition: 'Distance des ordres Buy Stop et Sell Stop par rapport au prix d\'entrée. Adaptatif selon le Noise Ratio.',
+    explication_litterale: 'Cette formule calcule à quelle distance on place nos ordres. Si le marché est "propre" (Noise < 2.0), on place les ordres près (ATR × 1.2). Si le marché est "bruyant" (Noise > 2.0), on les écarte (ATR × 1.5) pour éviter les faux déclenchements causés par les mèches.',
+    formule: 'IF Noise > 2.0 → Offset = ATR × 1.5\nELSE → Offset = ATR × 1.2',
+    inputs: ['ATR', 'Noise Ratio'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'ATR=24.5 points → Offset = 24.5 × 1.75 = 42.875 → arrondi = 43 points',
+    exemple: 'ATR=20, Noise=1.5 → Offset = 20 × 1.2 = 24 points\nATR=20, Noise=2.5 → Offset = 20 × 1.5 = 30 points',
     notes: [
-      'Multiplicateur 1.75 = balance optimal entre:',
-      '  - Activations fréquentes (offset petit → mieux)',
-      '  - SL/TP non trop serrés (offset grand → mieux)',
-      'ATR faible → Offset petit (marché calme)',
-      'ATR élevé → Offset grand (marché volatil)',
-      'Fondation pour: TP (offset×2), SL (offset×ratio), Risk Level'
+      'Adaptatif pour filtrer le bruit',
+      'Noise > 2.0 = marché nerveux → on s\'écarte',
+      'Noise < 2.0 = marché directionnel → on resserre',
+      'Arrondi au point supérieur (.ceil())'
     ]
   },
 
   take_profit: {
     id: 'take_profit',
-    titre: 'Take Profit (TP)',
+    titre: 'Take Profit (Target)',
     categorieId: 'straddle',
-    definition: 'Distance du Take Profit depuis l\'entrée. Fixé à 2× l\'offset pour Straddle (rapport Risk:Reward 1:2).',
-    explication_litterale: 'Cette formule décide à quel niveau on ferme notre position en profit. On double la distance de l\'offset: si nos ordres sont à 43 points, on ferme le profit à 86 points. C\'est simple: on risque 43 points (avec le SL) pour gagner 86 points. C\'est un rapport 1 contre 2, ce qui est équitable.',
-    formule: 'TP = Offset × 2.0\n\nArrondissement: .ceil() (pas de décimales)',
-    inputs: ['Offset calculé'],
+    definition: 'Objectif de profit théorique. Dans Bidi V2, la sortie est principalement gérée par le Trailing Stop, mais le TP sert de sécurité ou d\'objectif Risk:Reward.',
+    explication_litterale: 'Bien que le robot utilise un Trailing Stop pour laisser courir les gains, on définit un Take Profit de sécurité. Il est généralement placé à 2 fois la distance du Stop Loss, assurant un ratio Risk:Reward de 1:2.',
+    formule: 'TP = Stop Loss × 2.0',
+    inputs: ['Stop Loss'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'Offset=43 points → TP = 43 × 2.0 = 86 points (arrondi)',
+    exemple: 'SL=40 points → TP = 80 points',
     notes: [
-      'Ratio 1:2 = Risk:Reward classique pour Straddle',
-      'Risk (SL) doit être ≥ Offset (pour absorber whipsaws)',
-      'Reward (TP) = 2× Offset (pour équilibre)',
-      'Exemple complet: Offset=43 points, SL=77 points, TP=86 points'
+      'Ratio 1:2 = Standard Risk:Reward',
+      'Souvent non atteint car Trailing Stop sort avant',
+      'Sert de "Home Run" target'
     ]
   },
 
@@ -326,24 +323,22 @@ export const formules: Record<string, Formule> = {
 
   offset_ajuste: {
     id: 'offset_ajuste',
-    titre: 'SL Ajusté (Stop Loss)',
+    titre: 'Stop Loss (SL)',
     categorieId: 'straddle',
-    definition: 'Stop Loss pondéré par la fréquence whipsaw. Plus whipsaw est élevé, plus le SL est réduit (peu d\'espace). Plus whipsaw est bas, plus le SL est large (plus d\'espace).',
-    explication_litterale: 'Cette formule calcule où on met notre \"cut-loss\" (niveau auquel on accepte la perte). On part de l\'offset, puis on le multiplie par un nombre qui dépend des faux déclenchements (whipsaw). Si beaucoup de faux déclenchements (33%), on multiplie par 1.8 seulement (stop plus proche). Si peu de faux déclenchements (3%), on multiplie par 2.8 (stop très loin). Logique: avec beaucoup de faux déclenchements, on n\'a pas besoin d\'un stop loin. Avec peu de faux déclenchements, on peut mettre un stop loin sans peur.',
-    formule: 'SL_ajusté = Offset × ratio(whipsaw_freq)\n\nRatio par whipsaw:\n- Whipsaw >30% → ratio 1.5× (trop de faux déclenchements)\n- Whipsaw 20-30% → ratio 1.8× (équilibre)\n- Whipsaw 10-20% → ratio 2.2× (augmente SL)\n- Whipsaw 5-10% → ratio 2.5× (SL large)\n- Whipsaw <5% → ratio 2.8× (SL très large, peu de whipsaws)',
-    inputs: ['SL brut (= Offset)', 'Whipsaw frequency %'],
+    definition: 'Niveau de protection adaptatif. Plus le marché est bruyant (Noise élevé), plus le SL est large pour éviter de se faire sortir sur une mèche.',
+    explication_litterale: 'Le Stop Loss s\'adapte à la "nervosité" du marché. Si le marché est calme (Noise < 1.5), on met un SL serré (ATR × 1.5). Si le marché est très agité (Noise > 3.0), on met un SL très large (ATR × 3.0) pour laisser le prix respirer sans couper la position prématurément.',
+    formule: 'Noise > 3.0 → SL = ATR × 3.0\nNoise > 2.5 → SL = ATR × 2.5\nNoise > 2.0 → SL = ATR × 2.0\nNoise > 1.5 → SL = ATR × 1.75\nElse → SL = ATR × 1.5',
+    inputs: ['ATR', 'Noise Ratio'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'Offset=43 points, Whipsaw=33.4% → ratio=1.8 → SL_ajusté = 43 × 1.8 = 77 points (arrondi)',
+    exemple: 'ATR=20, Noise=2.2 → SL = 20 × 2.0 = 40 points\nATR=20, Noise=3.1 → SL = 20 × 3.0 = 60 points',
     notes: [
-      'LOGIQUE: Whipsaw HAUT (30%+) → SL RÉDUIT (1.5×) car trop de faux déclenchements',
-      'LOGIQUE: Whipsaw BAS (<5%) → SL AUGMENTÉ (2.8×) car peu de faux déclenchements',
-      'Arrondi toujours vers le haut (.ceil()) = pas de décimales',
-      'Exemple ancien: 20 × (1 + 0.25×0.3) = 21.5 ❌ OBSOLÈTE',
-      'Maintenant: 20 × 2.2 = 44 points ✅ PLUS RÉALISTE'
+      'Logique adaptative par paliers',
+      'Protège contre la volatilité erratique',
+      'Minimum 1.5x ATR pour sécurité de base'
     ]
   },
 
@@ -391,22 +386,43 @@ export const formules: Record<string, Formule> = {
 
   trailing_stop: {
     id: 'trailing_stop',
-    titre: 'Trailing Stop (Coefficient)',
+    titre: 'Trailing Stop (Suivi)',
     categorieId: 'straddle',
-    definition: 'Multiplicateur du SL pour stop dynamique. Ajusté selon whipsaw pour adapter la traîne.',
-    explication_litterale: 'Cette formule calcule un "stop qui suit le profit". Au lieu d\'un stop fixe, le stop se rapproche du prix au fur et à mesure que le profit augmente. On part d\'une valeur de base (1.59), puis on la réduit si beaucoup de faux déclenchements (pour être plus prudent). Si peu de faux déclenchements, on garde le stop plus agressif.',
-    formule: 'TS = 1.59 × (1 - whipsaw_freq / 2)',
-    inputs: ['Baseline: 1.59', 'Whipsaw frequency %'],
+    definition: 'Stop suiveur adaptatif. Sécurise les gains en remontant le SL à mesure que le prix avance.',
+    explication_litterale: 'Le Trailing Stop suit le prix comme une ombre. Si le marché est calme (Noise < 1.5), il suit de près (0.8x ATR) pour verrouiller vite les gains. Si le marché est nerveux (Noise > 3.0), il laisse plus de marge (1.2x ATR) pour ne pas sortir trop tôt sur une correction mineure.',
+    formule: 'Noise > 3.0 → TS = ATR × 1.2\nNoise > 2.0 → TS = ATR × 1.0\nNoise > 1.5 → TS = ATR × 0.8\nElse → TS = ATR × 0.6',
+    inputs: ['ATR', 'Noise Ratio'],
     output: {
       type: 'float',
-      range: '0.8 - 1.59',
-      unite: 'x SL'
+      range: '0.6 - 1.2',
+      unite: 'x ATR'
     },
-    exemple: 'Baseline=1.59, Whipsaw=30% → TS = 1.59 × 0.85 = 1.35x SL',
+    exemple: 'ATR=20, Noise=1.2 → TS = 20 × 0.6 = 12 points\nATR=20, Noise=2.5 → TS = 20 × 1.0 = 20 points',
     notes: [
-      'Whipsaw nul → TS = 1.59x',
-      'Whipsaw élevé → TS réduit (moins de traîne)',
-      'Réduit les faux déclenchements'
+      'Adaptatif selon le bruit',
+      'Plus le bruit est fort, plus le TS est large',
+      'Permet de laisser courir les gains sur les gros mouvements'
+    ]
+  },
+
+  sl_recovery: {
+    id: 'sl_recovery',
+    titre: 'SL Recovery (Mode Panique)',
+    categorieId: 'straddle',
+    definition: 'Stop Loss de secours en cas de mouvement violent inverse. Assure que le SL couvre au moins 3 fois l\'offset.',
+    explication_litterale: 'C\'est une sécurité supplémentaire. Parfois, le SL calculé normalement est trop proche si le marché fait un "gap" violent. Cette formule force le SL à être au moins 3 fois plus loin que l\'entrée (Offset). C\'est le "filet de sécurité" ultime.',
+    formule: 'SL_Recovery = max(SL, Offset × 3.0)',
+    inputs: ['Stop Loss', 'Offset'],
+    output: {
+      type: 'float',
+      range: '0.0 - ∞',
+      unite: 'points'
+    },
+    exemple: 'Offset=10, SL=20 → SL_Recovery = max(20, 30) = 30 points',
+    notes: [
+      'Sécurité anti-gap',
+      'Garantit un espace de respiration minimal',
+      'Activé surtout quand l\'Offset est très petit'
     ]
   },
 
@@ -414,20 +430,20 @@ export const formules: Record<string, Formule> = {
     id: 'timeout',
     titre: 'Timeout (Durée position)',
     categorieId: 'straddle',
-    definition: 'Durée maximale pour tenir la position. Inversement proportionnel à ATR (volatilité haute = décline vite).',
-    explication_litterale: 'Cette formule dit combien de minutes on peut tenir notre position. Si le marché est très volatil (beaucoup de mouvement), la volatilité va baisser vite, donc on ferme rapidement (18 minutes). Si le marché est calme (peu de mouvement), la volatilité va baisser lentement, donc on peut rester plus longtemps (32 minutes). C\'est logique: quand ça bouge beaucoup, ça se calme vite. Quand ça bouge peu, ça prend du temps.',
-    formule: 'ATR_norm = (ATR / 0.0008) capped at 1.0\nTimeout = 32 - (ATR_norm × 14)',
-    inputs: ['ATR moyen du quarter', 'Référence: 0.0008'],
+    definition: 'Durée maximale pour tenir la position. Fixé court pour le News Trading (Scalping).',
+    explication_litterale: 'Pour le trading d\'annonces économiques (News Trading), l\'impulsion est très rapide. Si le mouvement ne part pas tout de suite, il ne partira probablement pas. On ferme donc la position rapidement (3 minutes) pour libérer le capital et éviter de rester piégé dans un marché qui se range.',
+    formule: 'Timeout = 3 minutes (Fixe)',
+    inputs: ['Fixe'],
     output: {
       type: 'integer',
-      range: '18 - 32',
+      range: '3',
       unite: 'minutes'
     },
-    exemple: 'ATR=0.0004 (faible) → norm=0.5 → Timeout=32-(0.5×14)=25 min\nATR=0.0012 (élevé) → norm=1.0 → Timeout=32-(1.0×14)=18 min',
+    exemple: 'Toujours 3 minutes',
     notes: [
-      'Volatilité basse → timeout long (volatilité décline lentement)',
-      'Volatilité haute → timeout court (volatilité décline vite)',
-      'Range: 18-32 minutes pour Forex M1'
+      'Optimisé pour le scalping haute fréquence',
+      'Évite le "time decay" de l\'option implicite',
+      'Si pas de profit en 3 min → Exit'
     ]
   },
 
@@ -593,7 +609,7 @@ export const formules: Record<string, Formule> = {
     },
     exemple: 'Score brut = 78/100 (avant whipsaw)',
     notes: [
-      'Poids: emphasis sur volatilité et directionalité',
+      'Poids: emphasis on volatilité et directionalité',
       'Base pour ajustement whipsaw'
     ]
   },

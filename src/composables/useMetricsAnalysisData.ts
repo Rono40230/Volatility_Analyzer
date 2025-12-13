@@ -7,6 +7,7 @@ import {
   loadEntryWindowAnalysis,
   extractVolatilityDuration,
   createBestSlice,
+  getStitchedVolatilityProfile,
   type MovementQuality,
   type VolatilityDuration
 } from './useMetricsAnalysisData.helpers'
@@ -42,6 +43,13 @@ export function useMetricsAnalysisData() {
     const bestSliceStats = result.stats_15min.find(s => s.hour === bestHour && s.quarter === bestQuarter)
     if (!bestSliceStats) return
 
+    // Stitch profile for graph (T-5 to T+45)
+    const stitchedProfile = getStitchedVolatilityProfile(result.stats_15min, bestHour, bestQuarter)
+    const statsWithProfile = {
+      ...bestSliceStats,
+      volatility_profile: stitchedProfile
+    }
+
     // En mode archive, ne pas appeler les APIs de recalcul
     if (!isArchiveMode) {
       // Load movement quality first
@@ -60,7 +68,7 @@ export function useMetricsAnalysisData() {
     }
 
     // Create best slice with movement quality score
-    const bestSlice = createBestSlice(bestSliceStats, bestHour, bestQuarter, movementQualities.value?.score ?? 0)
+    const bestSlice = createBestSlice(statsWithProfile, bestHour, bestQuarter, movementQualities.value?.score ?? 0)
     sliceAnalyses.value = [bestSlice]
     tradingPlan.value = bestSlice.tradingPlan
 
@@ -84,6 +92,13 @@ export function useMetricsAnalysisData() {
     const selectedSliceStats = result.stats_15min.find(s => s.hour === selectedHour && s.quarter === selectedQuarter)
     if (!selectedSliceStats) return
 
+    // Stitch profile for graph (T-5 to T+45)
+    const stitchedProfile = getStitchedVolatilityProfile(result.stats_15min, selectedHour, selectedQuarter)
+    const statsWithProfile = {
+      ...selectedSliceStats,
+      volatility_profile: stitchedProfile
+    }
+
     // Load movement quality for selected quarter
     const { score: movementQualityScore, qualities } = await loadMovementQuality(
       result.symbol,
@@ -93,7 +108,7 @@ export function useMetricsAnalysisData() {
     movementQualities.value = qualities
 
     // Create slice for selected quarter
-    const selectedSlice = createBestSlice(selectedSliceStats, selectedHour, selectedQuarter, movementQualityScore)
+    const selectedSlice = createBestSlice(statsWithProfile, selectedHour, selectedQuarter, movementQualityScore)
     sliceAnalyses.value = [selectedSlice]
     tradingPlan.value = selectedSlice.tradingPlan
 
