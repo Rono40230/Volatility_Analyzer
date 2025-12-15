@@ -1,5 +1,7 @@
 // Helpers pour analyze_quarter_entry_timing_command.rs
-use crate::commands::volatility::minute_scoring::{score_metrics as score_metrics_fn, calculate_confidence as calculate_confidence_fn};
+use crate::commands::volatility::minute_scoring::{
+    calculer_confiance as calculate_confidence_fn, noter_metriques as score_metrics_fn,
+};
 use chrono::Timelike;
 use std::collections::HashMap;
 
@@ -20,10 +22,7 @@ pub fn group_candles_by_day(candles: &[crate::models::Candle]) -> Vec<Vec<crate:
 
     for candle in candles {
         let date_key = candle.datetime.format("%Y-%m-%d").to_string();
-        daily_map
-            .entry(date_key)
-            .or_default()
-            .push(candle.clone());
+        daily_map.entry(date_key).or_default().push(candle.clone());
     }
 
     daily_map.into_values().collect()
@@ -48,7 +47,7 @@ pub fn find_best_minute_in_quarter(daily_candles: &[crate::models::Candle]) -> R
             continue;
         }
 
-        let metrics = calculate_minute_metrics(&minute_candles)?;
+        let metrics = calculer_metriques_minute(&minute_candles)?;
         let score = score_metrics_fn(&metrics);
 
         if score > best_score {
@@ -61,7 +60,7 @@ pub fn find_best_minute_in_quarter(daily_candles: &[crate::models::Candle]) -> R
 }
 
 /// Calcule les métriques pour une minute spécifique
-pub fn calculate_minute_metrics(
+pub fn calculer_metriques_minute(
     candles: &[&crate::models::Candle],
 ) -> Result<MinuteMetrics, String> {
     if candles.is_empty() {
@@ -145,6 +144,6 @@ pub fn estimate_win_rate_for_minute(
 }
 
 /// Calcule le score de confiance (basé sur la consistance)
-pub fn calculate_confidence(offsets: &[u8], optimal: u8) -> f64 {
+pub fn calculer_confiance(offsets: &[u8], optimal: u8) -> f64 {
     calculate_confidence_fn(offsets, optimal)
 }

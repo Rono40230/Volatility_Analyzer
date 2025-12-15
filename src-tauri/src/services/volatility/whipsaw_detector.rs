@@ -1,8 +1,8 @@
 // services/volatility/whipsaw_detector.rs - Détection de fausses cassures (whipsaw)
 // CORRECTION PHASE 8: Simulation réaliste d'un Straddle
+use super::whipsaw_simulator::{simulate_straddle_trade, TradeResult};
 use crate::models::Candle;
 use tracing::{debug, info};
-use super::whipsaw_simulator::{simulate_straddle_trade, TradeResult};
 
 /// Calcule la fréquence des whipsaws de manière réaliste
 ///
@@ -11,7 +11,7 @@ use super::whipsaw_simulator::{simulate_straddle_trade, TradeResult};
 /// 2. Fenêtre : quarter optimal + 1 heure (60 candles M1)
 /// 3. Whipsaw = Buy + Sell triggers + au moins 1 SL hit
 /// 4. Compte win/loss réels avec TP/SL dynamiques
-pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> WhipsawAnalysis {
+pub fn calculer_frequence_whipsaw(candles: &[Candle], offset_pips: f64) -> WhipsawAnalysis {
     if candles.len() < 61 {
         // Besoin au moins 61 candles (1 min entry + 60 min test window)
         return WhipsawAnalysis::default();
@@ -27,7 +27,10 @@ pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> Whip
     // Grouper par jour
     for candle in candles.iter() {
         let day_key = candle.datetime.format("%Y-%m-%d").to_string();
-        daily_groups.entry(day_key).or_insert_with(Vec::new).push(candle);
+        daily_groups
+            .entry(day_key)
+            .or_insert_with(Vec::new)
+            .push(candle);
     }
 
     let mut win_count = 0;
@@ -62,13 +65,8 @@ pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> Whip
         let tp_pips = atr_estimate * 1.0; // TP = ATR * 1.0
 
         // Simuler le Straddle
-        let result = simulate_straddle_trade(
-            entry_price,
-            offset_pips,
-            sl_pips,
-            tp_pips,
-            test_window,
-        );
+        let result =
+            simulate_straddle_trade(entry_price, offset_pips, sl_pips, tp_pips, test_window);
 
         debug!(
             "📊 {}: Trade simulation - entry={:.4}, offset={}, SL={}, TP={}, result={:?}",
@@ -118,13 +116,13 @@ pub fn calculate_whipsaw_frequency(candles: &[Candle], offset_pips: f64) -> Whip
         offset_pips,
         candles_analyzed: candles.len(),
         whipsaws,
-        risk_level: calculate_risk_level(whipsaw_frequency),
+        risk_level: calculer_niveau_risque(whipsaw_frequency),
     }
 }
 
 /// Évalue le niveau de risque basé sur la fréquence de whipsaw (réaliste)
 /// CORRECTION: Seuils ajustés pour simulation réaliste (pas 1425 tests/jour)
-fn calculate_risk_level(whipsaw_frequency: f64) -> WhipsawRiskLevel {
+fn calculer_niveau_risque(whipsaw_frequency: f64) -> WhipsawRiskLevel {
     if whipsaw_frequency < 0.05 {
         WhipsawRiskLevel::VeryLow // < 5%
     } else if whipsaw_frequency < 0.15 {
@@ -240,14 +238,14 @@ mod tests {
         for i in 0..20 {
             candles.push(create_test_candle(i, 1.0875, 1.0835));
         }
-        let result = calculate_whipsaw_frequency(&candles, 50.0);
+        let result = calculer_frequence_whipsaw(&candles, 50.0);
         assert!(result.total_trades > 0);
     }
 
     #[test]
     fn test_whipsaw_empty_data() {
         let candles = vec![];
-        let result = calculate_whipsaw_frequency(&candles, 50.0);
+        let result = calculer_frequence_whipsaw(&candles, 50.0);
         assert_eq!(result.total_trades, 0);
     }
 }

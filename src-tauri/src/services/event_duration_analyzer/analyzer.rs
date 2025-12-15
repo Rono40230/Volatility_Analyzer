@@ -27,20 +27,20 @@ impl<'a> EventDurationAnalyzer<'a> {
         info!("Analyzing event duration for event at {}", self.event_time);
 
         // 1. Calculer ATR de référence (30min avant événement)
-        let baseline_atr = self.calculate_baseline_atr()?;
+        let baseline_atr = self.calculer_atr_reference()?;
         debug!("Baseline ATR (30min before): {:.6}", baseline_atr);
 
         // 2. Trouver index de l'événement
-        let event_index = self.find_event_index()?;
+        let event_index = self.trouver_index_evenement()?;
 
         // 3. Mesurer durée du pic de volatilité
-        let peak_duration = self.measure_peak_duration(event_index, baseline_atr)?;
+        let peak_duration = self.mesurer_duree_pic(event_index, baseline_atr)?;
 
         // 4. Mesurer temps de retour à la normale
-        let return_duration = self.measure_return_to_normal(event_index, baseline_atr)?;
+        let return_duration = self.mesurer_retour_normale(event_index, baseline_atr)?;
 
         // 5. Trouver moment du pic maximum
-        let peak_time = self.find_peak_time(event_index, 120)?; // 2h max
+        let peak_time = self.trouver_temps_pic(event_index, 120)?; // 2h max
 
         info!(
             "Event duration analysis complete: peak={}min, return={}min",
@@ -56,7 +56,7 @@ impl<'a> EventDurationAnalyzer<'a> {
     }
 
     /// Calcule l'ATR de référence 30min avant l'événement
-    pub fn calculate_baseline_atr(&self) -> Result<f64> {
+    pub fn calculer_atr_reference(&self) -> Result<f64> {
         let thirty_min_before = self.event_time - chrono::Duration::minutes(30);
 
         let candles_before: Vec<&Candle> = self
@@ -74,14 +74,14 @@ impl<'a> EventDurationAnalyzer<'a> {
         let candles_vec: Vec<Candle> = candles_before.iter().map(|c| (*c).clone()).collect();
 
         let calc = MetricsCalculator::new(&candles_vec);
-        let atrs = calc.calculate_atr(14)?;
+        let atrs = calc.calculer_atr(14)?;
 
         let mean_atr = atrs.iter().sum::<f64>() / atrs.len() as f64;
         Ok(mean_atr)
     }
 
     /// Trouve l'index de la bougie correspondant à l'événement
-    pub fn find_event_index(&self) -> Result<usize> {
+    pub fn trouver_index_evenement(&self) -> Result<usize> {
         self.candles
             .iter()
             .position(|c| c.datetime >= self.event_time)
@@ -91,7 +91,7 @@ impl<'a> EventDurationAnalyzer<'a> {
     }
 
     /// Mesure la durée du pic de volatilité (ATR > baseline * 1.5)
-    pub fn measure_peak_duration(&self, start_index: usize, baseline_atr: f64) -> Result<i32> {
+    pub fn mesurer_duree_pic(&self, start_index: usize, baseline_atr: f64) -> Result<i32> {
         let threshold = baseline_atr * 1.5; // 150% de l'ATR normal
         let max_window = 180; // 3h max
 
@@ -106,7 +106,7 @@ impl<'a> EventDurationAnalyzer<'a> {
             // Calculer ATR instantané (fenêtre glissante de 14 bougies)
             let window = &self.candles[i..i + 14];
             let calc = MetricsCalculator::new(window);
-            let atrs = calc.calculate_atr(14).unwrap_or_default();
+            let atrs = calc.calculer_atr(14).unwrap_or_default();
 
             if atrs.is_empty() {
                 continue;
@@ -130,7 +130,7 @@ impl<'a> EventDurationAnalyzer<'a> {
     }
 
     /// Mesure le temps de retour à ATR normal (< baseline * 1.1)
-    pub fn measure_return_to_normal(&self, start_index: usize, baseline_atr: f64) -> Result<i32> {
+    pub fn mesurer_retour_normale(&self, start_index: usize, baseline_atr: f64) -> Result<i32> {
         let threshold = baseline_atr * 1.1; // 110% de l'ATR normal
         let max_window = 240; // 4h max
 
@@ -141,7 +141,7 @@ impl<'a> EventDurationAnalyzer<'a> {
 
             let window = &self.candles[i..i + 14];
             let calc = MetricsCalculator::new(window);
-            let atrs = calc.calculate_atr(14).unwrap_or_default();
+            let atrs = calc.calculer_atr(14).unwrap_or_default();
 
             if let Some(&current_atr) = atrs.last() {
                 if current_atr < threshold {
@@ -154,7 +154,7 @@ impl<'a> EventDurationAnalyzer<'a> {
     }
 
     /// Trouve le moment du pic maximum ATR après l'événement
-    pub fn find_peak_time(&self, start_index: usize, max_minutes: usize) -> Result<i64> {
+    pub fn trouver_temps_pic(&self, start_index: usize, max_minutes: usize) -> Result<i64> {
         let mut max_atr = 0.0;
         let mut peak_minute = 0;
 
@@ -165,7 +165,7 @@ impl<'a> EventDurationAnalyzer<'a> {
 
             let window = &self.candles[i..i + 14];
             let calc = MetricsCalculator::new(window);
-            let atrs = calc.calculate_atr(14).unwrap_or_default();
+            let atrs = calc.calculer_atr(14).unwrap_or_default();
 
             if let Some(&current_atr) = atrs.last() {
                 if current_atr > max_atr {

@@ -3,7 +3,7 @@ use rusqlite::Connection;
 use tauri::State;
 
 use super::heatmap_helpers::{
-    calculate_avg_volatility_for_event_pair_optimized, get_event_types, HeatmapData,
+    calculer_volatilite_moyenne_evenement_paire_optimise, get_event_types, HeatmapData,
 };
 use crate::commands::candle_index_commands::CandleIndexState;
 
@@ -138,12 +138,12 @@ pub async fn get_correlation_heatmap(
 
     for pair in &pairs {
         for event_type in &mut event_types {
-            let vol_result = calculate_avg_volatility_for_event_pair_optimized(
+            let vol_result = calculer_volatilite_moyenne_evenement_paire_optimise(
                 &conn,
                 &event_type.name,
-                pair,
+                &pair,
                 calendar_id,
-                candle_index,
+                &candle_index,
             )?;
 
             let avg_vol_rounded = if vol_result.has_data {

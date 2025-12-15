@@ -17,7 +17,7 @@ impl<'a> MetricsCalculator<'a> {
     }
 
     /// Calcule l'ATR (Average True Range) sur une période donnée
-    pub fn calculate_atr(&self, period: usize) -> Result<Vec<f64>> {
+    pub fn calculer_atr(&self, period: usize) -> Result<Vec<f64>> {
         if self.candles.len() < period {
             return Err(VolatilityError::InsufficientData(format!(
                 "Need at least {} candles for ATR calculation, got {}",
@@ -63,7 +63,7 @@ impl<'a> MetricsCalculator<'a> {
     }
 
     /// Calcule la volatilité en pourcentage (écart-type des rendements)
-    pub fn calculate_volatility(&self, period: usize) -> Result<Vec<f64>> {
+    pub fn calculer_volatilite(&self, period: usize) -> Result<Vec<f64>> {
         if self.candles.len() < period + 1 {
             return Err(VolatilityError::InsufficientData(format!(
                 "Need at least {} candles for volatility calculation",
@@ -98,17 +98,17 @@ impl<'a> MetricsCalculator<'a> {
     }
 
     /// Calcule le Body Range pour toutes les bougies
-    pub fn calculate_body_ranges(&self) -> Vec<f64> {
+    pub fn calculer_ranges_corps(&self) -> Vec<f64> {
         self.candles.iter().map(|c| c.body_range()).collect()
     }
 
     /// Calcule le Shadow Ratio pour toutes les bougies
-    pub fn calculate_shadow_ratios(&self) -> Vec<f64> {
+    pub fn calculer_ratios_ombres(&self) -> Vec<f64> {
         self.candles.iter().map(|c| c.shadow_ratio()).collect()
     }
 
     /// Calcule le Tick Quality (variation prix / volume)
-    pub fn calculate_tick_quality(&self) -> Vec<f64> {
+    pub fn calculer_qualite_tick(&self) -> Vec<f64> {
         self.candles
             .iter()
             .map(|c| {
@@ -120,7 +120,7 @@ impl<'a> MetricsCalculator<'a> {
     }
 
     /// Calcule le Noise Ratio (True Range / mouvement net)
-    pub fn calculate_noise_ratio(&self) -> Vec<f64> {
+    pub fn calculer_ratio_bruit(&self) -> Vec<f64> {
         let mut noise_ratios = Vec::new();
 
         for i in 0..self.candles.len() {
@@ -150,8 +150,8 @@ impl<'a> MetricsCalculator<'a> {
     }
 
     /// Calcule la distribution du True Range (détecte les breakouts)
-    pub fn calculate_true_range_distribution(&self) -> Result<TrueRangeDistribution> {
-        TrueRangeDistribution::calculate(self.candles)
+    pub fn calculer_distribution_true_range(&self) -> Result<TrueRangeDistribution> {
+        TrueRangeDistribution::calculer(self.candles)
     }
 
     /// Retourne le nombre de bougies

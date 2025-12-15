@@ -164,7 +164,9 @@ pub fn compute_golden_hours(results: &[WeightedArchiveData]) -> Vec<GoldenHour> 
     golden_hours
 }
 
-pub fn compute_tradable_events(archives: &[crate::models::Archive]) -> Vec<crate::models::TradableEventType> {
+pub fn compute_tradable_events(
+    archives: &[crate::models::Archive],
+) -> Vec<crate::models::TradableEventType> {
     global_analyzer_event_analysis::compute_tradable_events(archives)
 }
 

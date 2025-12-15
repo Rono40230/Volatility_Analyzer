@@ -37,7 +37,7 @@ pub fn get_unique_symbols(candles: &[Candle]) -> Vec<String> {
 }
 
 #[tauri::command]
-pub async fn calculate_event_metrics(
+pub async fn calculer_metriques_evenement(
     params: CalculateMetricsParams,
     candles_state: State<'_, CandlesState>,
 ) -> Result<MetricsCommandResult, String> {

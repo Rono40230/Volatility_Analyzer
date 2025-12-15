@@ -21,7 +21,7 @@ impl<'a> Stats15MinCalculator<'a> {
 
     /// Calcule les statistiques pour chaque tranche de 15 minutes (en heure de Paris, UTC+1)
     /// Les candles sont en UTC, on les groupe par 15min de Paris pour une analyse de scalping fine
-    pub(super) fn calculate(&self) -> Result<Vec<Stats15Min>> {
+    pub(super) fn calculer(&self) -> Result<Vec<Stats15Min>> {
         debug!("Calculating 15-minute statistics (Paris time)");
 
         const PARIS_OFFSET_HOURS: i32 = 1; // UTC+1 (hiver). Amélioration future: gérer DST dynamiquement en été
@@ -52,7 +52,7 @@ impl<'a> Stats15MinCalculator<'a> {
         for hour in 0..24 {
             for quarter in 0..4 {
                 if let Some(candles) = groups_15min.get(&(hour, quarter)) {
-                    let hour_stats = self.calculate_for_slice(hour, quarter, candles)?;
+                    let hour_stats = self.calculer_pour_tranche(hour, quarter, candles)?;
                     stats.push(hour_stats);
                 } else {
                     // Tranche sans données : stats vides
@@ -92,7 +92,7 @@ impl<'a> Stats15MinCalculator<'a> {
     }
 
     /// Calcule les statistiques pour une tranche de 15 minutes spécifique
-    fn calculate_for_slice(
+    fn calculer_pour_tranche(
         &self,
         hour: u8,
         quarter: u8,
@@ -132,13 +132,13 @@ impl<'a> Stats15MinCalculator<'a> {
         let calc = MetricsCalculator::new(&owned_candles);
 
         // Calcule les métriques (avec gestion d'erreur si pas assez de données)
-        let atr_values = calc.calculate_atr(14).unwrap_or_default();
-        let volatility_values = calc.calculate_volatility(20).unwrap_or_default();
-        let body_ranges = calc.calculate_body_ranges();
-        let shadow_ratios = calc.calculate_shadow_ratios();
-        let tick_qualities = calc.calculate_tick_quality();
-        let noise_ratios = calc.calculate_noise_ratio();
-        let tr_dist = calc.calculate_true_range_distribution()?;
+        let atr_values = calc.calculer_atr(14).unwrap_or_default();
+        let volatility_values = calc.calculer_volatilite(20).unwrap_or_default();
+        let body_ranges = calc.calculer_ranges_corps();
+        let shadow_ratios = calc.calculer_ratios_ombres();
+        let tick_qualities = calc.calculer_qualite_tick();
+        let noise_ratios = calc.calculer_ratio_bruit();
+        let tr_dist = calc.calculer_distribution_true_range()?;
 
         // Calcule les moyennes
         let atr_mean = atr_values.last().copied().unwrap_or(0.0); // Dernière valeur ATR lissée (Wilder's)
@@ -162,7 +162,7 @@ impl<'a> Stats15MinCalculator<'a> {
 
         // TÂCHE 4: Analyse réelle de décroissance de volatilité
         let (peak_duration, half_life, trade_exp) =
-            match VolatilityDurationAnalyzer::analyze_from_candles(hour, quarter, candles) {
+            match VolatilityDurationAnalyzer::analyser_depuis_bougies(hour, quarter, candles) {
                 Ok(vd) => {
                     debug!(
                         "✅ TÂCHE 4 OK: {}:{} peak={} half_life={} trade_exp={}",
@@ -184,14 +184,14 @@ impl<'a> Stats15MinCalculator<'a> {
                 }
             };
 
-                // Calcul des paramètres Straddle (Harmonisation Bidi V2)
-        let symbol = candles.first().map(|c| c.symbol.as_str()).unwrap_or("EURUSD");
+        // Calcul des paramètres Straddle (Harmonisation Bidi V2)
+        let symbol = candles
+            .first()
+            .map(|c| c.symbol.as_str())
+            .unwrap_or("EURUSD");
         let point_value = get_point_value(symbol);
-        let straddle_params = StraddleParameterService::calculate_parameters(
-            atr_mean,
-            noise_ratio_mean,
-            point_value,
-        );
+        let straddle_params =
+            StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, point_value);
 
         // Calcul du profil de volatilité minute par minute (0-14) pour le graphique
         let mut minute_ranges: Vec<Vec<f64>> = vec![Vec::new(); 15];

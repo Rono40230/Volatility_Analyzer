@@ -105,14 +105,17 @@ impl GlobalAnalyzer {
             }
 
             if let Some(data) = current_analyzable_data {
-                let created_at_dt = chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
-                    .unwrap_or_else(|_| {
-                        // Fallback: utiliser l'époque Unix (1970-01-01)
-                        chrono::NaiveDateTime::new(
-                            chrono::NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch date is valid"),
-                            chrono::NaiveTime::from_hms_opt(0, 0, 0).expect("epoch time is valid")
-                        )
-                    });
+                let created_at_dt =
+                    chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
+                        .unwrap_or_else(|_| {
+                            // Fallback: utiliser l'époque Unix (1970-01-01)
+                            chrono::NaiveDateTime::new(
+                                chrono::NaiveDate::from_ymd_opt(1970, 1, 1)
+                                    .expect("epoch date is valid"),
+                                chrono::NaiveTime::from_hms_opt(0, 0, 0)
+                                    .expect("epoch time is valid"),
+                            )
+                        });
                 let weight = calculate_temporal_weight(created_at_dt);
                 info!(
                     "Archive {} lue avec succès: {} (poids: {:.2})",
@@ -136,14 +139,15 @@ impl GlobalAnalyzer {
         start_date: Option<&str>,
         end_date: Option<&str>,
     ) -> bool {
-        let archive_dt = chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
-            .unwrap_or_else(|_| {
-                // Fallback: utiliser l'époque Unix (1970-01-01)
-                chrono::NaiveDateTime::new(
-                    chrono::NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch date is valid"),
-                    chrono::NaiveTime::from_hms_opt(0, 0, 0).expect("epoch time is valid")
-                )
-            });
+        let archive_dt =
+            chrono::NaiveDateTime::parse_from_str(&archive.created_at, "%Y-%m-%d %H:%M:%S")
+                .unwrap_or_else(|_| {
+                    // Fallback: utiliser l'époque Unix (1970-01-01)
+                    chrono::NaiveDateTime::new(
+                        chrono::NaiveDate::from_ymd_opt(1970, 1, 1).expect("epoch date is valid"),
+                        chrono::NaiveTime::from_hms_opt(0, 0, 0).expect("epoch time is valid"),
+                    )
+                });
         if let Some(start) = start_date {
             if let Ok(start_dt) = chrono::NaiveDate::parse_from_str(start, "%Y-%m-%d") {
                 let start_datetime = start_dt.and_hms_opt(0, 0, 0).unwrap_or_default();

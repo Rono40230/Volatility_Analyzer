@@ -13,9 +13,9 @@ pub mod global_analysis;
 pub mod hourly_stats;
 pub mod hourly_stats_thresholds;
 pub mod stats_15min;
+pub mod straddle_parameters;
 pub mod trading_recommendation;
 pub mod volatility_duration;
-pub mod straddle_parameters;
 
 // Re-exports pour faciliter les imports
 pub use analysis_result::{AnalysisResult, CorrelatedEvent, GlobalMetrics};
@@ -29,6 +29,6 @@ pub use event_movement_quality::EventMovementQuality;
 pub use global_analysis::*;
 pub use hourly_stats::{EventInHour, HourlyStats};
 pub use stats_15min::Stats15Min;
+pub use straddle_parameters::StraddleParameters;
 pub use trading_recommendation::{RiskLevel, TradingRecommendation};
 pub use volatility_duration::VolatilityDuration;
-pub use straddle_parameters::StraddleParameters;

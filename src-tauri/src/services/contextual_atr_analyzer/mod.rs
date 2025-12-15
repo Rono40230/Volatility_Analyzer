@@ -1,8 +1,8 @@
 mod helpers;
 
 pub use helpers::{
-    calculate_baseline_atr, calculate_post_event_atr, classify_volatility, find_max_atr_spike,
-    recommend_multipliers, ContextualAtrMetrics, VolatilityLevel,
+    calculer_atr_reference, calculer_atr_post_evenement, classifier_volatilite, trouver_pic_atr_max,
+    recommander_multiplicateurs, ContextualAtrMetrics, VolatilityLevel,
 };
 
 use crate::models::{Candle, Result};
@@ -29,8 +29,8 @@ impl<'a> ContextualAtrAnalyzer<'a> {
     pub fn analyze(&self, atr_period: usize) -> Result<ContextualAtrMetrics> {
         info!("Analyzing contextual ATR for event at {}", self.event_time);
 
-        let atr_before = calculate_baseline_atr(self.candles, self.event_time, atr_period)?;
-        let atr_after = calculate_post_event_atr(self.candles, self.event_time, atr_period)?;
+        let atr_before = calculer_atr_reference(self.candles, self.event_time, atr_period)?;
+        let atr_after = calculer_atr_post_evenement(self.candles, self.event_time, atr_period)?;
 
         let atr_ratio = if atr_before > 0.0 {
             atr_after / atr_before
@@ -39,9 +39,9 @@ impl<'a> ContextualAtrAnalyzer<'a> {
         };
 
         let (max_spike, minutes_to_peak) =
-            find_max_atr_spike(self.candles, self.event_time, atr_period)?;
-        let volatility_level = classify_volatility(self.candles, atr_before);
-        let (sl_mult, tp_mult) = recommend_multipliers(atr_ratio, volatility_level.clone());
+            trouver_pic_atr_max(self.candles, self.event_time, atr_period)?;
+        let volatility_level = classifier_volatilite(self.candles, atr_before);
+        let (sl_mult, tp_mult) = recommander_multiplicateurs(atr_ratio, volatility_level.clone());
 
         info!(
             "ATR ratio: {:.2}x, Recommended SL: {:.1}x, TP: {:.1}x",

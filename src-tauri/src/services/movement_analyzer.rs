@@ -10,7 +10,7 @@ mod calculations {
     use crate::models::{Candle, VolatilityError};
 
     /// Calcule l'ATR (Average True Range) sur une série de candles
-    pub fn calculate_atr(candles: &[Candle]) -> Result<f64, VolatilityError> {
+    pub fn calculer_atr(candles: &[Candle]) -> Result<f64, VolatilityError> {
         if candles.len() < 2 {
             return Err(VolatilityError::InsufficientData(
                 "Besoin d'au moins 2 candles pour ATR".to_string(),
@@ -36,7 +36,7 @@ mod calculations {
     }
 
     /// Analyse les mouvements post-événement
-    pub fn analyze_post_event_movement(
+    pub fn analyser_mouvement_post_evenement(
         post_event_candles: &[Candle],
         pre_event_atr: f64,
         directional_threshold_atr_ratio: f64,
@@ -120,7 +120,7 @@ mod calculations {
     }
 
     /// Calcule le score de qualité combiné (0-10)
-    pub fn calculate_quality_score(
+    pub fn calculer_score_qualite(
         directional_move_rate: f64,
         success_rate: f64,
         whipsaw_rate: f64,
@@ -134,7 +134,7 @@ mod calculations {
     }
 }
 
-use calculations::{analyze_post_event_movement, calculate_atr, calculate_quality_score};
+use calculations::{analyser_mouvement_post_evenement, calculer_atr, calculer_score_qualite};
 
 /// Analyseur de qualité des mouvements d'événements économiques
 pub struct MovementAnalyzer;
@@ -176,7 +176,7 @@ impl MovementAnalyzer {
         }
 
         let pre_event_atr =
-            calculate_atr(&event_candles[..event_candles.len() / 2]).map_err(|_| {
+            calculer_atr(&event_candles[..event_candles.len() / 2]).map_err(|_| {
                 VolatilityError::MetricCalculationError(
                     "Impossible de calculer ATR pré-événement".to_string(),
                 )
@@ -186,7 +186,7 @@ impl MovementAnalyzer {
         let post_event_candles = &event_candles[post_event_start..];
 
         // Calculer les métriques de mouvement
-        let (directional_move_rate, avg_pips_moved, whipsaw_rate) = analyze_post_event_movement(
+        let (directional_move_rate, avg_pips_moved, whipsaw_rate) = analyser_mouvement_post_evenement(
             post_event_candles,
             pre_event_atr,
             config.directional_threshold_atr_ratio,
@@ -195,7 +195,7 @@ impl MovementAnalyzer {
 
         let success_rate = 1.0 - whipsaw_rate;
         let quality_score =
-            calculate_quality_score(directional_move_rate, success_rate, whipsaw_rate);
+            calculer_score_qualite(directional_move_rate, success_rate, whipsaw_rate);
 
         Ok(EventMovementQuality::new(
             symbol.to_string(),

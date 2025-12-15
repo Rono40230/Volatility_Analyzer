@@ -2,9 +2,7 @@
 // Simule une stratégie Straddle sur l'historique complet d'un créneau
 
 use super::straddle_adjustments::AdjustedMetrics;
-use super::straddle_simulator_helpers::{
-    calculate_atr_mean, calculate_risk_level,
-};
+use super::straddle_simulator_helpers::{calculer_atr_moyen, calculate_risk_level};
 use crate::models::Candle;
 use crate::services::pair_data::symbol_properties::normalize_to_pips;
 
@@ -88,7 +86,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     let offset_optimal_pips = normalize_to_pips(offset_optimal, symbol).ceil();
 
     // === CALCUL DE L'ATR (VOLATILITÉ) POUR DÉTERMINER LE TIMEOUT ===
-    let atr_mean = calculate_atr_mean(candles);
+    let atr_mean = calculer_atr_moyen(candles);
 
     // === SIMULATION DES TRADES STRADDLE (AVEC DÉTECTION WHIPSAW) ===
     let mut total_trades = 0;
@@ -96,7 +94,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     let mut losses = 0;
     let mut whipsaws = 0;
     let mut whipsaw_details_vec: Vec<WhipsawDetail> = Vec::new();
-    
+
     let marge = offset_optimal;
     // Ratio TP:SL de 2:1 (Standard Straddle)
     // SL = Marge (l'autre côté du straddle)
@@ -111,8 +109,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
         // État du trade
         let mut triggered_side: Option<&str> = None; // "BUY" ou "SELL"
-        let mut trade_result: Option<&str> = None;   // "WIN", "LOSS", "WHIPSAW"
-        
+        let mut trade_result: Option<&str> = None; // "WIN", "LOSS", "WHIPSAW"
+
         let mut buy_trigger_idx = 0;
         let mut sell_trigger_idx = 0;
 
@@ -122,7 +120,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
         for j in (i + 1)..end_idx {
             let current = &candles[j];
-            
+
             if triggered_side.is_none() {
                 // Pas encore déclenché, on surveille les deux bornes
                 if current.high >= buy_stop && current.low <= sell_stop {
@@ -175,7 +173,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                             trade_result = Some("WIN");
                             break;
                         }
-                    },
+                    }
                     Some("SELL") => {
                         // SL = Buy Stop (Whipsaw)
                         if current.high >= buy_stop {
@@ -188,7 +186,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                             trade_result = Some("WIN");
                             break;
                         }
-                    },
+                    }
                     _ => break, // Should not happen
                 }
             }
@@ -210,7 +208,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                         buy_trigger_index: buy_trigger_idx,
                         sell_trigger_index: sell_trigger_idx,
                     });
-                },
+                }
                 _ => losses += 1, // LOSS (Time out ou autre)
             }
         } else if triggered_side.is_some() {

@@ -94,11 +94,11 @@ fn calculate_metrics_from_candles(
         } else {
             candle.close
         };
-        
+
         let tr = (candle.high - candle.low)
             .max((candle.high - close_prev).abs())
             .max((candle.low - close_prev).abs());
-        
+
         atr_values.push(tr);
         if tr > atr_max {
             atr_max = tr;
@@ -143,7 +143,7 @@ fn calculate_metrics_from_candles(
     } else {
         0.0
     };
-    
+
     let range_mean = range_sum / count as f64;
     let body_range_mean = body_range_sum / count as f64;
     let noise_ratio_mean = noise_ratio_sum / count as f64;

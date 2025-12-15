@@ -7,8 +7,8 @@ mod models;
 mod schema;
 mod services;
 
-use commands::*;
 use commands::retrospective_analysis::analyze_volatility_profile;
+use commands::*;
 use std::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -153,9 +153,9 @@ pub fn run() {
             analyze_symbol,
             get_hourly_stats,
             get_best_hours,
-            calculate_offset_optimal,
-            calculate_win_rate,
-            calculate_whipsaw_freq,
+            calculer_offset_optimal,
+            calculer_taux_reussite,
+            calculer_frequence_whipsaw,
             analyze_slice_metrics, // NEW: Analyse métriques d'un créneau 15min
             analyze_straddle_metrics, // NEW: Analyse complète avec VRAIES données
             analyze_volatility_duration_for_slice, // NEW: Durée de volatilité réelle
@@ -197,7 +197,7 @@ pub fn run() {
             get_selected_calendar_file,
             set_selected_calendar_file,
             // Event metrics commands (Phase 1 Roadmap)
-            calculate_event_metrics,
+            calculer_metriques_evenement,
             load_candles_for_metrics,
             get_available_symbols,
             clear_candles,

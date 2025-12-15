@@ -1,7 +1,7 @@
 mod calculator;
 mod candles;
 
-pub use calculator::calculate_event_metrics;
+pub use calculator::calculer_metriques_evenement;
 pub use candles::{clear_candles, get_available_symbols, load_candles_for_metrics};
 
 use crate::models::Candle;

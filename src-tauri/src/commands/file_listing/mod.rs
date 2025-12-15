@@ -4,7 +4,7 @@ pub use deletion::{delete_calendar_file, delete_pair_files};
 pub use types::{CalendarFileInfo, PairFileInfo};
 
 use crate::services::pair_data_stats::{
-    calculate_pair_summary, count_csv_lines, extract_date_range_from_path, PairDataSummary,
+    calculer_resume_paire, count_csv_lines, extract_date_range_from_path, PairDataSummary,
 };
 use chrono::{DateTime, Utc};
 use std::fs;
@@ -172,5 +172,5 @@ pub async fn get_pair_data_summary() -> Result<PairDataSummary, String> {
         })
         .collect();
 
-    Ok(calculate_pair_summary(stats_files))
+    Ok(calculer_resume_paire(stats_files))
 }

@@ -42,7 +42,7 @@ pub use economic_commands::{
 };
 pub use entry_window_analysis_commands::analyze_entry_window;
 pub use event_metrics::{
-    calculate_event_metrics, clear_candles, get_available_symbols, load_candles_for_metrics,
+    calculer_metriques_evenement, clear_candles, get_available_symbols, load_candles_for_metrics,
 };
 pub use export_pdf_commands::exporter_formules_pdf;
 pub use file_listing::*;
@@ -59,8 +59,8 @@ pub use retrospective_analysis::{analyze_decay_profile, analyze_peak_delay, get_
 pub use session_commands::*;
 pub use volatility::{
     analyze_quarter_entry_timing, analyze_slice_metrics, analyze_straddle_metrics, analyze_symbol,
-    analyze_volatility_duration_for_slice, calculate_offset_optimal, calculate_whipsaw_freq,
-    calculate_win_rate, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
+    analyze_volatility_duration_for_slice, calculer_offset_optimal, calculer_frequence_whipsaw,
+    calculer_taux_reussite, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
     load_candles_for_hour, load_symbols, ping,
 };
 pub use volatility_duration_commands::analyze_volatility_duration;

@@ -1,9 +1,10 @@
 // commands/volatility/straddle_analysis.rs - Commands pour calculs Straddle
 use crate::models::Candle;
 use crate::services::pair_data::get_point_value;
-use crate::services::straddle_simulator_helpers::calculate_atr_mean;
+use crate::services::straddle_simulator_helpers::calculer_atr_moyen;
 use crate::services::volatility::{
-    calculate_whipsaw_frequency, simulate_straddle_win_rate,
+    calculer_frequence_whipsaw as service_calculer_frequence_whipsaw,
+    simuler_taux_reussite_straddle,
 };
 use crate::services::StraddleParameterService;
 use serde::{Deserialize, Serialize};
@@ -38,12 +39,12 @@ pub struct WhipsawResponse {
 
 /// Calcule l'offset optimal pour éviter 95% des fausses mèches
 #[command]
-pub fn calculate_offset_optimal(
+pub fn calculer_offset_optimal(
     candles: Vec<Candle>,
     _window: tauri::Window,
 ) -> Result<OptimalOffsetResponse, String> {
     tracing::info!(
-        "Command: calculate_offset_optimal for {} candles",
+        "Command: calculer_offset_optimal for {} candles",
         candles.len()
     );
 
@@ -60,31 +61,35 @@ pub fn calculate_offset_optimal(
     let point_value = get_point_value(symbol);
 
     // 2. Calculer les métriques nécessaires
-    let atr_mean = calculate_atr_mean(&candles);
-    
+    let atr_mean = calculer_atr_moyen(&candles);
+
     // Calcul du Noise Ratio moyen
     let noise_ratio_mean: f64 = if !candles.is_empty() {
-        let sum: f64 = candles.iter().map(|c| {
-            let range = c.high - c.low;
-            let body = (c.open - c.close).abs();
-            if body < point_value * 0.1 {
-                if range < point_value * 0.1 { 1.0 } else { 5.0 }
-            } else {
-                range / body
-            }
-        }).sum();
+        let sum: f64 = candles
+            .iter()
+            .map(|c| {
+                let range = c.high - c.low;
+                let body = (c.open - c.close).abs();
+                if body < point_value * 0.1 {
+                    if range < point_value * 0.1 {
+                        1.0
+                    } else {
+                        5.0
+                    }
+                } else {
+                    range / body
+                }
+            })
+            .sum();
         sum / candles.len() as f64
     } else {
         1.0
     };
 
     // 3. Utiliser le service unifié pour calculer l'offset
-    let params = StraddleParameterService::calculate_parameters(
-        atr_mean,
-        noise_ratio_mean,
-        point_value
-    );
-    
+    let params =
+        StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, point_value);
+
     let offset_pips = params.offset_pips;
 
     // Calculer aussi les stats détaillées (Percentile 95 des mèches)
@@ -119,18 +124,18 @@ pub fn calculate_offset_optimal(
 
 /// Simule le win rate pour un ensemble de candles
 #[command]
-pub fn calculate_win_rate(
+pub fn calculer_taux_reussite(
     candles: Vec<Candle>,
     offset_pips: f64,
     _window: tauri::Window,
 ) -> Result<WinRateResponse, String> {
     tracing::info!(
-        "Command: calculate_win_rate for {} candles with offset {}",
+        "Command: calculer_taux_reussite for {} candles with offset {}",
         candles.len(),
         offset_pips
     );
 
-    let result = simulate_straddle_win_rate(&candles, offset_pips);
+    let result = simuler_taux_reussite_straddle(&candles, offset_pips);
 
     Ok(WinRateResponse {
         total_trades: result.total_trades,
@@ -144,18 +149,18 @@ pub fn calculate_win_rate(
 
 /// Calcule la fréquence des whipsaws
 #[command]
-pub fn calculate_whipsaw_freq(
+pub fn calculer_frequence_whipsaw(
     candles: Vec<Candle>,
     offset_pips: f64,
     _window: tauri::Window,
 ) -> Result<WhipsawResponse, String> {
     tracing::info!(
-        "Command: calculate_whipsaw_freq for {} candles with offset {}",
+        "Command: calculer_frequence_whipsaw for {} candles with offset {}",
         candles.len(),
         offset_pips
     );
 
-    let analysis = calculate_whipsaw_frequency(&candles, offset_pips);
+    let analysis = service_calculer_frequence_whipsaw(&candles, offset_pips);
 
     Ok(WhipsawResponse {
         total_trades: analysis.total_trades,

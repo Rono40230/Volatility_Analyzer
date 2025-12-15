@@ -129,11 +129,11 @@ impl VolatilityAnalyzer {
 
         // 1. Calcule les statistiques par heure
         let calculator = HourlyStatsCalculator::new(&self.candles);
-        let mut hourly_stats = calculator.calculate()?;
+        let mut hourly_stats = calculator.calculer()?;
 
         // 1.5 Calcule les statistiques par tranche de 15 minutes (pour scalping)
         let calculator_15min = Stats15MinCalculator::new(&self.candles);
-        let mut stats_15min = calculator_15min.calculate()?;
+        let mut stats_15min = calculator_15min.calculer()?;
 
         let point_value = get_point_value(symbol);
 
@@ -189,12 +189,12 @@ impl VolatilityAnalyzer {
         // 2. Trouve le meilleur quarter
         let best_quarter = BestQuarterFinder::find_best_quarter(&stats_15min).unwrap_or((0, 0));
 
-        // 3. Calcule les métriques globales
+        // 2. Calcule les métriques globales
         let global_metrics =
-            MetricsAggregator::calculate_global_metrics(&hourly_stats, self.candles.len());
+            MetricsAggregator::calculer_metriques_globales(&hourly_stats, self.candles.len());
 
         // 4. Calcule le score de confiance
-        let confidence_score = MetricsAggregator::calculate_confidence_score(&global_metrics);
+        let confidence_score = MetricsAggregator::calculer_score_confiance(&global_metrics);
 
         // 5. Génère la recommandation
         let recommendation = TradingRecommendation::from_confidence(confidence_score);

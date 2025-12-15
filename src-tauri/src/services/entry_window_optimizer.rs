@@ -36,10 +36,7 @@ pub fn optimize_entry_window(candles: &[Candle], symbol: &str, quarter: u32) -> 
     let mut candles_by_day: HashMap<String, Vec<&Candle>> = HashMap::new();
     for candle in candles {
         let day_key = candle.datetime.date_naive().to_string();
-        candles_by_day
-            .entry(day_key)
-            .or_default()
-            .push(candle);
+        candles_by_day.entry(day_key).or_default().push(candle);
     }
 
     let start_minute_of_quarter = (quarter * 15) as i64;

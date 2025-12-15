@@ -39,12 +39,12 @@ impl AdjustedMetrics {
         // Logique: Plus whipsaw est élevé, plus le SL doit être AUGMENTÉ (plus d'espace contre le bruit)
         // Plus whipsaw est bas, plus le SL peut être RÉDUIT (conditions propres, peu de faux mouvements)
         let whipsaw_adjusted_ratio = match whipsaw_factor {
-            w if w > 0.50 => 3.5,  // Whipsaw 50%+ → ratio 3.5× (énorme SL)
-            w if w > 0.30 => 3.0,  // Whipsaw 30-50% → ratio 3.0×
-            w if w > 0.20 => 2.5,  // Whipsaw 20-30% → ratio 2.5×
-            w if w > 0.10 => 2.0,  // Whipsaw 10-20% → ratio 2.0×
-            w if w > 0.05 => 1.5,  // Whipsaw 5-10% → ratio 1.5×
-            _ => 1.2,              // Whipsaw <5% → ratio 1.2× (petit SL)
+            w if w > 0.50 => 3.5, // Whipsaw 50%+ → ratio 3.5× (énorme SL)
+            w if w > 0.30 => 3.0, // Whipsaw 30-50% → ratio 3.0×
+            w if w > 0.20 => 2.5, // Whipsaw 20-30% → ratio 2.5×
+            w if w > 0.10 => 2.0, // Whipsaw 10-20% → ratio 2.0×
+            w if w > 0.05 => 1.5, // Whipsaw 5-10% → ratio 1.5×
+            _ => 1.2,             // Whipsaw <5% → ratio 1.2× (petit SL)
         };
         // Arrondir à l'unité supérieure (pas de décimales pour les pips)
         let sl_adjusted_pips = (offset_optimal_pips * whipsaw_adjusted_ratio).ceil();
@@ -85,8 +85,8 @@ impl AdjustedMetrics {
     ) -> Self {
         // Whipsaw désactivé = pas de pondération
         // Retourner les valeurs brutes (sans modification)
-        
-        let win_rate_adjusted = 0.0;  // Pas de win rate
+
+        let win_rate_adjusted = 0.0; // Pas de win rate
 
         // SL brut = offset sans pondération
         let sl_adjusted_pips = offset_optimal_pips;

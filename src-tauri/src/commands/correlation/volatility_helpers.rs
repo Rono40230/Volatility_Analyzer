@@ -51,7 +51,7 @@ pub fn calculer_volatilites_optimise(
 
     let mut event_volatility_sum = 0.0;
     let mut event_count = 0;
-    
+
     let mut candles_before = Vec::new();
     let mut candles_after = Vec::new();
 
@@ -60,7 +60,7 @@ pub fn calculer_volatilites_optimise(
             let pips = (candle.high - candle.low) / pip_value; // ✅ CORRECTION: division au lieu de multiplication
             event_volatility_sum += pips;
             event_count += 1;
-            
+
             if candle.datetime < event_dt {
                 candles_before.push(candle.clone());
             } else {
@@ -68,9 +68,10 @@ pub fn calculer_volatilites_optimise(
             }
         }
     }
-    
+
     // Calcul du Straddle Score
-    let score_metrics = StraddleScoreCalculator::calculate(&candles_before, &candles_after, pip_value);
+    let score_metrics =
+        StraddleScoreCalculator::calculer(&candles_before, &candles_after, pip_value);
 
     // OPTIMISATION 2: Récupérer candles pour la BASELINE
     // Utiliser la méthode spécialisée du CandleIndex qui filtre par:
@@ -114,7 +115,7 @@ pub fn calculer_volatilites_optimise(
 /// NOTE: Cette fonction est laissée disponible pour optimisations futures.
 /// Elle n'est pas actuellement appelée mais reste utile en tant qu'API public pour les clients.
 #[allow(dead_code)]
-pub fn calculate_batch_volatilities_optimized(
+pub fn calculer_volatilites_lot_optimise(
     candle_index: &CandleIndex,
     pair_symbol: &str,
     event_datetimes: &[NaiveDateTime],

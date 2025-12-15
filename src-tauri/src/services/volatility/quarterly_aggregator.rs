@@ -161,7 +161,9 @@ impl QuarterlyAggregator {
                             profile
                                 .iter()
                                 .enumerate()
-                                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                                .max_by(|(_, a), (_, b)| {
+                                    a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+                                })
                                 .map(|(index, _)| index as u8)
                         });
 

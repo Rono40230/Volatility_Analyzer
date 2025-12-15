@@ -45,7 +45,7 @@ impl<'a> EventMetricsAggregator<'a> {
         );
 
         let win_rate_calculator = WinRateCalculator::new(self.candles, self.event_time);
-        let win_rate_metrics = win_rate_calculator.calculate_win_rate(
+        let win_rate_metrics = win_rate_calculator.calculer_taux_reussite(
             15,
             config.atr_multiplier_sl,
             config.atr_multiplier_tp,

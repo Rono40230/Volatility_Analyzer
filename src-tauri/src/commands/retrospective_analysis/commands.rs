@@ -1,6 +1,6 @@
-use super::types::{EventType, EventTypeList};
 use super::helpers::setup_databases;
 use super::services::RetroAnalysisService;
+use super::types::{EventType, EventTypeList};
 use chrono::Timelike;
 
 #[tauri::command]
@@ -15,22 +15,34 @@ pub async fn analyze_peak_delay(
         return Err(format!("No events: {}", event_type));
     }
 
-    let (peak_delays, peak_atrs) = RetroAnalysisService::compute_peak_delay(&pair, &event_type, &events, &loader).await?;
+    let (peak_delays, peak_atrs) =
+        RetroAnalysisService::calculer_delai_pic(&pair, &event_type, &events, &loader).await?;
 
     let avg_delay = (peak_delays.iter().sum::<i16>() as f64 / peak_delays.len() as f64) as i16;
     let avg_peak_atr = peak_atrs.iter().sum::<f64>() / peak_atrs.len() as f64;
 
-    Ok(crate::commands::retrospective_analysis::types::PeakDelayResult {
-        peak_delay_minutes: avg_delay,
-        peak_atr: avg_peak_atr,
-        event_minute: events.first().map(|e| e.event_time.minute() as u8).unwrap_or(0),
-        confidence: (peak_delays.len() as f64 / events.len() as f64).min(1.0),
-        event_count: events.len(),
-        event_type,
-        optimal_entry_seconds_before: if avg_peak_atr > 100.0 { 90 } else { 60 },
-        event_date_min: events.first().map(|e| e.event_time.to_string()).unwrap_or_default(),
-        event_date_max: events.last().map(|e| e.event_time.to_string()).unwrap_or_default(),
-    })
+    Ok(
+        crate::commands::retrospective_analysis::types::PeakDelayResult {
+            peak_delay_minutes: avg_delay,
+            peak_atr: avg_peak_atr,
+            event_minute: events
+                .first()
+                .map(|e| e.event_time.minute() as u8)
+                .unwrap_or(0),
+            confidence: (peak_delays.len() as f64 / events.len() as f64).min(1.0),
+            event_count: events.len(),
+            event_type,
+            optimal_entry_seconds_before: if avg_peak_atr > 100.0 { 90 } else { 60 },
+            event_date_min: events
+                .first()
+                .map(|e| e.event_time.to_string())
+                .unwrap_or_default(),
+            event_date_max: events
+                .last()
+                .map(|e| e.event_time.to_string())
+                .unwrap_or_default(),
+        },
+    )
 }
 
 #[tauri::command]
@@ -45,7 +57,8 @@ pub async fn analyze_decay_profile(
         return Err(format!("No events: {}", event_type));
     }
 
-    let (decay_rates, peak_atrs) = RetroAnalysisService::compute_decay_profile(&pair, &events, &loader).await?;
+    let (decay_rates, peak_atrs) =
+        RetroAnalysisService::calculer_profil_decroissance(&pair, &events, &loader).await?;
 
     let avg_decay_rate = decay_rates.iter().sum::<f64>() / decay_rates.len() as f64;
     let avg_peak_atr = peak_atrs.iter().sum::<f64>() / peak_atrs.len() as f64;
@@ -57,14 +70,16 @@ pub async fn analyze_decay_profile(
         ("Lent".into(), 32)
     };
 
-    Ok(crate::commands::retrospective_analysis::types::DecayProfileResult {
-        peak_atr: avg_peak_atr,
-        decay_rate_pips_per_minute: avg_decay_rate,
-        decay_speed,
-        recommended_timeout_minutes: timeout,
-        event_count: events.len(),
-        event_type,
-    })
+    Ok(
+        crate::commands::retrospective_analysis::types::DecayProfileResult {
+            peak_atr: avg_peak_atr,
+            decay_rate_pips_per_minute: avg_decay_rate,
+            decay_speed,
+            recommended_timeout_minutes: timeout,
+            event_count: events.len(),
+            event_type,
+        },
+    )
 }
 
 #[tauri::command]
@@ -79,7 +94,7 @@ pub async fn analyze_volatility_profile(
         return Err(format!("No events: {}", event_type));
     }
 
-    RetroAnalysisService::compute_event_impact(&pair, &event_type, &events, &loader).await
+    RetroAnalysisService::calculer_impact_evenement(&pair, &event_type, &events, &loader).await
 }
 
 #[tauri::command]
@@ -103,7 +118,10 @@ pub async fn get_event_types(calendar_id: Option<i32>) -> Result<EventTypeList, 
     Ok(EventTypeList {
         types: types
             .into_iter()
-            .map(|(name, count)| EventType { name, count: count as i32 })
+            .map(|(name, count)| EventType {
+                name,
+                count: count as i32,
+            })
             .collect(),
     })
 }

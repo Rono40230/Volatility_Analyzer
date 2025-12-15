@@ -63,7 +63,9 @@ pub fn process_file_with_cleaning(
 
     tracing::info!(
         "✅ {} lignes nettoyées ({} erreurs = {:.2}%)",
-        cleaning_report.lines_cleaned, cleaning_report.errors, error_rate
+        cleaning_report.lines_cleaned,
+        cleaning_report.errors,
+        error_rate
     );
 
     tracing::info!("📥 Début de l'import du fichier");

@@ -23,7 +23,7 @@ pub async fn analyze_volatility_duration_for_slice(
     use crate::services::candle_index::CandleIndex;
     use crate::services::database_loader::DatabaseLoader;
     use crate::services::slice_metrics_analyzer;
-    use crate::services::volatility_duration_calculator::calculate_volatility_duration;
+    use crate::services::volatility_duration_calculator::calculer_duree_volatilite;
 
     // Créer le pool de connexions pour la BD paires
     let data_dir =
@@ -52,7 +52,7 @@ pub async fn analyze_volatility_duration_for_slice(
     )?;
 
     // Calculer la durée de volatilité
-    let duration = calculate_volatility_duration(&candles, &symbol);
+    let duration = calculer_duree_volatilite(&candles, &symbol);
 
     Ok(VolatilityDurationResponse {
         peak_duration_minutes: duration.peak_duration_minutes,

@@ -25,7 +25,7 @@ pub struct ContextualAtrMetrics {
 }
 
 /// Calcule l'ATR baseline (30min avant événement)
-pub fn calculate_baseline_atr(
+pub fn calculer_atr_reference(
     candles: &[Candle],
     event_time: chrono::DateTime<chrono::Utc>,
     atr_period: usize,
@@ -48,7 +48,7 @@ pub fn calculate_baseline_atr(
     }
 
     let calculator = MetricsCalculator::new(&baseline_candles);
-    let atr_values = calculator.calculate_atr(atr_period)?;
+    let atr_values = calculator.calculer_atr(atr_period)?;
 
     atr_values
         .last()
@@ -57,7 +57,7 @@ pub fn calculate_baseline_atr(
 }
 
 /// Calcule l'ATR post-événement (30min après)
-pub fn calculate_post_event_atr(
+pub fn calculer_atr_post_evenement(
     candles: &[Candle],
     event_time: chrono::DateTime<chrono::Utc>,
     atr_period: usize,
@@ -80,7 +80,7 @@ pub fn calculate_post_event_atr(
     }
 
     let calculator = MetricsCalculator::new(&post_candles);
-    let atr_values = calculator.calculate_atr(atr_period)?;
+    let atr_values = calculator.calculer_atr(atr_period)?;
 
     atr_values
         .last()
@@ -89,7 +89,7 @@ pub fn calculate_post_event_atr(
 }
 
 /// Trouve le pic maximal d'ATR dans les 2h post-événement
-pub fn find_max_atr_spike(
+pub fn trouver_pic_atr_max(
     candles: &[Candle],
     event_time: chrono::DateTime<chrono::Utc>,
     atr_period: usize,
@@ -115,7 +115,7 @@ pub fn find_max_atr_spike(
         let window = &post_candles[i - atr_period..i];
         let calculator = MetricsCalculator::new(window);
 
-        if let Ok(atr_values) = calculator.calculate_atr(atr_period) {
+        if let Ok(atr_values) = calculator.calculer_atr(atr_period) {
             if let Some(&atr) = atr_values.last() {
                 if atr > max_atr {
                     max_atr = atr;
@@ -136,7 +136,7 @@ pub fn find_max_atr_spike(
 }
 
 /// Classifie le niveau de volatilité baseline
-pub fn classify_volatility(candles: &[Candle], atr: f64) -> VolatilityLevel {
+pub fn classifier_volatilite(candles: &[Candle], atr: f64) -> VolatilityLevel {
     let sample_candle = candles.first().expect("Candles should not be empty");
     let price = sample_candle.close;
     let atr_pct = (atr / price) * 100.0;
@@ -151,7 +151,7 @@ pub fn classify_volatility(candles: &[Candle], atr: f64) -> VolatilityLevel {
 }
 
 /// Recommande les multiplicateurs SL/TP basés sur le contexte
-pub fn recommend_multipliers(atr_ratio: f64, volatility_level: VolatilityLevel) -> (f64, f64) {
+pub fn recommander_multiplicateurs(atr_ratio: f64, volatility_level: VolatilityLevel) -> (f64, f64) {
     let base_sl: f64 = match volatility_level {
         VolatilityLevel::Low => 1.5,
         VolatilityLevel::Medium => 2.0,

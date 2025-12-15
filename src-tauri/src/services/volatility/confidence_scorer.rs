@@ -74,7 +74,7 @@ impl ConfidenceScorer {
     /// > - BreakoutPct 18% → 10 pts (beaucoup de cassures)
     /// > - Bonus → 5 pts (données suffisantes)
     /// > = TOTAL 105 → capped à 100 = "EXCELLENT, scalpe agressif"
-    pub(super) fn calculate_confidence_score(metrics: &GlobalMetrics) -> f64 {
+    pub(super) fn calculer_score_confiance(metrics: &GlobalMetrics) -> f64 {
         let mut score: f64 = 0.0;
 
         // 1. Score ATR (30 points max) - Seuils adaptés au Forex M1
@@ -178,7 +178,7 @@ mod tests {
             total_candles: 1000,
         };
 
-        let score = ConfidenceScorer::calculate_confidence_score(&metrics);
+        let score = ConfidenceScorer::calculer_score_confiance(&metrics);
         assert!(
             score < 20.0,
             "Mauvaises métriques doivent donner score < 20, obtenu {}",
@@ -199,7 +199,7 @@ mod tests {
             total_candles: 200000,
         };
 
-        let score = ConfidenceScorer::calculate_confidence_score(&metrics);
+        let score = ConfidenceScorer::calculer_score_confiance(&metrics);
         assert!(
             score >= 80.0,
             "Excellentes métriques doivent donner score >= 80, obtenu {}",
@@ -228,7 +228,7 @@ mod tests {
                 mean_range: 0.0008,
                 total_candles: 100000,
             };
-            let score = ConfidenceScorer::calculate_confidence_score(&metrics);
+            let score = ConfidenceScorer::calculer_score_confiance(&metrics);
             assert!(
                 score <= 100.0,
                 "Score ne doit pas dépasser 100. ATR={}, Vol={}, Score={}",

@@ -16,7 +16,8 @@ pub async fn clean_csv_files(paths: Vec<String>) -> Result<Vec<CleaningReport>, 
             Ok(report) => {
                 tracing::info!(
                     "✅ {}: {} lignes nettoyées",
-                    report.original_file, report.lines_cleaned
+                    report.original_file,
+                    report.lines_cleaned
                 );
                 reports.push(report);
             }
@@ -40,7 +41,8 @@ pub async fn clean_csv_files(paths: Vec<String>) -> Result<Vec<CleaningReport>, 
 
     tracing::info!(
         "📊 Nettoyage terminé: {} lignes, {} erreurs",
-        total_cleaned, total_errors
+        total_cleaned,
+        total_errors
     );
 
     Ok(reports)

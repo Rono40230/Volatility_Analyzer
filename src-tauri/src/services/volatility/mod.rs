@@ -20,5 +20,5 @@ mod win_rate_calculator;
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;
 pub use volatility_duration_analyzer::VolatilityDurationAnalyzer;
-pub use whipsaw_detector::calculate_whipsaw_frequency;
-pub use win_rate_calculator::simulate_straddle_win_rate;
+pub use whipsaw_detector::calculer_frequence_whipsaw;
+pub use win_rate_calculator::simuler_taux_reussite_straddle;

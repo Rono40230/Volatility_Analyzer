@@ -6,9 +6,9 @@ use crate::models::Candle;
 /// Calcule l'ATR moyen (Average True Range) pour une liste de candles
 /// Utilise une EMA(14) des True Ranges pour être conforme au standard MT5
 /// et donner plus de poids aux mouvements récents
-pub fn calculate_atr_mean(candles: &[Candle]) -> f64 {
+pub fn calculer_atr_moyen(candles: &[Candle]) -> f64 {
     let mut tr_values: Vec<f64> = Vec::new();
-    
+
     // Calcul du True Range pour chaque candle
     for i in 0..candles.len() {
         let high = candles[i].high;
@@ -40,19 +40,19 @@ pub fn calculate_ema(values: &[f64], period: usize) -> f64 {
     }
 
     let period = period.min(values.len()); // Limiter la période au nombre de valeurs disponibles
-    
+
     // Coefficient de lissage EMA = 2 / (period + 1)
     let multiplier = 2.0 / (period as f64 + 1.0);
-    
+
     // Initialiser avec la SMA des premières valeurs
     let sma_init: f64 = values[0..period].iter().sum::<f64>() / period as f64;
     let mut ema = sma_init;
-    
+
     // Appliquer l'EMA sur les valeurs restantes
     for i in period..values.len() {
         ema = values[i] * multiplier + ema * (1.0 - multiplier);
     }
-    
+
     ema
 }
 

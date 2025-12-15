@@ -1,5 +1,5 @@
 /// Analyseurs simples pour peak delay et decay profile
-use super::helpers::calculate_atr;
+use super::helpers::calculer_atr;
 use crate::services::VolatilityDurationAnalyzer;
 use chrono::{Duration, Timelike};
 
@@ -7,7 +7,7 @@ pub struct PeakDelayAnalyzer;
 pub struct DecayProfileAnalyzer;
 
 impl PeakDelayAnalyzer {
-    pub async fn compute(
+    pub async fn calculer(
         pair: &str,
         _event_type: &str,
         events: &[crate::models::CalendarEvent],
@@ -24,9 +24,11 @@ impl PeakDelayAnalyzer {
                 .unwrap_or_default();
 
             if !candles.is_empty() {
-                let atr_values: Vec<f64> =
-                    candles.iter().map(|c| calculate_atr(c.high, c.low, c.close)).collect();
-                if let Ok(pd) = VolatilityDurationAnalyzer::calculate_peak_delay(
+                let atr_values: Vec<f64> = candles
+                    .iter()
+                    .map(|c| calculer_atr(c.high, c.low, c.close))
+                    .collect();
+                if let Ok(pd) = VolatilityDurationAnalyzer::calculer_delai_pic(
                     &atr_values,
                     event.event_time.minute() as u8,
                 ) {
@@ -45,7 +47,7 @@ impl PeakDelayAnalyzer {
 }
 
 impl DecayProfileAnalyzer {
-    pub async fn compute(
+    pub async fn calculer(
         pair: &str,
         events: &[crate::models::CalendarEvent],
         loader: &crate::services::DatabaseLoader,
@@ -61,9 +63,12 @@ impl DecayProfileAnalyzer {
                 .unwrap_or_default();
 
             if !candles.is_empty() {
-                let atr_values: Vec<f64> =
-                    candles.iter().map(|c| calculate_atr(c.high, c.low, c.close)).collect();
-                if let Ok((rate, _)) = VolatilityDurationAnalyzer::calculate_decay_profile(&atr_values)
+                let atr_values: Vec<f64> = candles
+                    .iter()
+                    .map(|c| calculer_atr(c.high, c.low, c.close))
+                    .collect();
+                if let Ok((rate, _)) =
+                    VolatilityDurationAnalyzer::calculer_profil_decroissance(&atr_values)
                 {
                     decay_rates.push(rate);
                 }

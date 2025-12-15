@@ -119,7 +119,7 @@ pub async fn analyze_quarter_entry_timing(
     let avg_win_rate = total_win_rates / offsets.len() as f64;
 
     // Calculer la confiance (basée sur la consistance des offsets)
-    let confidence = calculate_confidence(&offsets, optimal_offset);
+    let confidence = calculer_confiance(&offsets, optimal_offset);
 
     tracing::info!(
         "✅ Timing analysé: offset={}min, win_rate={:.1}%, confidence={:.0}%",

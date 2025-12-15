@@ -9,7 +9,7 @@ pub struct CalendarCorrelator;
 
 impl CalendarCorrelator {
     /// Calcule la corrélation entre sessions et événements calendrier économique
-    pub fn calculate_correlation(
+    pub fn calculer_correlation(
         sessions: &[TradingSession],
         pool: &crate::db::DbPool,
     ) -> Result<Vec<CalendarCorrelation>, String> {

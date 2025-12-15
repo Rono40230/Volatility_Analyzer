@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::calendar_db_queries::{open_volatility_db, query_calendar_imports};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CalendarImportInfo {
@@ -89,7 +89,7 @@ pub async fn set_active_calendar_id(calendar_id: i32) -> Result<(), String> {
 pub async fn get_calendar_id_by_filename(filename: String) -> Result<Option<i32>, String> {
     tracing::info!("🔍 Getting calendar ID for filename: {}", filename);
     let conn = open_volatility_db()?;
-    
+
     // Exact match
     let mut stmt = conn
         .prepare("SELECT id FROM calendar_imports WHERE filename = ?")
@@ -98,7 +98,7 @@ pub async fn get_calendar_id_by_filename(filename: String) -> Result<Option<i32>
         tracing::info!("🔍 Calendar ID (exact match) for {}: {:?}", filename, id);
         return Ok(Some(id));
     }
-    
+
     // Pattern match
     let pattern = format!("%{}%", filename.trim_end_matches(".csv"));
     let mut stmt = conn
@@ -108,7 +108,7 @@ pub async fn get_calendar_id_by_filename(filename: String) -> Result<Option<i32>
         tracing::info!("🔍 Calendar ID (pattern match) for {}: {:?}", filename, id);
         return Ok(Some(id));
     }
-    
+
     tracing::warn!("⚠️ Calendar ID not found for {}", filename);
     Ok(None)
 }
@@ -120,12 +120,16 @@ pub async fn get_calendar_period_by_id(calendar_id: i32) -> Result<CalendarPerio
     let mut stmt = conn
         .prepare("SELECT oldest_event_date, newest_event_date FROM calendar_imports WHERE id = ?")
         .map_err(|e| format!("Query failed: {}", e))?;
-    
+
     let period = stmt
         .query_row([calendar_id], |row| {
             let start: Option<String> = row.get(0)?;
             let end: Option<String> = row.get(1)?;
-            tracing::debug!("📅 Raw database values - start: {:?}, end: {:?}", start, end);
+            tracing::debug!(
+                "📅 Raw database values - start: {:?}, end: {:?}",
+                start,
+                end
+            );
             Ok(CalendarPeriod {
                 start_date: start,
                 end_date: end,
@@ -135,7 +139,7 @@ pub async fn get_calendar_period_by_id(calendar_id: i32) -> Result<CalendarPerio
             tracing::error!("❌ Query row error: {}", e);
             format!("Calendar with ID {} not found", calendar_id)
         })?;
-    
+
     tracing::info!(
         "✅ Calendar {} period: {:?} to {:?}",
         calendar_id,

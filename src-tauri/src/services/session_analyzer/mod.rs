@@ -62,7 +62,7 @@ pub struct SessionAnalyzer;
 
 impl SessionAnalyzer {
     /// Définit les 4 sessions Forex en UTC
-    pub fn get_sessions() -> Vec<TradingSession> {
+    pub fn obtenir_sessions() -> Vec<TradingSession> {
         vec![
             TradingSession {
                 name: "Sydney".to_string(),
@@ -92,17 +92,17 @@ impl SessionAnalyzer {
     }
 
     /// Formate les horaires Paris d'une session
-    pub fn format_paris_hours(session: &TradingSession, is_winter: bool) -> String {
+    pub fn formater_heures_paris(session: &TradingSession, is_winter: bool) -> String {
         format_paris_hours(session.utc_start_hour, session.utc_end_hour, is_winter)
     }
 
     /// Détermine si une heure UTC appartient à une session donnée
-    pub fn is_in_session(hour: u32, session: &TradingSession) -> bool {
+    pub fn est_dans_session(hour: u32, session: &TradingSession) -> bool {
         is_in_session(hour, session.utc_start_hour, session.utc_end_hour)
     }
 
     /// Génère des recommandations basées sur les statistiques
-    pub fn generate_recommendations(
+    pub fn generer_recommandations(
         sessions: &[SessionStats],
         avg_daily_vol: f64,
     ) -> Vec<Recommendation> {

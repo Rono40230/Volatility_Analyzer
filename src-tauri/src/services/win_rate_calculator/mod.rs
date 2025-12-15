@@ -1,7 +1,7 @@
 mod helpers;
 
 pub use helpers::{
-    calculate_atr_at_index, find_candle_index, track_trade, TradeOutcome, WinRateMetrics,
+    calculer_atr_a_index, find_candle_index, track_trade, TradeOutcome, WinRateMetrics,
 };
 
 use crate::models::{Candle, Result};
@@ -41,7 +41,7 @@ impl<'a> WinRateCalculator<'a> {
             ));
         }
 
-        let atr = calculate_atr_at_index(self.candles, entry_index)?;
+        let atr = calculer_atr_a_index(self.candles, entry_index)?;
         let entry_candle = &self.candles[entry_index];
         let entry_price = entry_candle.close;
         let sl_distance = atr * atr_multiplier_sl;
@@ -81,7 +81,7 @@ impl<'a> WinRateCalculator<'a> {
     }
 
     /// Simule N trades avec mêmes paramètres pour calculer statistiques
-    pub fn calculate_win_rate(
+    pub fn calculer_taux_reussite(
         &self,
         entry_minutes_before: i32,
         atr_multiplier_sl: f64,

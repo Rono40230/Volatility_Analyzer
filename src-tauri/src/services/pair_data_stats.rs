@@ -62,7 +62,7 @@ pub fn extract_date_range_from_path(file_path: &Path) -> Option<String> {
 }
 
 /// Calcule les statistiques globales des données de paires
-pub fn calculate_pair_summary(files: Vec<PairFileInfo>) -> PairDataSummary {
+pub fn calculer_resume_paire(files: Vec<PairFileInfo>) -> PairDataSummary {
     if files.is_empty() {
         return PairDataSummary {
             total_pairs: 0,

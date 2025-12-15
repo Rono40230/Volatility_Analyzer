@@ -25,7 +25,7 @@ pub async fn get_available_pairs(
         .pool
         .lock()
         .map_err(|_| "Failed to acquire database pool lock".to_string())?;
-    
+
     if let Some(pool) = pool_opt.as_ref() {
         DatabaseLoader::new(pool.clone())
             .get_all_symbols()

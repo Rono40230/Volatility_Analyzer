@@ -19,7 +19,7 @@ impl<'a> HourlyStatsCalculator<'a> {
 
     /// Calcule les statistiques pour chaque heure (en heure de Paris, UTC+1)
     /// Les candles sont en UTC, on les groupe par heure de Paris pour une meilleure analyse pour les traders français
-    pub(super) fn calculate(&self) -> Result<Vec<HourlyStats>> {
+    pub(super) fn calculer(&self) -> Result<Vec<HourlyStats>> {
         debug!("Calculating hourly statistics (Paris time)");
 
         const PARIS_OFFSET_HOURS: i32 = 1; // UTC+1 (hiver). Amélioration future: gérer DST dynamiquement en été
@@ -39,7 +39,7 @@ impl<'a> HourlyStatsCalculator<'a> {
 
         for hour in 0..24 {
             if let Some(candles) = hourly_groups.get(&hour) {
-                let hour_stats = self.calculate_for_hour(hour, candles)?;
+                let hour_stats = self.calculer_pour_heure(hour, candles)?;
                 stats.push(hour_stats);
             } else {
                 // Heure sans données : stats vides
@@ -65,7 +65,7 @@ impl<'a> HourlyStatsCalculator<'a> {
     }
 
     /// Calcule les statistiques pour une heure spécifique
-    fn calculate_for_hour(&self, hour: u8, candles: &[&Candle]) -> Result<HourlyStats> {
+    fn calculer_pour_heure(&self, hour: u8, candles: &[&Candle]) -> Result<HourlyStats> {
         let candle_count = candles.len();
 
         // Crée un vecteur owned pour le calculateur
@@ -73,12 +73,12 @@ impl<'a> HourlyStatsCalculator<'a> {
         let calc = MetricsCalculator::new(&owned_candles);
 
         // Calcule les métriques (avec gestion d'erreur si pas assez de données)
-        let atr_values = calc.calculate_atr(14).unwrap_or_default();
-        let volatility_values = calc.calculate_volatility(20).unwrap_or_default();
-        let body_ranges = calc.calculate_body_ranges();
-        let shadow_ratios = calc.calculate_shadow_ratios();
-        let noise_ratios = calc.calculate_noise_ratio();
-        let tr_dist = calc.calculate_true_range_distribution()?;
+        let atr_values = calc.calculer_atr(14).unwrap_or_default();
+        let volatility_values = calc.calculer_volatilite(20).unwrap_or_default();
+        let body_ranges = calc.calculer_ranges_corps();
+        let shadow_ratios = calc.calculer_ratios_ombres();
+        let noise_ratios = calc.calculer_ratio_bruit();
+        let tr_dist = calc.calculer_distribution_true_range()?;
 
         // Calcule les moyennes
         let atr_mean = atr_values.last().copied().unwrap_or(0.0); // Dernière valeur ATR lissée (Wilder's)

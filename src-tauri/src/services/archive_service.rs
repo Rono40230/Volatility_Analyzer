@@ -47,7 +47,10 @@ impl ArchiveService {
             .load::<Archive>(&mut conn);
 
         match &result {
-            Ok(archives) => tracing::info!("✅ ArchiveService.list_archives: {} archives loaded", archives.len()),
+            Ok(archives) => tracing::info!(
+                "✅ ArchiveService.list_archives: {} archives loaded",
+                archives.len()
+            ),
             Err(e) => tracing::error!("❌ ArchiveService.list_archives SQL error: {}", e),
         }
 

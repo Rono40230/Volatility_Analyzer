@@ -12,7 +12,7 @@ use crate::models::Candle;
 /// 6. Si 1 seul se déclenche et fait profit = WIN
 /// 7. Si 1 seul se déclenche mais pas de profit = LOSS
 /// 8. Si aucun ne se déclenche = LOSS
-pub fn simulate_straddle_win_rate(candles: &[Candle], offset_pips: f64) -> WinRateResult {
+pub fn simuler_taux_reussite_straddle(candles: &[Candle], offset_pips: f64) -> WinRateResult {
     if candles.len() < 16 {
         // Besoin au moins 16 candles (1 d'entrée + 15 de follow)
         return WinRateResult::default();

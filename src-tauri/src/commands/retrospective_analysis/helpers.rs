@@ -41,7 +41,7 @@ pub async fn load_events_by_type(
         .map_err(|e| format!("Load failed: {}", e))
 }
 
-pub fn calculate_atr(high: f64, low: f64, close: f64) -> f64 {
+pub fn calculer_atr(high: f64, low: f64, close: f64) -> f64 {
     (high - low).max((high - close.abs()).max(close - low.abs()))
 }
 

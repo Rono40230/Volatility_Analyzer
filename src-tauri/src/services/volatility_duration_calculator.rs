@@ -20,7 +20,7 @@ pub struct VolatilityDurationResult {
 /// 1. Pour chaque jour, on identifie le pic de volatilité dans le créneau
 /// 2. On mesure combien de temps la volatilité reste élevée après le pic
 /// 3. On calcule la demi-vie (temps pour que la volatilité diminue de 50%)
-pub fn calculate_volatility_duration(
+pub fn calculer_duree_volatilite(
     candles: &[Candle],
     _symbol: &str,
 ) -> VolatilityDurationResult {
@@ -38,10 +38,7 @@ pub fn calculate_volatility_duration(
     let mut candles_by_day: HashMap<String, Vec<&Candle>> = HashMap::new();
     for candle in candles {
         let day_key = candle.datetime.date_naive().to_string();
-        candles_by_day
-            .entry(day_key)
-            .or_default()
-            .push(candle);
+        candles_by_day.entry(day_key).or_default().push(candle);
     }
 
     let mut peak_durations: Vec<i64> = Vec::new();
@@ -152,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_empty_candles() {
-        let result = calculate_volatility_duration(&[], "EURUSD");
+        let result = calculer_duree_volatilite(&[], "EURUSD");
         assert_eq!(result.peak_duration_minutes, 0);
         assert_eq!(result.sample_size, 0);
     }

@@ -16,5 +16,5 @@ pub use analyze_slice_metrics_command::analyze_slice_metrics;
 pub use analyze_volatility_duration_command::analyze_volatility_duration_for_slice;
 pub use candles_loader::{get_cached_candles_for_hour, load_candles_for_hour};
 pub use stats::{get_best_hours, get_hourly_stats};
-pub use straddle_analysis::{calculate_offset_optimal, calculate_whipsaw_freq, calculate_win_rate};
+pub use straddle_analysis::{calculer_offset_optimal, calculer_frequence_whipsaw, calculer_taux_reussite};
 pub use straddle_metrics::analyze_straddle_metrics;

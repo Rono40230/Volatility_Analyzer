@@ -11,15 +11,20 @@ use tauri::command;
 /// - Crypto (BTCUSD, ETHUSD): 1 pip = 1 point
 fn get_points_per_pip(symbol: &str) -> f64 {
     if symbol.contains("XAU") {
-        10.0  // Or: 1 pip = 10 points
+        10.0 // Or: 1 pip = 10 points
     } else if symbol.contains("XAG") {
-        1000.0  // Argent: 1 pip = 1000 points
-    } else if symbol.contains("US30") || symbol.contains("DE30") || symbol.contains("NAS100") || symbol.contains("SPX500") || symbol.contains("USA500") {
-        1.0  // Indices: 1 pip = 1 point
+        1000.0 // Argent: 1 pip = 1000 points
+    } else if symbol.contains("US30")
+        || symbol.contains("DE30")
+        || symbol.contains("NAS100")
+        || symbol.contains("SPX500")
+        || symbol.contains("USA500")
+    {
+        1.0 // Indices: 1 pip = 1 point
     } else if symbol.contains("BTC") || symbol.contains("ETH") {
-        1.0  // Crypto: 1 pip = 1 point
+        1.0 // Crypto: 1 pip = 1 point
     } else {
-        10.0  // Forex par défaut (EURUSD, CADJPY, USDJPY, etc): 1 pip = 10 points
+        10.0 // Forex par défaut (EURUSD, CADJPY, USDJPY, etc): 1 pip = 10 points
     }
 }
 
@@ -124,7 +129,10 @@ pub async fn analyze_straddle_metrics(
             sl_adjusted_points: pips_to_points(simulation.sl_adjusted_pips, &symbol),
             win_rate_adjusted: simulation.win_rate_adjusted,
             // Trailing Stop: coefficient × SL = valeur en pips
-            trailing_stop_adjusted: pips_to_points(simulation.sl_adjusted_pips * simulation.trailing_stop_adjusted, &symbol),
+            trailing_stop_adjusted: pips_to_points(
+                simulation.sl_adjusted_pips * simulation.trailing_stop_adjusted,
+                &symbol,
+            ),
             timeout_adjusted_minutes: simulation.timeout_adjusted_minutes,
             whipsaw_details,
         },

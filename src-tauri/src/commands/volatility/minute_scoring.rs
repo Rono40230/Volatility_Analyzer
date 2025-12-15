@@ -4,7 +4,7 @@
 use super::analyze_quarter_entry_timing_helpers::MinuteMetrics;
 
 /// Score les métriques avec des seuils complexes
-pub fn score_metrics(m: &MinuteMetrics) -> f64 {
+pub fn noter_metriques(m: &MinuteMetrics) -> f64 {
     let mut score = 0.0;
     // Range scoring
     score += if m.range_percent > 2.5 {
@@ -75,7 +75,7 @@ pub fn score_metrics(m: &MinuteMetrics) -> f64 {
 }
 
 /// Calcule le score de confiance (basé sur la consistance)
-pub fn calculate_confidence(offsets: &[u8], optimal: u8) -> f64 {
+pub fn calculer_confiance(offsets: &[u8], optimal: u8) -> f64 {
     if offsets.is_empty() {
         return 0.0;
     }

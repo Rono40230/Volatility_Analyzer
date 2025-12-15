@@ -5,7 +5,7 @@ use crate::services::volatility::volatility_heuristics::VolatilityHeuristics;
 pub struct VolatilityDurationAnalyzer;
 
 impl VolatilityDurationAnalyzer {
-    pub fn analyze(slice: &Stats15Min) -> Result<VolatilityDuration, VolatilityError> {
+    pub fn analyser(slice: &Stats15Min) -> Result<VolatilityDuration, VolatilityError> {
         if slice.candle_count == 0 {
             return Err(VolatilityError::InsufficientData(
                 "Créneau vide".to_string(),
@@ -23,7 +23,7 @@ impl VolatilityDurationAnalyzer {
         ))
     }
 
-    pub fn analyze_from_candles(
+    pub fn analyser_depuis_bougies(
         hour: u8,
         quarter: u8,
         candles: &[&Candle],
@@ -38,7 +38,7 @@ impl VolatilityDurationAnalyzer {
                 "Min 5 bougies requises".to_string(),
             ));
         }
-        let atr_values = Self::calculate_atr_values(candles)?;
+        let atr_values = Self::calculer_valeurs_atr(candles)?;
         let peak_atr = atr_values.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
         if peak_atr <= 0.0 {
             return Err(VolatilityError::MetricCalculationError(
@@ -49,8 +49,8 @@ impl VolatilityDurationAnalyzer {
             .iter()
             .position(|&atr| (atr - peak_atr).abs() < 1e-10)
             .unwrap_or(0);
-        let peak_duration = Self::calculate_peak_duration(&atr_values, peak_atr)?;
-        let half_life = Self::calculate_half_life(&atr_values, peak_index, peak_atr)?;
+        let peak_duration = Self::calculer_duree_pic(&atr_values, peak_atr)?;
+        let half_life = Self::calculer_demi_vie(&atr_values, peak_index, peak_atr)?;
         let final_half_life = if half_life >= peak_duration {
             (peak_duration as f64 * 0.9) as u16
         } else {
@@ -65,7 +65,7 @@ impl VolatilityDurationAnalyzer {
         ))
     }
 
-    fn calculate_atr_values(candles: &[&Candle]) -> Result<Vec<f64>, VolatilityError> {
+    fn calculer_valeurs_atr(candles: &[&Candle]) -> Result<Vec<f64>, VolatilityError> {
         if candles.len() < 4 {
             return Err(VolatilityError::InsufficientData(
                 "Min 4 bougies pour ATR (période 3)".to_string(),
@@ -74,7 +74,7 @@ impl VolatilityDurationAnalyzer {
         let mut atr_values = Vec::new();
         const PERIOD: f64 = 3.0;
         const PERIOD_USIZE: usize = 3;
-        
+
         let mut tr_values = Vec::new();
         for i in 0..candles.len() {
             let curr = candles[i];
@@ -88,9 +88,9 @@ impl VolatilityDurationAnalyzer {
                 tr_values.push(hl.max(hc).max(lc));
             }
         }
-        
+
         if tr_values.len() < PERIOD_USIZE {
-             return Err(VolatilityError::InsufficientData(
+            return Err(VolatilityError::InsufficientData(
                 "Pas assez de données TR".to_string(),
             ));
         }
@@ -104,13 +104,13 @@ impl VolatilityDurationAnalyzer {
         Ok(atr_values)
     }
 
-    fn calculate_peak_duration(atr_values: &[f64], peak_atr: f64) -> Result<u16, VolatilityError> {
+    fn calculer_duree_pic(atr_values: &[f64], peak_atr: f64) -> Result<u16, VolatilityError> {
         let threshold = peak_atr * 0.8;
         let peak_count = atr_values.iter().filter(|&&atr| atr > threshold).count();
         Ok(peak_count.max(1) as u16)
     }
 
-    fn calculate_half_life(
+    fn calculer_demi_vie(
         atr_values: &[f64],
         peak_index: usize,
         peak_atr: f64,
@@ -124,7 +124,7 @@ impl VolatilityDurationAnalyzer {
         Ok(index.max(5) as u16)
     }
 
-    pub fn calculate_peak_delay(
+    pub fn calculer_delai_pic(
         atr_values: &[f64],
         event_minute: u8,
     ) -> Result<i16, VolatilityError> {
@@ -142,7 +142,7 @@ impl VolatilityDurationAnalyzer {
         Ok(delay_minutes.clamp(-10, 15))
     }
 
-    pub fn calculate_decay_profile(atr_values: &[f64]) -> Result<(f64, String), VolatilityError> {
+    pub fn calculer_profil_decroissance(atr_values: &[f64]) -> Result<(f64, String), VolatilityError> {
         if atr_values.len() < 12 {
             return Err(VolatilityError::InsufficientData(
                 "Min 12 ATR values".to_string(),
@@ -207,7 +207,7 @@ mod tests {
             create_test_candle(1.0815, 1.0825, 1.0805),
         ];
         let candle_refs: Vec<&Candle> = candles.iter().collect();
-        let result = VolatilityDurationAnalyzer::analyze_from_candles(14, 0, &candle_refs);
+        let result = VolatilityDurationAnalyzer::analyser_depuis_bougies(14, 0, &candle_refs);
         assert!(result.is_ok());
     }
 
@@ -215,20 +215,20 @@ mod tests {
     fn test_insufficient_candles() {
         let candles = vec![create_test_candle(1.0800, 1.0810, 1.0790)];
         let candle_refs: Vec<&Candle> = candles.iter().collect();
-        assert!(VolatilityDurationAnalyzer::analyze_from_candles(14, 0, &candle_refs).is_err());
+        assert!(VolatilityDurationAnalyzer::analyser_depuis_bougies(14, 0, &candle_refs).is_err());
     }
 
     #[test]
     fn test_peak_delay_after_event() {
         let atr_values = vec![0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.0, 0.9, 0.8];
-        let result = VolatilityDurationAnalyzer::calculate_peak_delay(&atr_values, 5);
+        let result = VolatilityDurationAnalyzer::calculer_delai_pic(&atr_values, 5);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_peak_delay_before_event() {
         let atr_values = vec![0.5, 0.6, 1.2, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3];
-        let result = VolatilityDurationAnalyzer::calculate_peak_delay(&atr_values, 10);
+        let result = VolatilityDurationAnalyzer::calculer_delai_pic(&atr_values, 10);
         assert!(result.is_ok());
     }
 
@@ -237,7 +237,7 @@ mod tests {
         let atr_values = vec![
             0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.0, 0.9, 0.5, 0.3, 0.2,
         ];
-        let result = VolatilityDurationAnalyzer::calculate_decay_profile(&atr_values);
+        let result = VolatilityDurationAnalyzer::calculer_profil_decroissance(&atr_values);
         assert!(result.is_ok());
         let (_, decay_speed) = result.expect("Should have decay profile");
         assert_eq!(decay_speed, "FAST");
@@ -248,7 +248,7 @@ mod tests {
         let atr_values = vec![
             0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.1, 1.05, 1.0, 0.99, 0.98,
         ];
-        let result = VolatilityDurationAnalyzer::calculate_decay_profile(&atr_values);
+        let result = VolatilityDurationAnalyzer::calculer_profil_decroissance(&atr_values);
         assert!(result.is_ok());
         let (_, decay_speed) = result.expect("Should have decay profile");
         assert_eq!(decay_speed, "SLOW");

@@ -80,7 +80,11 @@ mod tests {
             candle_count: 15,
             events: vec![EventInHour {
                 event_name: "Test Event".to_string(),
-                impact: if events_count > 0 { "HIGH".to_string() } else { "LOW".to_string() },
+                impact: if events_count > 0 {
+                    "HIGH".to_string()
+                } else {
+                    "LOW".to_string()
+                },
                 datetime: "2025-01-15 14:00:00".to_string(),
                 volatility_increase: 0.5,
             }][0..events_count.min(1)]

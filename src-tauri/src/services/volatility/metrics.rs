@@ -9,7 +9,7 @@ pub(super) struct MetricsAggregator;
 
 impl MetricsAggregator {
     /// Calcule les métriques globales agrégées
-    pub(super) fn calculate_global_metrics(
+    pub(super) fn calculer_metriques_globales(
         hourly_stats: &[HourlyStats],
         total_candles: usize,
     ) -> GlobalMetrics {
@@ -64,7 +64,7 @@ impl MetricsAggregator {
     }
 
     /// Calcule le score de confiance - DÉLÉGUÉ au ConfidenceScorer
-    pub(super) fn calculate_confidence_score(metrics: &GlobalMetrics) -> f64 {
-        ConfidenceScorer::calculate_confidence_score(metrics)
+    pub(super) fn calculer_score_confiance(metrics: &GlobalMetrics) -> f64 {
+        ConfidenceScorer::calculer_score_confiance(metrics)
     }
 }

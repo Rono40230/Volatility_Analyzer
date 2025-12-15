@@ -85,7 +85,7 @@ pub fn track_trade(
 }
 
 /// Calcule l'ATR à un index donné
-pub fn calculate_atr_at_index(candles: &[Candle], index: usize) -> Result<f64> {
+pub fn calculer_atr_a_index(candles: &[Candle], index: usize) -> Result<f64> {
     use crate::services::metrics::MetricsCalculator;
 
     if index < 14 {
@@ -96,7 +96,7 @@ pub fn calculate_atr_at_index(candles: &[Candle], index: usize) -> Result<f64> {
 
     let window = &candles[index - 14..=index];
     let calc = MetricsCalculator::new(window);
-    let atrs = calc.calculate_atr(14)?;
+    let atrs = calc.calculer_atr(14)?;
 
     atrs.last()
         .copied()

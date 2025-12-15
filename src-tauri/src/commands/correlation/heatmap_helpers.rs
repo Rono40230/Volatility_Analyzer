@@ -69,7 +69,7 @@ pub fn get_event_types(
     Ok(event_types)
 }
 
-pub fn calculate_avg_volatility_for_event_pair_optimized(
+pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
     conn: &Connection,
     event_name: &str,
     pair: &str,

@@ -22,7 +22,7 @@ pub struct TrueRangeDistribution {
 
 impl TrueRangeDistribution {
     /// Calcule la distribution du True Range
-    pub fn calculate(candles: &[Candle]) -> Result<Self> {
+    pub fn calculer(candles: &[Candle]) -> Result<Self> {
         if candles.is_empty() {
             return Err(VolatilityError::InsufficientData(
                 "No candles for True Range distribution".to_string(),

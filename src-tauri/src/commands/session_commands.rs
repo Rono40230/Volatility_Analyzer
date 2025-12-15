@@ -32,7 +32,7 @@ pub async fn analyze_sessions(
         .collect();
 
     // Analyser par session
-    let sessions = SessionAnalyzer::get_sessions();
+    let sessions = SessionAnalyzer::obtenir_sessions();
     let mut session_volatilities: HashMap<String, Vec<f64>> = HashMap::new();
 
     for session in &sessions {
@@ -60,7 +60,7 @@ pub async fn analyze_sessions(
 
         // Assigner à la ou les sessions correspondantes
         for session in &sessions {
-            if SessionAnalyzer::is_in_session(hour, session) {
+            if SessionAnalyzer::est_dans_session(hour, session) {
                 session_volatilities
                     .get_mut(&session.name)
                     .ok_or_else(|| "Session not found in volatilities map".to_string())?
@@ -92,7 +92,7 @@ pub async fn analyze_sessions(
         session_stats.push(SessionStats {
             name: session.name.clone(),
             icon: session.icon.clone(),
-            paris_hours: SessionAnalyzer::format_paris_hours(session, is_winter),
+            paris_hours: SessionAnalyzer::formater_heures_paris(session, is_winter),
             avg_volatility: (avg_vol * 10000.0 * 100.0).round() / 100.0, // Convertir en pips avec 2 décimales
             percentage: (percentage * 100.0).round() / 100.0,
             candle_count: vols.len(),
@@ -107,7 +107,7 @@ pub async fn analyze_sessions(
     });
 
     // Calculer les chevauchements
-    let overlaps = calculate_overlaps(&sessions, &candles, is_winter, avg_daily_volatility)?;
+    let overlaps = calculer_chevauchements(&sessions, &candles, is_winter, avg_daily_volatility)?;
 
     // Corrélation avec calendrier (vraies données DB)
     let pool_guard = _state
@@ -115,11 +115,11 @@ pub async fn analyze_sessions(
         .lock()
         .map_err(|e| format!("Erreur lock pool: {}", e))?;
     let pool = pool_guard.as_ref().ok_or("Pool DB non initialisé")?;
-    let calendar_correlation = CalendarCorrelator::calculate_correlation(&sessions, pool)?;
+    let calendar_correlation = CalendarCorrelator::calculer_correlation(&sessions, pool)?;
 
     // Générer les recommandations
     let recommendations =
-        SessionAnalyzer::generate_recommendations(&session_stats, avg_daily_volatility);
+        SessionAnalyzer::generer_recommandations(&session_stats, avg_daily_volatility);
 
     // Formater la période
     let period = if let (Some(first), Some(last)) = (first_date, last_date) {
@@ -139,7 +139,7 @@ pub async fn analyze_sessions(
     })
 }
 
-fn calculate_overlaps(
+fn calculer_chevauchements(
     _sessions: &[TradingSession],
     candles: &[(i64, f64, f64)],
     is_winter: bool,

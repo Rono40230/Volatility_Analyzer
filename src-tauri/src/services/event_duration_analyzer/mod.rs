@@ -128,7 +128,7 @@ mod tests {
             .into();
 
         let analyzer = EventDurationAnalyzer::new(&candles, event_time);
-        let result = analyzer.calculate_baseline_atr();
+        let result = analyzer.calculer_atr_reference();
         // Devrait échouer avec données insuffisantes
         assert!(result.is_err());
     }
