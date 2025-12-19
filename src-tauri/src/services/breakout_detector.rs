@@ -8,7 +8,7 @@ use crate::models::Candle;
 /// Un breakout est défini comme :
 /// - Le prix casse un niveau de support/résistance récent
 /// - Le mouvement est confirmé par un body significatif (> 50% du range)
-pub fn calculate_breakout_percentage(candles: &[Candle]) -> f64 {
+pub fn calculer_pourcentage_breakout(candles: &[Candle]) -> f64 {
     if candles.len() < 3 {
         return 0.0;
     }
@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_empty_candles() {
-        let percentage = calculate_breakout_percentage(&[]);
+        let percentage = calculer_pourcentage_breakout(&[]);
         assert_eq!(percentage, 0.0);
     }
 }

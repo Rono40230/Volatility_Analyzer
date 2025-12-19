@@ -5,11 +5,13 @@ import {
   formatSliceTime,
   loadMovementQuality,
   loadEntryWindowAnalysis,
+  loadQuarterEvents,
   extractVolatilityDuration,
   createBestSlice,
   getStitchedVolatilityProfile,
   type MovementQuality,
-  type VolatilityDuration
+  type VolatilityDuration,
+  type RecurringEvent
 } from './useMetricsAnalysisData.helpers'
 
 export function useMetricsAnalysisData() {
@@ -19,6 +21,7 @@ export function useMetricsAnalysisData() {
   const volatilityDuration = ref<VolatilityDuration | null>(null)
   const tradingPlan = ref<any>(null)
   const entryWindowAnalysis = ref<any>({ optimal_offset: 0, optimal_win_rate: 0 })
+  const recurringEvents = ref<RecurringEvent[]>([])
 
   async function updateAnalysis(analysisResult: AnalysisResult, isArchiveMode = false) {
     sliceAnalyses.value = []
@@ -26,6 +29,7 @@ export function useMetricsAnalysisData() {
     volatilityDuration.value = null
     tradingPlan.value = null
     entryWindowAnalysis.value = { optimal_offset: 0, optimal_win_rate: 0 }
+    recurringEvents.value = []
 
     const result = analysisResult
     const [bestHour, bestQuarter] = result.best_quarter
@@ -66,6 +70,9 @@ export function useMetricsAnalysisData() {
       if (entryAnalysis) {
         entryWindowAnalysis.value = entryAnalysis
       }
+
+      // Load recurring events
+      recurringEvents.value = await loadQuarterEvents(result.symbol, bestHour, bestQuarter)
     }
 
     // Create best slice with movement quality score
@@ -122,6 +129,9 @@ export function useMetricsAnalysisData() {
     if (entryAnalysis) {
       entryWindowAnalysis.value = entryAnalysis
     }
+
+    // Load recurring events for selected quarter
+    recurringEvents.value = await loadQuarterEvents(result.symbol, selectedHour, selectedQuarter)
   }
 
   return {
@@ -131,6 +141,7 @@ export function useMetricsAnalysisData() {
     volatilityDuration,
     tradingPlan,
     entryWindowAnalysis,
+    recurringEvents,
     updateAnalysis,
     updateAnalysisForQuarter
   }

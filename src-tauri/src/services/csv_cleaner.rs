@@ -82,17 +82,17 @@ pub fn clean_european_csv(input_path: &str, output_dir: &Path) -> Result<Cleanin
 
     if error_rate >= 1.0 {
         report.status = "partial".to_string();
-        println!(
+        tracing::warn!(
             "⚠️ {} lignes nettoyées ({} erreurs = {:.2}%)",
             report.lines_cleaned, report.errors, error_rate
         );
     } else if report.errors > 0 {
-        println!(
+        tracing::info!(
             "✅ {} lignes nettoyées ({} erreurs = {:.2}% < 1%)",
             report.lines_cleaned, report.errors, error_rate
         );
     } else {
-        println!("✅ {} lignes nettoyées (0 erreur)", report.lines_cleaned);
+        tracing::info!("✅ {} lignes nettoyées (0 erreur)", report.lines_cleaned);
     }
 
     Ok(report)

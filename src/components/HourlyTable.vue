@@ -26,7 +26,6 @@
             <th>Direction Strength</th>
             <th>Noise Ratio</th>
             <th>Breakouts %</th>
-            <th>Evenements</th>
           </tr>
         </thead>
         <tbody>
@@ -69,21 +68,6 @@
               <td>{{ (stat.volume_imbalance_mean * 100).toFixed(2) }}%</td>
               <td>{{ stat.noise_ratio_mean.toFixed(2) }}%</td>
               <td>{{ stat.breakout_percentage.toFixed(2) }}%</td>
-              <td class="events-cell">
-                <button
-                  v-if="getDistinctEventCount(stat.events) > 0"
-                  class="event-badge-btn"
-                  :class="getEventBadgeClass(stat.events)"
-                  :title="`${getDistinctEventCount(stat.events)} événement(s) HIGH`"
-                  @click="selectHour(stat.hour, stat.events)"
-                >
-                  {{ logHourEventCount(stat.hour, stat.events) }}
-                </button>
-                <span
-                  v-else
-                  class="no-event"
-                >—</span>
-              </td>
             </tr>
 
             <!-- Accordion 15-minutes -->
@@ -92,7 +76,7 @@
               class="accordion-row"
             >
               <td
-                :colspan="props.stats15min ? 10 : 9"
+                :colspan="props.stats15min ? 9 : 8"
                 class="accordion-cell"
               >
                 <div class="scalping-details">
@@ -116,7 +100,6 @@
                         <th title="TÂCHE 4: Durée optimale fermeture trade">
                           Trade Exp (min)
                         </th>
-                        <th>Événements</th>
                         <th style="width: 140px;">Actions</th>
                       </tr>
                     </thead>
@@ -167,20 +150,6 @@
                             class="warning-icon"
                           >⚠️</span>
                         </td>
-                        <td class="events-cell">
-                          <button
-                            v-if="getEventsForQuarter(stat.events, stat.hour, quarter.quarter).length > 0"
-                            class="event-badge-btn high"
-                            style="font-size: 0.8em; padding: 2px 6px;"
-                            @click="selectHour(stat.hour, getEventsForQuarter(stat.events, stat.hour, quarter.quarter))"
-                          >
-                            {{ getEventsForQuarter(stat.events, stat.hour, quarter.quarter).length }}
-                          </button>
-                          <span
-                            v-else
-                            class="no-event"
-                          >—</span>
-                        </td>
                         <td class="actions-cell">
                           <button
                             class="btn-bidi-params"
@@ -200,21 +169,12 @@
         </tbody>
       </table>
     </div>
-
-    <!-- Drawer des événements -->
-    <EventDetailsDrawer
-      :is-open="drawerOpen"
-      :selected-hour="selectedHour"
-      :all-events="selectedEvents"
-      @close="drawerOpen = false"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import type { HourlyStats, EventInHour, Stats15Min } from '../stores/volatility'
-import EventDetailsDrawer from './EventDetailsDrawer.vue'
+import type { HourlyStats, Stats15Min } from '../stores/volatility'
 import UnitDisplay from './UnitDisplay.vue'
 
 interface GlobalMetrics {
@@ -262,9 +222,6 @@ function formatQuarterLabel(hour: number, quarter: number): string {
 }
 
 // État du drawer
-const drawerOpen = ref(false)
-const selectedHour = ref<number | null>(null)
-const selectedEvents = ref<EventInHour[] | null>(null)
 const expandedHours = ref<number[]>([])
 const top3Slices = ref<Array<{ hour: number; quarter: number }>>([])
 
@@ -309,102 +266,8 @@ function isBestHour(hour: number): boolean {
   return props.bestQuarter[0] === hour
 }
 
-// ============================================
-// Gestion des événements (drawer)
-// ============================================
-
-function selectHour(hour: number, events: EventInHour[]) {
-  selectedHour.value = hour
-  selectedEvents.value = events
-  drawerOpen.value = true
-}
-
 function openBidiParams(hour: number, quarter: number) {
   emit('open-bidi-params', { hour, quarter })
-}
-
-
-function normalizeImpact(impact: string): string {
-  const i = impact.toUpperCase().trim()
-  if (i === 'HIGH' || i === 'H') return 'HIGH'
-  if (i === 'MEDIUM' || i === 'M' || i === 'MED') return 'MEDIUM'
-  if (i === 'LOW' || i === 'L') return 'LOW'
-  return 'UNKNOWN'
-}
-
-// Log le compte d'événements pour l'heure 0
-function logHourEventCount(hour: number, events: EventInHour[] | undefined): number {
-  return getDistinctEventCount(events)
-}
-
-
-
-
-function getEventBadgeClass(events: EventInHour[]): string {
-  const hasHigh = events.some(e => normalizeImpact(e.impact) === 'HIGH')
-  return hasHigh ? 'high' : 'hidden-badge' // hidden-badge si pas de HIGH
-}
-
-function getDistinctEventCount(events: EventInHour[] | undefined): number {
-  if (!events || events.length === 0) return 0
-  
-  // Filtrer pour ne garder que HIGH
-  const highEvents = events.filter(e => normalizeImpact(e.impact) === 'HIGH')
-  
-  // Compter les PAIRES (nom + impact) distinctes
-  const distinctPairs = new Set(highEvents.map(e => `${e.event_name}|HIGH`))
-  return distinctPairs.size
-}
-
-// Compter le nombre total d'événements (pour afficher par quarter)
-function getTotalEventCount(events: EventInHour[] | undefined): number {
-  if (!events || events.length === 0) return 0
-  // Retourner simplement le nombre total d'événements
-  return events.length
-}
-
-// Extraire les événements HIGH DISTINCTS pour un quarter spécifique
-// Même logique que getDistinctEventCount mais filtrée par quarter
-function getEventsForQuarter(hourEvents: EventInHour[] | undefined, hour: number, quarter: number): EventInHour[] {
-  if (!hourEvents || hourEvents.length === 0) return []
-  
-  // D'abord : récupérer TOUTES les paires HIGH distinctes de l'heure
-  const allHighEvents = hourEvents.filter(e => normalizeImpact(e.impact) === 'HIGH')
-  const allDistinctPairs = new Set(allHighEvents.map(e => `${e.event_name}|HIGH`))
-  
-  // Répartir par quarter basé sur le datetime (format "HH:MM:SS")
-  const quarterStart = quarter * 15
-  const quarterEnd = quarterStart + 15
-  
-  // Pour chaque paire DISTINCTE, vérifier s'il existe au moins un événement dans ce quarter
-  const pairsInQuarter = new Set<string>()
-  
-  for (const pair of allDistinctPairs) {
-    // Chercher un événement avec cette paire qui tombe dans ce quarter
-    const eventInQuarter = allHighEvents.find(e => {
-      if (`${e.event_name}|HIGH` !== pair) return false
-      
-      const timeParts = e.datetime.split(':')
-      if (timeParts.length < 2) return false
-      const minute = parseInt(timeParts[1], 10)
-      return minute >= quarterStart && minute < quarterEnd
-    })
-    
-    if (eventInQuarter) {
-      pairsInQuarter.add(pair)
-    }
-  }
-  
-  // Retourner un tableau avec une seule instance de chaque paire qui est dans ce quarter
-  const result: EventInHour[] = []
-  for (const pair of pairsInQuarter) {
-    const event = allHighEvents.find(e => `${e.event_name}|HIGH` === pair)
-    if (event) {
-      result.push(event)
-    }
-  }
-  
-  return result
 }
 
 // Fonctions pour accordion 15-minutes
@@ -434,6 +297,7 @@ function getQuartersForHour(hour: number) {
         candle_count: 0,
         atr_mean: 0,
         atr_max: 0,
+        max_true_range: 0,
         volatility_mean: 0,
         range_mean: 0,
         body_range_mean: 0,

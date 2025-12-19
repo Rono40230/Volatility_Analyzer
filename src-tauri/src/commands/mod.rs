@@ -63,6 +63,6 @@ pub use volatility::{
     analyze_quarter_entry_timing, analyze_slice_metrics, analyze_straddle_metrics, analyze_symbol,
     analyze_volatility_duration_for_slice, calculer_offset_optimal, calculer_frequence_whipsaw,
     calculer_taux_reussite, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
-    load_candles_for_hour, load_symbols, ping,
+    get_quarter_events, load_candles_for_hour, load_symbols, ping,
 };
 pub use volatility_duration_commands::analyze_volatility_duration;

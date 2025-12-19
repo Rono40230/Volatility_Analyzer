@@ -16,6 +16,7 @@
               :offset-optimal="offsetOptimal" 
               :symbol="analysisData?.symbol || 'EURUSD'"
               :point-value="props.analysisResult?.point_value"
+              :recurring-events="recurringEvents"
             />
           </BestSliceCard>
         </div>
@@ -60,7 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ close: [] }>()
 
 const isOpenRef = ref(props.isOpen)
-const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, offsetOptimal, whipsawAnalysis } = useMetricsModalLoad(props, isOpenRef)
+const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, whipsawAnalysis } = useMetricsModalLoad(props, isOpenRef)
 
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')

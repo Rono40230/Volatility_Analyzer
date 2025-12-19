@@ -168,8 +168,8 @@ fn calculate_metrics_from_candles(
     };
 
     // Breakout % (using real detection)
-    use crate::services::breakout_detector::calculate_breakout_percentage;
-    let breakout_percentage = calculate_breakout_percentage(candles);
+    use crate::services::breakout_detector::calculer_pourcentage_breakout;
+    let breakout_percentage = calculer_pourcentage_breakout(candles);
 
     // Normaliser ATR et Range en pips
     let atr_mean_pips = normalize_to_pips(atr_mean, symbol).ceil();

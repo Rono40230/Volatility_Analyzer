@@ -46,7 +46,7 @@ impl EntryWindowAnalyzer {
                     .collect();
 
                 if !window_candles.is_empty() {
-                    let metrics = Self::calculate_offset_metrics(
+                    let metrics = Self::calculer_metriques_offset(
                         entry.close,
                         &window_candles,
                         offset_minutes,
@@ -99,7 +99,7 @@ impl EntryWindowAnalyzer {
     }
 
     #[allow(dead_code)]
-    fn calculate_offset_metrics(
+    fn calculer_metriques_offset(
         entry_price: f64,
         window_candles: &[&Candle],
         offset: i32,

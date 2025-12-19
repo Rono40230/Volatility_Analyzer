@@ -1,5 +1,5 @@
 // Utilitaires pour HourlyTable
-import type { EventInHour, GlobalMetrics, Stats15Min } from '../stores/volatility'
+import type { GlobalMetrics, Stats15Min } from '../stores/volatility'
 
 export function getEstimatedPrice(globalMetrics?: GlobalMetrics): number {
   if (!globalMetrics) return 100000
@@ -18,25 +18,6 @@ export function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
 }
 
-export function normalizeImpact(impact: string): string {
-  const i = impact.toUpperCase().trim()
-  if (i === 'HIGH' || i === 'H') return 'HIGH'
-  if (i === 'MEDIUM' || i === 'M' || i === 'MED') return 'MEDIUM'
-  if (i === 'LOW' || i === 'L') return 'LOW'
-  return 'UNKNOWN'
-}
-
-export function getEventBadgeClass(events: EventInHour[]): string {
-  const hasHigh = events.some(e => normalizeImpact(e.impact) === 'HIGH')
-  return hasHigh ? 'high' : 'hidden-badge'
-}
-
-export function getDistinctEventCount(events: EventInHour[] | undefined): number {
-  if (!events || events.length === 0) return 0
-  const highEvents = events.filter(e => normalizeImpact(e.impact) === 'HIGH')
-  const distinctPairs = new Set(highEvents.map(e => `${e.event_name}|HIGH`))
-  return distinctPairs.size
-}
 
 export function calculateSliceScore(slice: Stats15Min): number {
   if (slice.candle_count === 0) return 0

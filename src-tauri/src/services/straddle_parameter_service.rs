@@ -5,9 +5,9 @@ pub struct StraddleParameterService;
 impl StraddleParameterService {
     /// Calcule les paramètres Straddle unifiés (utilisé par Volatilité Brute et Corrélation)
     ///
-    /// Logique harmonisée (Bidi V2):
-    /// - Offset : Adaptatif selon le bruit (1.2x à 1.5x ATR)
-    /// - SL : Adaptatif selon le bruit (1.5x à 3.0x ATR)
+    /// Logique harmonisée (Bidi V4 - High Volatility Hardened):
+    /// - Offset : DURCI (2.0x à 3.0x ATR) pour éviter les mèches des gros mouvements
+    /// - SL : ÉLARGI (2.5x à 5.0x ATR) pour encaisser le bruit initial
     /// - TP : Non défini explicitement (Trailing Stop utilisé)
     /// - Timeout : Basé sur la volatilité (fixe à 3 min pour l'instant ou calculé)
     ///
@@ -22,37 +22,35 @@ impl StraddleParameterService {
         // Marge de sécurité spread (défaut 3.0 pips)
         let spread_safety = spread_margin.unwrap_or(3.0);
 
-        // 1. Offset Adaptatif
-        // Si bruit > 2.0, on s'écarte plus (1.5x) pour éviter les mèches
-        // Sinon on reste proche (1.2x)
-        let offset_multiplier = if noise_ratio > 2.0 { 1.5 } else { 1.2 };
+        // 1. Offset Adaptatif (DURCI V4)
+        // Si bruit > 2.5, on s'écarte BEAUCOUP (3.0x) pour éviter les mèches
+        // Sinon on reste prudent (2.0x) - Fini le 1.5x trop risqué
+        let offset_multiplier = if noise_ratio > 2.5 { 3.0 } else { 2.0 };
         let offset_pips = (atr * offset_multiplier).ceil() + spread_safety;
 
-        // 2. Stop Loss Adaptatif (Sécurité)
-        // Plus il y a de bruit, plus le SL doit être large
-        let sl_ratio = if noise_ratio > 3.0 {
-            3.0
+        // 2. Stop Loss Adaptatif (ÉLARGI V4)
+        // Plus il y a de bruit, plus le SL doit être large pour survivre au Whipsaw
+        let sl_ratio = if noise_ratio > 3.5 {
+            5.0 // Bruit extrême = SL très large
         } else if noise_ratio > 2.5 {
-            2.5
+            4.0 // Bruit fort
         } else if noise_ratio > 2.0 {
-            2.0
-        } else if noise_ratio > 1.5 {
-            1.75
+            3.0 // Bruit moyen
         } else {
-            1.5
+            2.5 // Calme (mais on garde 2.5 min pour sécurité)
         };
         let stop_loss_pips = (atr * sl_ratio).ceil();
 
         // 3. Trailing Stop (Suivi)
         // Environ 30-40% du SL, ou adaptatif
         let ts_ratio = if noise_ratio > 3.0 {
-            1.2
+            2.0
         } else if noise_ratio > 2.0 {
-            1.0
+            1.5
         } else if noise_ratio > 1.5 {
-            0.8
+            1.2
         } else {
-            0.6
+            1.0
         };
         let trailing_stop_pips = (atr * ts_ratio).ceil();
 

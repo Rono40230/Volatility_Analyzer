@@ -83,8 +83,8 @@ impl PairDataConverter {
             .collect();
 
         let format = Self::detect_format(&headers);
-        println!("🔍 Format détecté: {:?}", format);
-        println!("📋 Headers: {:?}", headers);
+        tracing::debug!("🔍 Format détecté: {:?}", format);
+        tracing::debug!("📋 Headers: {:?}", headers);
 
         let mut candles = Vec::new();
         let mut line_number = 1; // Commence à 1 (après header)
@@ -96,14 +96,14 @@ impl PairDataConverter {
             let record = match result {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("⚠️ Ligne {} ignorée (erreur CSV): {}", line_number, e);
+                    tracing::warn!("⚠️ Ligne {} ignorée (erreur CSV): {}", line_number, e);
                     continue;
                 }
             };
 
             match FormatParsers::parse_record(&record, &format, &headers) {
                 Ok(candle) => candles.push(candle),
-                Err(e) => eprintln!("⚠️ Ligne {} ignorée (parsing): {}", line_number, e),
+                Err(e) => tracing::warn!("⚠️ Ligne {} ignorée (parsing): {}", line_number, e),
             }
         }
 

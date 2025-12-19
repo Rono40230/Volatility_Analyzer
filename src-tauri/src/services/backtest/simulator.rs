@@ -17,8 +17,6 @@ impl EventSimulator {
         // On suppose qu'on place les ordres à l'ouverture de la bougie de l'événement
         let t0_candle = candles.iter().find(|c| c.datetime >= event_time);
         
-        let t0_candle = candles.iter().find(|c| c.datetime >= event_time);
-        
         let reference_price = match t0_candle {
             Some(c) => c.open,
             None => return TradeResult {

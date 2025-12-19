@@ -162,6 +162,7 @@ pub fn run() {
             analyze_quarter_entry_timing, // NEW: Meilleur moment d'entrée par minute
             load_candles_for_hour, // NEW: Charger 60 candles pour une heure
             get_cached_candles_for_hour, // NEW: Récupérer candles en cache
+            get_quarter_events, // NEW: Récupérer événements récurrents pour un quarter
             // Calendar commands (Phase 2 MVP)
             get_upcoming_events,
             load_economic_events_from_csv,

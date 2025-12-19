@@ -87,7 +87,16 @@ pub async fn analyze_quarter_entry_timing(
         daily_occurrences.len()
     );
 
-    // Pour chaque jour, trouver le meilleur minute (offset 0-14)
+    // 1. Trouver le meilleur minute GLOBALEMENT (sur tout l'historique agrégé)
+    // Cela correspond au "pic" visible sur le graphique moyen (évite le problème de la moyenne des indices)
+    let global_best_minute = find_best_minute_in_quarter(&all_quarter_candles)?;
+
+    tracing::info!(
+        "🌍 Meilleur minute globale (pic moyen): +{} min",
+        global_best_minute
+    );
+
+    // 2. Analyser la consistance jour par jour (pour la confiance et stats)
     let mut offsets: Vec<u8> = Vec::new();
     let mut total_win_rates: f64 = 0.0;
 
@@ -108,17 +117,13 @@ pub async fn analyze_quarter_entry_timing(
         return Err("Aucun offset valide trouvé".to_string());
     }
 
-    // Calculer la moyenne des offsets
-    let avg_offset =
-        (offsets.iter().map(|&o| o as f64).sum::<f64>() / offsets.len() as f64).round() as u8;
-
-    // Borner l'offset: [0, 15)
-    let optimal_offset = std::cmp::min(avg_offset, 14);
+    // L'offset optimal est celui qui ressort le mieux sur l'ensemble de l'historique
+    let optimal_offset = global_best_minute;
 
     // Calculer le win-rate moyen
     let avg_win_rate = total_win_rates / offsets.len() as f64;
 
-    // Calculer la confiance (basée sur la consistance des offsets)
+    // Calculer la confiance (basée sur la consistance des offsets par rapport à l'optimal)
     let confidence = calculer_confiance(&offsets, optimal_offset);
 
     tracing::info!(

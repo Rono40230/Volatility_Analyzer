@@ -274,20 +274,20 @@ export const formules: Record<string, Formule> = {
     id: 'offset',
     titre: 'Offset (Distance ordres)',
     categorieId: 'straddle',
-    definition: 'Distance des ordres Buy Stop et Sell Stop par rapport au prix d\'entrée. Adaptatif selon le Noise Ratio.',
-    explication_litterale: 'Cette formule calcule à quelle distance on place nos ordres. Si le marché est "propre" (Noise < 2.0), on place les ordres près (ATR × 1.2). Si le marché est "bruyant" (Noise > 2.0), on les écarte (ATR × 1.5). On ajoute toujours le spread pour compenser les coûts.',
-    formule: 'IF Noise > 2.0 → Offset = (ATR × 1.5) + Spread\nELSE → Offset = (ATR × 1.2) + Spread',
-    inputs: ['ATR', 'Noise Ratio', 'Spread'],
+    definition: 'Distance des ordres Buy Stop et Sell Stop. Logique "Bidi V4 Hardened" pour éviter les mèches.',
+    explication_litterale: 'On place les ordres assez loin pour ne pas être déclenché par le bruit. Si le marché est très bruyant (Noise > 2.5), on s\'écarte beaucoup (ATR x3). Sinon, on reste prudent (ATR x2). On ajoute toujours une marge de sécurité (Spread).',
+    formule: 'IF Noise > 2.5 → Offset = (ATR × 3.0) + Spread\nELSE → Offset = (ATR × 2.0) + Spread',
+    inputs: ['ATR', 'Noise Ratio', 'Spread (def: 3.0)'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'ATR=20, Noise=1.5, Spread=3 → Offset = (20 × 1.2) + 3 = 27 points',
+    exemple: 'ATR=10, Noise=2.8 → Offset = (10 × 3.0) + 3 = 33 points',
     notes: [
-      'Adaptatif pour filtrer le bruit',
-      'Inclut une marge de sécurité (spread)',
-      'Arrondi au point supérieur (.ceil())'
+      'Logique V4 Durcie (fini le 1.5x trop risqué)',
+      'Filtre agressivement les faux départs',
+      'Priorité: Sécurité > Opportunité'
     ]
   },
 
@@ -336,22 +336,22 @@ export const formules: Record<string, Formule> = {
 
   offset_ajuste: {
     id: 'offset_ajuste',
-    titre: 'Stop Loss (SL)',
+    titre: 'Stop Loss (SL) Adaptatif',
     categorieId: 'straddle',
-    definition: 'Niveau de protection adaptatif. Plus le marché est bruyant (Noise élevé), plus le SL est large pour éviter de se faire sortir sur une mèche.',
-    explication_litterale: 'Le Stop Loss s\'adapte à la "nervosité" du marché. Si le marché est calme (Noise < 1.5), on met un SL serré (ATR × 1.5). Si le marché est très agité (Noise > 3.0), on met un SL très large (ATR × 3.0) pour laisser le prix respirer sans couper la position prématurément.',
-    formule: 'Noise > 3.0 → SL = ATR × 3.0\nNoise > 2.5 → SL = ATR × 2.5\nNoise > 2.0 → SL = ATR × 2.0\nNoise > 1.5 → SL = ATR × 1.75\nElse → SL = ATR × 1.5',
+    definition: 'Niveau de protection élargi (Bidi V4). Plus le bruit est fort, plus le SL est large pour survivre au Whipsaw.',
+    explication_litterale: 'Le SL s\'adapte à la violence du marché. Si c\'est calme, on utilise ATR x2.5. Si c\'est le chaos (Noise > 3.5), on élargit énormément (ATR x5.0) pour ne pas se faire sortir sur un aller-retour rapide.',
+    formule: 'Noise > 3.5 → SL = ATR × 5.0\nNoise > 2.5 → SL = ATR × 4.0\nNoise > 2.0 → SL = ATR × 3.0\nElse → SL = ATR × 2.5',
     inputs: ['ATR', 'Noise Ratio'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'ATR=20, Noise=2.2 → SL = 20 × 2.0 = 40 points\nATR=20, Noise=3.1 → SL = 20 × 3.0 = 60 points',
+    exemple: 'ATR=10, Noise=3.6 → SL = 10 × 5.0 = 50 points',
     notes: [
-      'Logique adaptative par paliers',
-      'Protège contre la volatilité erratique',
-      'Minimum 1.5x ATR pour sécurité de base'
+      'Logique V4 Élargie',
+      'But: Survivre à la volatilité initiale',
+      'Minimum 2.5x ATR (vs 1.5x avant)'
     ]
   },
 
@@ -402,15 +402,15 @@ export const formules: Record<string, Formule> = {
     titre: 'Trailing Stop (Suivi)',
     categorieId: 'straddle',
     definition: 'Stop suiveur adaptatif. Sécurise les gains en remontant le SL à mesure que le prix avance.',
-    explication_litterale: 'Le Trailing Stop suit le prix comme une ombre. Si le marché est calme (Noise < 1.5), il suit de près (0.8x ATR) pour verrouiller vite les gains. Si le marché est nerveux (Noise > 3.0), il laisse plus de marge (1.2x ATR) pour ne pas sortir trop tôt sur une correction mineure.',
-    formule: 'Noise > 3.0 → TS = ATR × 1.2\nNoise > 2.0 → TS = ATR × 1.0\nNoise > 1.5 → TS = ATR × 0.8\nElse → TS = ATR × 0.6',
+    explication_litterale: 'Le Trailing Stop suit le prix comme une ombre. Si le marché est calme (Noise < 1.5), il suit de près (1.0x ATR) pour verrouiller vite les gains. Si le marché est nerveux (Noise > 3.0), il laisse plus de marge (2.0x ATR) pour ne pas sortir trop tôt sur une correction mineure.',
+    formule: 'Noise > 3.0 → TS = ATR × 2.0\nNoise > 2.0 → TS = ATR × 1.5\nNoise > 1.5 → TS = ATR × 1.2\nElse → TS = ATR × 1.0',
     inputs: ['ATR', 'Noise Ratio'],
     output: {
       type: 'float',
-      range: '0.6 - 1.2',
+      range: '1.0 - 2.0',
       unite: 'x ATR'
     },
-    exemple: 'ATR=20, Noise=1.2 → TS = 20 × 0.6 = 12 points\nATR=20, Noise=2.5 → TS = 20 × 1.0 = 20 points',
+    exemple: 'ATR=20, Noise=1.2 → TS = 20 × 1.0 = 20 points\nATR=20, Noise=2.5 → TS = 20 × 1.5 = 30 points',
     notes: [
       'Adaptatif selon le bruit',
       'Plus le bruit est fort, plus le TS est large',
@@ -486,21 +486,22 @@ export const formules: Record<string, Formule> = {
 
   whipsaw_risk_level: {
     id: 'whipsaw_risk_level',
-    titre: 'Whipsaw Risk Level',
+    titre: 'Whipsaw Risk Level (Giant Doji)',
     categorieId: 'whipsaw',
-    definition: 'Catégorisation du risque basée sur la fréquence whipsaw.',
-    explication_litterale: 'C\'est mon jugement sur le RISQUE de whipsaw à cette heure. "Very Low" = presque aucun risque. "High" = beaucoup de risque. Elle te dit: comment prudent dois-tu être cette heure? Si Risk="Very High", ça veut dire quasiment 1 fois sur 3, ton Straddle va se déclencher dans les deux sens = perdu.',
-    formule: 'Risk = "Very Low" if % < 5\n      = "Low" if % < 10\n      = "Medium" if % < 20\n      = "High" if % < 35\n      = "Very High" if % ≥ 35',
-    inputs: ['Whipsaw frequency %'],
+    definition: 'Détection des "Giant Dojis" : forte volatilité mais clôture proche de l\'ouverture. Signe de retournement violent (Whipsaw).',
+    explication_litterale: 'Je cherche les bougies "pièges". Si une bougie est très grande (ATR > 15 pts) mais qu\'elle finit presque où elle a commencé (Corps < 35% du range), c\'est un "Giant Doji". Ça veut dire que le prix a explosé dans les deux sens puis est revenu. C\'est le pire scénario pour un Straddle.',
+    formule: 'Risk = TRUE si (ATR > 15.0) ET (|Body| / Range < 0.35)',
+    inputs: ['ATR', 'Body Range %'],
     output: {
-      type: 'string (enum)',
-      range: '{VeryLow, Low, Medium, High, VeryHigh}',
-      unite: 'catégorie'
+      type: 'boolean',
+      range: '{True, False}',
+      unite: 'flag'
     },
-    exemple: '4.5% → Very Low risk',
+    exemple: 'ATR=30 pts, Body=10% → Giant Doji détecté (Risque Whipsaw élevé)',
     notes: [
-      'Visuel: couleur verte/jaune/rouge correspondante',
-      'Utilisé pour affichage BestSliceCard'
+      'ATR > 15 pts : filtre les dojis de nuit (calmes)',
+      'Body < 35% : signe d\'indécision majeure',
+      'Indicateur clé pour éviter les pertes'
     ]
   },
 
@@ -529,19 +530,20 @@ export const formules: Record<string, Formule> = {
     id: 'peak_duration',
     titre: 'Peak Duration',
     categorieId: 'timing',
-    definition: 'Minutes jusqu\'au pic de volatilité après le début du quarter. Identifie le moment de la plus grande amplitude.',
-    explication_litterale: 'Cette formule regarde QUAND le marché bouge le plus après un événement. Si c\'est à 3 minutes = le gros mouvement arrive vite. Si c\'est à 30 minutes = le marché prend du temps à réagir. C\'est utile pour savoir quand placer ton Straddle pour attraper le bon moment.',
-    formule: 'Peak_min = argmax(ATR[i]) où i ∈ [0, quarter_duration]',
-    inputs: ['ATR par minute', 'Time series'],
+    definition: 'Estimation heuristique de la durée du pic de volatilité basée sur l\'ATR, la directionalité (Body%) et l\'impact des événements.',
+    explication_litterale: 'Cette formule estime combien de temps la volatilité reste élevée. Elle part d\'une base (100-240 min) selon si le marché est volatil (ATR) et directionnel (Body%). Ensuite, elle ajuste selon l\'impact des événements: HIGH prolonge la durée (x1.5), LOW la réduit (x0.7).',
+    formule: 'Base = f(ATR, Body%)\nDuration = Base × ImpactMultiplier (High=1.5, Low=0.7)\nClamped: [60, 300] min',
+    inputs: ['ATR', 'Body Range %', 'Event Impact'],
     output: {
       type: 'integer',
-      range: '0 - quarter_duration',
+      range: '60 - 300',
       unite: 'minutes'
     },
-    exemple: 'Peak ATR à minute 12 du quarter → Peak Duration = 12 min',
+    exemple: 'ATR élevé + Body > 50% → Base 100 min. Event HIGH → 100 × 1.5 = 150 min.',
     notes: [
-      'Typique Forex: 5-15 minutes après event',
-      'Utile pour TP placement timing'
+      'Base: 100, 140, 180 ou 240 min selon intensité',
+      'Ajustement dynamique selon l\'annonce éco',
+      'Minimum 1h, Maximum 5h'
     ]
   },
 
@@ -549,19 +551,20 @@ export const formules: Record<string, Formule> = {
     id: 'half_life',
     titre: 'Volatility Half-life',
     categorieId: 'timing',
-    definition: 'Temps jusqu\'à moitié du pic de volatilité. Mesure la décroissance exponentielle.',
-    explication_litterale: 'Cette formule mesure combien de temps il faut pour que la volatilité descende à la moitié du maximum. Si peak=100 points, half-life=5 minutes = à 5 minutes le marché bouge encore 50 points en moyenne. À 10 minutes = 25 points. Elle te dit quand ta position perd de la valeur.',
-    formule: 'Half_life = t où ATR(t) = peak_ATR / 2',
-    inputs: ['ATR decay curve', 'Peak ATR value'],
+    definition: 'Temps estimé pour que la volatilité retombe à 50% de son pic. Dépend fortement du "bruit" (Noise Ratio).',
+    explication_litterale: 'Cette formule calcule la vitesse de retour au calme. Si le marché est "propre" (Noise < 1.5), la volatilité persiste longtemps (65% du pic). Si le marché est "bruyant" (Noise > 2.5), la volatilité s\'effondre vite (35% du pic).',
+    formule: 'Ratio = f(NoiseRatio) → {0.65, 0.50, 0.35}\nHalf_life = PeakDuration × Ratio',
+    inputs: ['Peak Duration', 'Noise Ratio'],
     output: {
       type: 'integer',
-      range: '0 - peak_duration',
+      range: '30 - 270',
       unite: 'minutes'
     },
-    exemple: 'Peak=20 points à 12min, ATR=10 points à 18min → Half-life = 6 min (12→18)',
+    exemple: 'Peak=100 min, Noise=1.2 (propre) → Half-life = 65 min.\nPeak=100 min, Noise=3.0 (sale) → Half-life = 35 min.',
     notes: [
-      'Exponentiel: volatilité décline vite puis lentement',
-      'Détermine trade expiration logique'
+      'Noise < 1.5 → Ratio 0.65 (Décroissance lente)',
+      'Noise < 2.5 → Ratio 0.50 (Décroissance normale)',
+      'Noise > 2.5 → Ratio 0.35 (Décroissance rapide)'
     ]
   },
 

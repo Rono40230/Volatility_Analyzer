@@ -31,6 +31,7 @@
         :placement-time="placementTime"
         :hour="analysis?.slice?.hour"
         :quarter="analysis?.slice?.quarter"
+        :events="recurringEvents"
       />
 
       <!-- Right: Simultaneous -->
@@ -76,6 +77,13 @@ const props = defineProps<{
   offsetOptimal?: OffsetOptimal | null
   symbol?: string
   pointValue?: number
+  recurringEvents?: Array<{
+    time: string
+    name: string
+    impact: string
+    currency: string
+    frequency: number
+  }>
 }>()
 
 const pointsPerPip = computed(() => getPointsPerPip(props.symbol || 'EURUSD'))

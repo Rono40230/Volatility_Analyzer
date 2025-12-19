@@ -39,10 +39,10 @@ impl BacktestEngine {
         // On récupère le nom de l'événement depuis le premier événement ou on utilise une valeur par défaut
         // Note: Le champ description contient le nom de l'événement (ex: "Non-Farm Employment Change")
         let event_name = events.first().map(|e| e.description.clone()).unwrap_or_else(|| "Unknown".to_string());
-        Ok(Self::calculate_summary(pair, &event_name, trades, mode))
+        Ok(Self::calculer_synthese(pair, &event_name, trades, mode))
     }
 
-    fn calculate_summary(pair: &str, event_name: &str, trades: Vec<TradeResult>, mode: StrategyMode) -> BacktestResult {
+    fn calculer_synthese(pair: &str, event_name: &str, trades: Vec<TradeResult>, mode: StrategyMode) -> BacktestResult {
         let asset_props = AssetProperties::from_symbol(pair);
         let total_trades = trades.len();
         let mut winning = 0;

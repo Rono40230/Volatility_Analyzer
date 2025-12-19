@@ -3,34 +3,7 @@ import type { Stats15Min } from '../stores/volatilityTypes'
 import { calculateStraddleScore, calculateTradingPlan } from '../utils/straddleAnalysis'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 export { getStitchedVolatilityProfile } from '../utils/volatilityProfile'
-
-export interface VolatilityDuration {
-  peak_duration_minutes: number
-  volatility_half_life_minutes: number
-  recommended_trade_expiration_minutes: number
-  confidence_score: number
-  sample_size: number
-}
-
-export interface MovementQuality {
-  id?: number | null
-  symbol: string
-  event_type: string
-  score?: number
-  label?: string
-  quality_score?: number
-  quality_label?: string
-  trend_score?: number
-  smoothness_score?: number
-  candle_consistency?: number
-  directional_move_rate?: number
-  whipsaw_rate?: number
-  avg_pips_moved?: number
-  success_rate?: number
-  sample_size?: number
-  created_at?: number
-  updated_at?: number
-}
+export type { VolatilityDuration, MovementQuality, RecurringEvent } from './metricsAnalysisTypes'
 
 export function formatSliceTime(hour: number, quarter: number): string {
   const startMin = quarter * 15
@@ -134,6 +107,20 @@ export function createBestSlice(
     combos: [],
     traps: [],
     tradingPlan: calculateTradingPlan(bestSliceStats, 100000, finalScore)
+  }
+}
+
+export async function loadQuarterEvents(
+  symbol: string,
+  hour: number,
+  quarter: number
+): Promise<RecurringEvent[]> {
+  try {
+    const events = await invoke<RecurringEvent[]>('get_quarter_events', { symbol, hour, quarter })
+    return events
+  } catch (e) {
+    // Silent fail is acceptable here as it's auxiliary data
+    return []
   }
 }
 

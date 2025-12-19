@@ -76,7 +76,7 @@ interface ModalProps {
 }
 
 export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
-  const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, updateAnalysis, updateAnalysisForQuarter } = useMetricsAnalysisData()
+  const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, updateAnalysis, updateAnalysisForQuarter } = useMetricsAnalysisData()
   const { offsetOptimal, winRate, whipsawAnalysis, analyzeStraddleMetrics } = useStraddleAnalysis()
 
   const loadAnalysis = async () => {
@@ -133,6 +133,6 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
   })
   onMounted(loadAnalysis)
 
-  return { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, offsetOptimal, winRate, whipsawAnalysis }
+  return { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, winRate, whipsawAnalysis }
 }
 

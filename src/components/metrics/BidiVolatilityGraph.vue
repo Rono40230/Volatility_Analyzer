@@ -8,6 +8,7 @@
         :entry-label="placementTime ? `Entrée (${placementTime})` : undefined"
         :hour="hour"
         :quarter="quarter"
+        :events="events"
       />
     </div>
     <div v-else class="graph-placeholder">
@@ -30,6 +31,13 @@ defineProps<{
   placementTime?: string
   hour?: number
   quarter?: number
+  events?: Array<{
+    time: string
+    name: string
+    impact: string
+    currency: string
+    frequency: number
+  }>
 }>()
 </script>
 

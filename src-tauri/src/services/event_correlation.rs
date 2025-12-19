@@ -54,7 +54,7 @@ impl EventCorrelationService {
 
         // Calcule la volatilité (Max True Range) 1h avant l'événement (Baseline)
         // Fenêtre Baseline : -60 min à -10 min
-        let before_metrics = self.calculate_volatility_metrics(
+        let before_metrics = self.calculer_metriques_volatilite(
             event.event_time - Duration::minutes(60),
             event.event_time - Duration::minutes(10),
             candles,
@@ -62,7 +62,7 @@ impl EventCorrelationService {
 
         // Calcule la volatilité (Max True Range) autour de l'événement (Impact)
         // Fenêtre Impact : -10 min à +30 min (FIX-03)
-        let impact_metrics = self.calculate_volatility_metrics(
+        let impact_metrics = self.calculer_metriques_volatilite(
             event.event_time - Duration::minutes(10),
             event.event_time + Duration::minutes(30),
             candles,
@@ -98,7 +98,7 @@ impl EventCorrelationService {
     }
 
     /// Calcule les métriques de volatilité (Mean TR, Max TR) dans une fenêtre temporelle
-    fn calculate_volatility_metrics(
+    fn calculer_metriques_volatilite(
         &self,
         start: NaiveDateTime,
         end: NaiveDateTime,

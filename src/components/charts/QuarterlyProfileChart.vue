@@ -55,6 +55,30 @@
       <line v-if="optimalEntry !== undefined" :x1="getX(optimalEntry)" y1="20" :x2="getX(optimalEntry)" y2="180" stroke="#10b981" stroke-width="1" stroke-dasharray="4,4" />
       <text v-if="optimalEntry !== undefined" :x="getX(optimalEntry)" y="15" font-size="7" fill="#10b981" text-anchor="middle" font-weight="bold">{{ entryLabel || `Entrée (${formatTime(optimalEntry)})` }}</text>
 
+      <!-- Event Flags -->
+      <g v-for="(event, index) in events" :key="index">
+        <!-- Flag Pole -->
+        <line 
+          :x1="getX(getEventMinute(event.time))" 
+          y1="20" 
+          :x2="getX(getEventMinute(event.time))" 
+          y2="180" 
+          :stroke="getEventColor(event.impact)" 
+          stroke-width="1" 
+          stroke-dasharray="2,2" 
+          opacity="0.7" 
+        />
+        
+        <!-- Flag Icon (Triangle) -->
+        <path 
+          :d="`M ${getX(getEventMinute(event.time))} 20 L ${getX(getEventMinute(event.time)) + 6} 24 L ${getX(getEventMinute(event.time))} 28 Z`" 
+          :fill="getEventColor(event.impact)" 
+        />
+
+        <!-- Event Label (on hover via title) -->
+        <title>{{ event.time }} - {{ event.name }} ({{ event.currency }}) [{{ event.impact }}]</title>
+      </g>
+
       <!-- Gradients -->
       <defs>
         <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -67,7 +91,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { 
+  formatTime as formatTimeUtil, 
+  getEventMinute as getEventMinuteUtil, 
+  getEventColor, 
+  getX as getXUtil, 
+  getY as getYUtil 
+} from './quarterlyProfileChartUtils'
 
 const props = defineProps<{
   profile: number[]
@@ -76,34 +107,30 @@ const props = defineProps<{
   entryLabel?: string
   hour?: number
   quarter?: number
+  events?: Array<{
+    time: string
+    name: string
+    impact: string
+    currency: string
+    frequency: number
+  }>
 }>()
+
+onMounted(() => {
+  // Mounted
+})
+
+watch(() => props.events, (newEvents) => {
+  // Events updated
+}, { deep: true })
 
 const isExtended = computed(() => props.profile.length > 15)
 const minMinute = computed(() => isExtended.value ? -5 : 0)
 const maxMinute = computed(() => isExtended.value ? 30 : 14) // 30 to include up to +15min after end (15+15)
 const totalRange = computed(() => maxMinute.value - minMinute.value)
 
-const formatTime = (minute: number) => {
-  if (props.hour === undefined || props.quarter === undefined) return `${minute}m`
-  
-  const startMin = props.quarter * 15
-  let totalMin = startMin + minute
-  let finalH = props.hour
-  
-  while (totalMin >= 60) {
-    totalMin -= 60
-    finalH = (finalH + 1) % 24
-  }
-  
-  while (totalMin < 0) {
-    totalMin += 60
-    finalH = (finalH - 1 + 24) % 24
-  }
-  
-  const mm = totalMin.toString().padStart(2, '0')
-  const hh = finalH.toString().padStart(2, '0')
-  return `${hh}:${mm}`
-}
+const formatTime = (minute: number) => formatTimeUtil(minute, props.hour, props.quarter)
+const getEventMinute = (timeStr: string) => getEventMinuteUtil(timeStr, props.hour, props.quarter)
 
 const xAxisLabels = computed(() => {
   if (isExtended.value) {
@@ -136,20 +163,8 @@ const yAxisTicks = computed(() => {
   return ticks
 })
 
-const getX = (minute: number) => {
-  const width = 340 // 380 - 40
-  const offset = minute - minMinute.value
-  // Ensure we don't divide by zero, though totalRange should be > 0
-  const range = totalRange.value || 1
-  return 40 + (offset / range) * width
-}
-
-const getY = (val: number) => {
-  const height = 160 // 180 - 20
-  const max = maxValue.value
-  if (max === 0) return 180
-  return 180 - (val / max) * height
-}
+const getX = (minute: number) => getXUtil(minute, minMinute.value, totalRange.value)
+const getY = (val: number) => getYUtil(val, maxValue.value)
 
 const points = computed(() => {
   return props.profile.map((val, idx) => {

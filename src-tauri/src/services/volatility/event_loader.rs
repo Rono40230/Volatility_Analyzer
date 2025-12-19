@@ -63,9 +63,17 @@ impl EventLoader {
             }
 
             if let Some(stat) = hourly_stats.iter_mut().find(|s| s.hour == event_hour) {
+                let impact_upper = event.impact.to_uppercase();
+                let normalized_impact = match impact_upper.as_str() {
+                    "H" | "HIGH" => "HIGH",
+                    "M" | "MEDIUM" => "MEDIUM",
+                    "L" | "LOW" => "LOW",
+                    _ => "NONE",
+                };
+
                 let event_in_hour = EventInHour {
                     event_name: event.description.clone(),
-                    impact: event.impact.clone(),
+                    impact: normalized_impact.to_string(),
                     datetime: event.event_time.format("%H:%M:%S").to_string(),
                     volatility_increase: 0.0,
                 };
@@ -136,33 +144,42 @@ impl EventLoader {
             symbol
         );
 
-        // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (Paris)
-        const PARIS_OFFSET_HOURS: i32 = 1;
+        // Filtrer HIGH/MEDIUM impact et compter par tranche de 15 minutes (UTC)
+        tracing::info!("🔍 Checking {} events against {} stats slots", events.len(), stats_15min.len());
+        
         let mut matched_count = 0;
         let mut unmatched_count = 0;
+        let mut skipped_impact_count = 0;
 
-        for event in events {
-            if event.impact != "HIGH" && event.impact != "MEDIUM" {
+        for (i, event) in events.iter().enumerate() {
+            if i < 3 {
+                 tracing::debug!("Event sample: {} - Impact: {}", event.description, event.impact);
+            }
+
+            let impact_upper = event.impact.to_uppercase();
+            let is_high = impact_upper == "HIGH" || impact_upper == "H";
+            let is_medium = impact_upper == "MEDIUM" || impact_upper == "M";
+
+            if !is_high && !is_medium {
+                skipped_impact_count += 1;
                 continue;
             }
 
-            // Convertir l'heure UTC en heure de Paris
-            let utc_hour = event.event_time.hour() as i32;
-            let utc_minute = event.event_time.minute() as i32;
+            let normalized_impact = if is_high { "HIGH" } else { "MEDIUM" };
 
-            let paris_hour = (utc_hour + PARIS_OFFSET_HOURS) % 24;
-            let paris_minute = utc_minute; // Les minutes ne changent pas avec timezone
-            let paris_hour_u8 = paris_hour as u8;
-            let quarter = (paris_minute / 15) as u8;
+            // Utiliser UTC directement
+            let utc_hour = event.event_time.hour() as u8;
+            let utc_minute = event.event_time.minute() as u8;
+            let quarter = utc_minute / 15;
 
             // Trouver la tranche de 15 minutes correspondante
             if let Some(slot) = stats_15min
                 .iter_mut()
-                .find(|s| s.hour == paris_hour_u8 && s.quarter == quarter)
+                .find(|s| s.hour == utc_hour && s.quarter == quarter)
             {
                 let event_in_hour = EventInHour {
                     event_name: event.description.clone(),
-                    impact: event.impact.clone(),
+                    impact: normalized_impact.to_string(),
                     datetime: event.event_time.format("%H:%M:%S").to_string(),
                     volatility_increase: 0.0,
                 };
@@ -170,12 +187,10 @@ impl EventLoader {
                 matched_count += 1;
                 if matched_count <= 5 {
                     tracing::debug!(
-                        "✅ Event matched: {} at {}:{} → Paris {}:{} (quarter {})",
+                        "✅ Event matched: {} at {}:{} (quarter {})",
                         event.description,
                         utc_hour,
                         utc_minute,
-                        paris_hour,
-                        paris_minute,
                         quarter
                     );
                 }
@@ -183,17 +198,17 @@ impl EventLoader {
                 unmatched_count += 1;
                 if unmatched_count <= 5 {
                     tracing::debug!(
-                        "❌ Event NOT matched: {} at UTC {}:{} → Paris {}:{} (quarter {})",
+                        "❌ Event NOT matched: {} at UTC {}:{} (quarter {})",
                         event.description,
                         utc_hour,
                         utc_minute,
-                        paris_hour,
-                        paris_minute,
                         quarter
                     );
                 }
             }
         }
+        
+        tracing::info!("📊 Event Matching Summary: Matched={}, Unmatched={}, Skipped(Low Impact)={}", matched_count, unmatched_count, skipped_impact_count);
 
         tracing::info!(
             "📊 EventLoader 15min result: {} matched, {} unmatched",
