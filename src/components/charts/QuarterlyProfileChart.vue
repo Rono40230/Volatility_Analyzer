@@ -15,9 +15,11 @@
       <!-- X Axis Labels (Exact Time) -->
       <text v-for="m in xAxisLabels" :key="m" :x="getX(m)" y="195" font-size="7" fill="#8b949e" text-anchor="middle">{{ formatTime(m) }}</text>
 
-      <!-- Y Axis Labels -->
-      <text x="35" :y="getY(maxValue)" font-size="7" fill="#8b949e" text-anchor="end">{{ maxValue.toFixed(1) }}</text>
-      <text x="35" :y="getY(0)" font-size="7" fill="#8b949e" text-anchor="end">0</text>
+      <!-- Y Axis Labels & Grid (Every 1 pip) -->
+      <template v-for="tick in yAxisTicks" :key="tick">
+        <line :x1="40" :y1="getY(tick)" :x2="380" :y2="getY(tick)" stroke="#30363d" stroke-width="1" stroke-dasharray="2,2" opacity="0.5" />
+        <text x="35" :y="getY(tick) + 2" font-size="7" fill="#8b949e" text-anchor="end">{{ tick }}</text>
+      </template>
 
       <!-- Profile Line -->
       <polyline :points="points" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
@@ -117,7 +119,21 @@ const xAxisLabels = computed(() => {
 
 const maxValue = computed(() => {
   const max = Math.max(...props.profile)
-  return max === 0 ? 1 : max // Évite la division par zéro, mais ne force pas 1 si max est petit (ex: 0.005)
+  const ceiling = Math.ceil(max)
+  return ceiling === 0 ? 1 : ceiling
+})
+
+const yAxisTicks = computed(() => {
+  const max = maxValue.value
+  const ticks = []
+  let step = 1
+  if (max > 20) step = 2
+  if (max > 50) step = 5
+  
+  for (let i = 0; i <= max; i += step) {
+    ticks.push(i)
+  }
+  return ticks
 })
 
 const getX = (minute: number) => {

@@ -1,51 +1,59 @@
-# 📋 Plan de Correction : Normalisation et Cohérence des Métriques
+# 📋 Tâches : Correction Critique Conversion Points/Pips
 
-Ce document détaille les étapes nécessaires pour corriger les incohérences de calcul (Max Spike, échelles des indices, décalage graphique) identifiées lors de l'analyse des captures.
+## CONTEXTE
+Un audit a révélé une incohérence majeure entre le Backend (qui envoie des données normalisées en **PIPS**) et le Frontend (qui les affiche comme des **POINTS** sans conversion). Cela entraîne une erreur d'un facteur 10 sur les paires Forex (ex: afficher "10 pts" au lieu de "100 pts").
 
-## 🎯 Objectif
-Unifier la gestion des unités (Pips/Points) à travers tout le système pour garantir des métriques réalistes et une cohérence parfaite entre les tableaux et les graphiques.
-
----
-
-## 🚀 Phase 1 : Correction du Moteur de Normalisation (Priorité Haute)
-*L'objectif est de s'assurer que le système identifie correctement chaque actif et sa valeur de "point".*
-
-- [x] **Améliorer `AssetProperties` (`models/asset_class.rs`)**
-    - [x] Affiner la détection des indices (US30, NAS100, DAX, etc.) pour utiliser une valeur de point de `1.0`.
-    - [x] Ajouter une logique de détection du nombre de décimales pour s'adapter aux différents formats de fichiers CSV (MetaTrader vs TradingView).
-    - [x] Valider les conventions pour l'Or (XAU) et l'Argent (XAG).
-
-- [x] **Sécuriser le calcul du "Max Spike" (`services/metrics/distribution.rs`)**
-    - [x] Remplacer le maximum absolu (sensible aux erreurs de données) par un percentile élevé (ex: 95e ou 98e percentile).
-    - [x] Ajouter un filtre pour ignorer les bougies aberrantes (ex: True Range > 500% de la moyenne locale).
+**Objectif** : Harmoniser l'affichage pour garantir que les valeurs en Points sont correctes (x10 pour Forex) afin d'éviter des erreurs de configuration de robot fatales.
 
 ---
 
-## 🏗️ Phase 2 : Unification de la Chaîne de Calcul (Priorité Moyenne)
-*L'objectif est de supprimer les "bypass" de normalisation pour que tous les modules parlent la même langue.*
+## 📅 PLAN D'ACTION PRIORISÉ
 
-- [x] **Refactoriser `Stats15MinCalculator` (`services/volatility/stats_15min.rs`)**
-    - [x] Intégrer `AssetProperties` dès le début du calcul.
-    - [x] Normaliser l'ATR, le Range et le Max Spike immédiatement après le calcul brut.
-    - [x] Supprimer la dépendance à `get_point_value` (obsolète) au profit de `AssetProperties`.
+### 🔴 PRIORITÉ 1 : Cœur du Système d'Affichage
+Le composant `UnitDisplay` est le point central de l'erreur. Il doit savoir que la valeur entrante est toujours normalisée (Pips).
 
-- [x] **Synchroniser le Graphique (`services/volatility/quarterly_aggregator.rs`)**
-    - [x] Appliquer la normalisation au `volatility_profile` (données minute par minute).
-    - [x] S'assurer que les valeurs envoyées au frontend pour le graphique sont en points/pips et non en prix brut.
+- [ ] **Refactor `src/components/UnitDisplay.vue`**
+    - [ ] Modifier la logique : Considérer la prop `value` comme étant **toujours** en Pips (source Backend).
+    - [ ] Si `unit` est 'pts'/'points' : Calculer `displayValue = value * pointsPerPip`.
+    - [ ] Si `unit` est 'pips' : Calculer `displayValue = value`.
+    - [ ] Mettre à jour le template pour afficher "X pts" ou "X pips" correctement.
+
+### 🔴 PRIORITÉ 2 : Paramètres de Trading (Bidi)
+Les paramètres calculés (Offset, SL, TP) sont critiques pour le robot. Ils doivent être affichés en Points MT5.
+
+- [ ] **Audit & Fix `src/components/metrics/BidiParametersSection.vue`**
+    - [ ] Vérifier les valeurs passées aux cartes (`StraddleDirectionalCard`, `StraddleSimultaneousCard`).
+    - [ ] S'assurer que les valeurs (Offset, SL, TP) sont converties en Points avant affichage.
+- [ ] **Fix `src/components/trading/StraddleDirectionalCard.vue`**
+    - [ ] Vérifier l'utilisation de `UnitDisplay` ou le formatage manuel.
+    - [ ] Garantir l'affichage "xxx Points".
+
+### 🟠 PRIORITÉ 3 : Tableaux de Données
+Vérifier que la correction de `UnitDisplay` se propage correctement sans double conversion.
+
+- [ ] **Vérification `src/components/HourlyTable.vue`**
+    - [ ] S'assurer que `atr_mean`, `max_true_range` utilisent bien `UnitDisplay`.
+    - [ ] Vérifier l'affichage des colonnes ATR et Max Spike.
+- [ ] **Vérification `src/components/metrics/MetricsGrid.vue`**
+    - [ ] Vérifier l'affichage des métriques globales.
+
+### 🟡 PRIORITÉ 4 : Archives
+Les archives stockent des snapshots JSON. Il faut s'assurer qu'à la relecture, les unités sont respectées.
+
+- [ ] **Fix `src/composables/useArchiveParsers.ts`**
+    - [ ] S'assurer que lors du parsing, on ne dénormalise pas accidentellement les valeurs si elles sont déjà stockées en Pips.
+    - [ ] Harmoniser l'unité par défaut (`unit: 'pts'` vs `unit: 'pips'`).
+
+### 🟢 PRIORITÉ 5 : Validation Finale
+- [ ] **Test Manuel (Scénario EURUSD)**
+    - [ ] Charger EURUSD.
+    - [ ] Vérifier ATR : Doit être ~10-20 Pips -> Affichage **100-200 pts**.
+    - [ ] Vérifier Heatmap : Doit rester cohérente (déjà correcte).
+    - [ ] Vérifier Paramètres Bidi : Offset ~15 Pips -> Affichage **150 pts**.
 
 ---
 
-## 🎨 Phase 3 : Cohérence de l'Interface (Priorité Basse)
-*L'objectif est d'afficher clairement les unités à l'utilisateur.*
-
-- [x] **Mise à jour de l'affichage UI**
-    - [x] Utiliser l'étiquette d'unité (`unit`) renvoyée par le backend ("pips" ou "pts") dans les en-têtes de colonnes.
-    - [x] Harmoniser le nombre de décimales affichées selon le type d'actif (ex: 1 décimale pour le Forex, 0 pour les Indices).
-
----
-
-## ✅ Critères de Validation
-1. [x] **BTCUSD :** Le Max Spike dans le tableau doit être cohérent avec le sommet du graphique (environ 50-100 pts, pas 11 000).
-2. [x] **Indices :** L'ATR du Nasdaq doit afficher des valeurs réalistes (ex: 20-50 pts) et non des centaines de milliers.
-3. [x] **Forex :** L'ATR doit être clairement identifiable en pips (ex: 8.5 pips).
-4. [x] **Zéro Régression :** Les calculs de score de confiance et de paramètres Straddle doivent rester fonctionnels.
+## 📝 NOTES TECHNIQUES
+- **Backend** : Envoie toujours des PIPS (`AssetProperties::normalize` divise par 0.0001 pour Forex).
+- **Frontend** : Doit multiplier par `pointsPerPip` (10 pour Forex) pour obtenir les POINTS.
+- **Règle d'Or** : "Afficher en Points, Calculer en Pips".

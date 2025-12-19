@@ -88,16 +88,25 @@ fn calculate_metrics_from_candles(
     let mut shadow_ratio_sum = 0.0;
 
     for (i, candle) in candles.iter().enumerate() {
-        // ATR (True Range) - Inclure les gaps
-        let close_prev = if i > 0 {
-            candles[i - 1].close
+        // Vérifier la continuité temporelle (1 minute d'écart)
+        // Si > 1 min (changement de jour ou trou), on ignore le gap pour le TR
+        let is_contiguous = if i > 0 {
+            let diff = candle.datetime.signed_duration_since(candles[i - 1].datetime);
+            diff.num_minutes() == 1
         } else {
-            candle.close
+            false
         };
 
-        let tr = (candle.high - candle.low)
-            .max((candle.high - close_prev).abs())
-            .max((candle.low - close_prev).abs());
+        // ATR (True Range)
+        let tr = if is_contiguous {
+            let close_prev = candles[i - 1].close;
+            (candle.high - candle.low)
+                .max((candle.high - close_prev).abs())
+                .max((candle.low - close_prev).abs())
+        } else {
+            // Premier candle d'une série ou après un trou : TR = High - Low
+            candle.high - candle.low
+        };
 
         atr_values.push(tr);
         if tr > atr_max {

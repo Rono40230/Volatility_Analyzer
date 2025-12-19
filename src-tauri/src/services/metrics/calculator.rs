@@ -32,7 +32,17 @@ impl<'a> MetricsCalculator<'a> {
 
         // Calcule le True Range pour chaque bougie
         for i in 0..self.candles.len() {
-            let prev_close = if i > 0 {
+            let is_contiguous = if i > 0 {
+                let diff = self
+                    .candles[i]
+                    .datetime
+                    .signed_duration_since(self.candles[i - 1].datetime);
+                diff.num_minutes() == 1
+            } else {
+                false
+            };
+
+            let prev_close = if is_contiguous {
                 Some(self.candles[i - 1].close)
             } else {
                 None
@@ -76,9 +86,22 @@ impl<'a> MetricsCalculator<'a> {
         // Calcule les rendements (returns)
         let mut returns = Vec::new();
         for i in 1..self.candles.len() {
-            let ret =
-                (self.candles[i].close - self.candles[i - 1].close) / self.candles[i - 1].close;
-            returns.push(ret);
+            let is_contiguous = self
+                .candles[i]
+                .datetime
+                .signed_duration_since(self.candles[i - 1].datetime)
+                .num_minutes()
+                == 1;
+
+            if is_contiguous {
+                let ret = (self.candles[i].close - self.candles[i - 1].close)
+                    / self.candles[i - 1].close;
+                returns.push(ret);
+            }
+        }
+
+        if returns.len() < period {
+            return Ok(Vec::new());
         }
 
         // Calcule l'écart-type glissant

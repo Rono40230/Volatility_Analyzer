@@ -31,12 +31,16 @@
         <text :x="svgMargins.t0" y="35" font-size="12" text-anchor="middle" fill="#fbbf24" font-weight="bold">T0 (Événement)</text>
         <text :x="svgMargins.right - 5" y="35" font-size="11" text-anchor="end" fill="#8b949e" font-style="italic">Paris</text>
 
+
+
         <line v-if="props.meilleurMoment > 0" :x1="bestMomentX" y1="50" :x2="bestMomentX" y2="380" stroke="#10b981" stroke-width="2" stroke-dasharray="6,3" opacity="0.7" />
         <text v-if="props.meilleurMoment > 0" :x="bestMomentX" y="45" font-size="11" text-anchor="middle" fill="#10b981" font-weight="600">Entrée ({{ getTimeLabel(-props.meilleurMoment) }})</text>
 
-        <text :x="svgMargins.labelY" :y="yAxisBaseline + 5" font-size="12" text-anchor="end" fill="#8b949e">{{ minAtrLabel }}</text>
-        <text :x="svgMargins.labelY" :y="yMidLine + 5" font-size="12" text-anchor="end" fill="#8b949e">{{ midAtrLabel }}</text>
-        <text :x="svgMargins.labelY" y="55" font-size="12" text-anchor="end" fill="#8b949e">{{ maxAtrLabel }}</text>
+        <!-- Graduations Y (tous les 1 pip) -->
+        <template v-for="tick in yAxisTicks" :key="`y-tick-${tick}`">
+          <line :x1="svgMargins.left" :y1="mapPipToY(tick)" :x2="svgMargins.right" :y2="mapPipToY(tick)" stroke="#718096" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+          <text :x="svgMargins.labelY" :y="mapPipToY(tick) + 4" font-size="11" text-anchor="end" fill="#cbd5e0" font-weight="500">{{ tick }}</text>
+        </template>
 
         <!-- Marqueurs X: AVANT (-30 à 0) -->
         <template v-for="minute in [-30, -20, -10, 0]" :key="`tick-before-${minute}`">
@@ -126,7 +130,9 @@ const {
   beforePointsString,
   afterPointsString,
   curvePathBefore,
-  curvePathAfter
+  curvePathAfter,
+  yAxisTicks,
+  mapPipToY
 } = useRetroGraphDataPoints({
   atrTimelineBefore: props.atrTimelineBefore,
   atrTimelineAfter: props.atrTimelineAfter,

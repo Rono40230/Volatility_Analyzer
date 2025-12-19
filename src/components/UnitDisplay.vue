@@ -11,47 +11,41 @@ const props = defineProps<{
 
 const pointsPerPip = computed(() => {
   if (props.symbol) return getPointsPerPip(props.symbol)
-  // Fallback historique si le symbole n'est pas fourni
-  if (props.unit === 'pips') return 10
+  // Fallback: si on parle de pips/pts sans symbole, on suppose Forex (10)
+  if (props.unit === 'pips' || props.unit === 'pts' || props.unit === 'points') return 10
   return 1
 })
 
-const pointsValue = computed(() => {
-  if (props.unit === 'pips') return props.value * pointsPerPip.value
-  return props.value
-})
+// HYPOTHÈSE CRITIQUE (Suite Audit) : 
+// La valeur d'entrée (props.value) venant du backend est TOUJOURS en PIPS (Normalisée).
+// Le backend divise par 0.0001 pour le Forex, donc envoie des Pips.
 
-const pipsValue = computed(() => {
-  if (props.unit === 'pips') return props.value
-  return props.value / pointsPerPip.value
+const pipsValue = computed(() => props.value)
+
+const pointsValue = computed(() => {
+  return props.value * pointsPerPip.value
 })
 
 const pipsDecimals = computed(() => {
-  // On veut au moins assez de décimales pour voir la conversion
-  // Si ratio = 10, on veut +1 décimale par rapport aux points
-  // Si ratio = 1000, on veut +3 décimales
   const baseDecimals = props.decimals ?? 1
-  if (pointsPerPip.value >= 1000) return Math.max(baseDecimals, 3)
-  if (pointsPerPip.value >= 10) return Math.max(baseDecimals, 2)
-  return baseDecimals
+  return Math.max(baseDecimals, 1)
 })
 
-const formattedValue = computed(() => {
-  const decimals = props.decimals ?? 1
-  return props.value.toFixed(decimals)
+const pointsDecimals = computed(() => {
+    return props.decimals ?? 1
+})
+
+const isPipsOrPoints = computed(() => {
+  return ['pips', 'pts', 'points'].includes(props.unit)
 })
 
 const displayUnit = computed(() => {
   switch (props.unit) {
-    case 'pips':
-      return 'pips'
+    case 'pips': return 'pips'
     case 'points':
-    case 'pts':
-      return 'pts'
-    case '$':
-      return ''
-    default:
-      return props.unit
+    case 'pts': return 'pts'
+    case '$': return ''
+    default: return props.unit
   }
 })
 
@@ -62,11 +56,17 @@ const prefix = computed(() => {
 
 <template>
   <span class="unit-display">
-    <template v-if="unit === 'pips' || unit === 'pts' || unit === 'points'">
-      {{ pointsValue.toFixed(1) }} points <span class="sub-unit">(soit {{ pipsValue.toFixed(pipsDecimals) }} pips)</span>
+    <template v-if="isPipsOrPoints">
+      <!-- Affichage Standardisé : POINTS (soit PIPS) -->
+      <!-- Ex: 150.0 pts (soit 15.0 pips) -->
+      {{ pointsValue.toFixed(pointsDecimals) }} pts 
+      <span class="sub-unit">(soit {{ pipsValue.toFixed(pipsDecimals) }} pips)</span>
     </template>
+    
     <template v-else>
-      {{ prefix }}{{ formattedValue }} <span v-if="displayUnit" class="unit">{{ displayUnit }}</span>
+      <!-- Autres unités (%, $, etc.) -->
+      {{ prefix }}{{ props.value.toFixed(props.decimals ?? 2) }} 
+      <span v-if="displayUnit" class="unit">{{ displayUnit }}</span>
     </template>
   </span>
 </template>

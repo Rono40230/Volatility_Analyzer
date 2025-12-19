@@ -12,8 +12,8 @@ export function useRetroGraphDataPoints(props: {
   const pointValue = computed(() => props.pointValue || 1.0)
 
   const svgMargins = computed(() => {
-    if (screenWidth.value > 1024) return { left: 20, right: 999, t0: 445, labelY: 15 }
-    if (screenWidth.value > 768) return { left: 40, right: 980, t0: 435, labelY: 30 }
+    if (screenWidth.value > 1024) return { left: 40, right: 999, t0: 445, labelY: 30 }
+    if (screenWidth.value > 768) return { left: 50, right: 980, t0: 435, labelY: 40 }
     if (screenWidth.value > 480) return { left: 60, right: 960, t0: 425, labelY: 50 }
     return { left: 80, right: 940, t0: 415, labelY: 70 }
   })
@@ -32,6 +32,28 @@ export function useRetroGraphDataPoints(props: {
   const mapAtrToY = (atr: number): number => {
     if (maxAtr.value === minAtr.value) return Y_BASELINE
     return Y_BASELINE - ((atr - minAtr.value) / (maxAtr.value - minAtr.value)) * (Y_BASELINE - Y_TOP)
+  }
+
+  // Génération des graduations Y (tous les 1 pip si possible)
+  const yAxisTicks = computed(() => {
+    const minPips = Math.floor(minAtr.value / pointValue.value)
+    const maxPips = Math.ceil(maxAtr.value / pointValue.value)
+    
+    const range = maxPips - minPips
+    let step = 1
+    if (range > 20) step = 2
+    if (range > 50) step = 5
+    if (range > 100) step = 10
+    
+    const ticks = []
+    for (let i = minPips; i <= maxPips; i += step) {
+      ticks.push(i)
+    }
+    return ticks
+  })
+
+  const mapPipToY = (pipValue: number) => {
+    return mapAtrToY(pipValue * pointValue.value)
   }
 
   const getTimeLabel = (offset: number): string => {
@@ -109,6 +131,8 @@ export function useRetroGraphDataPoints(props: {
     beforePointsString,
     afterPointsString,
     curvePathBefore,
-    curvePathAfter
+    curvePathAfter,
+    yAxisTicks,
+    mapPipToY
   }
 }

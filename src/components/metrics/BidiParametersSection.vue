@@ -24,25 +24,14 @@
       </div>
 
       <!-- Center: Duration & Info -->
-      <div class="col-center">
-        <div v-if="volatilityProfile && volatilityProfile.length > 0" class="graph-container">
-          <QuarterlyProfileChart 
-            :profile="volatilityProfile" 
-            :optimal-entry="meilleurMoment"
-            :duration="volatilityDuration?.peak_duration_minutes"
-            :entry-label="placementTime ? `Entrée (${placementTime})` : undefined"
-            :hour="analysis?.slice?.hour"
-            :quarter="analysis?.slice?.quarter"
-          />
-        </div>
-        <div v-else class="graph-placeholder">
-          <div class="placeholder-content">
-            <div class="icon">📊</div>
-            <div class="message">Graphique de volatilité événementielle non disponible</div>
-            <div class="sub-message">L'analyse brute est temporelle et non liée à un événement spécifique (T0).</div>
-          </div>
-        </div>
-      </div>
+      <BidiVolatilityGraph
+        :volatility-profile="volatilityProfile"
+        :meilleur-moment="meilleurMoment"
+        :duration="volatilityDuration?.peak_duration_minutes"
+        :placement-time="placementTime"
+        :hour="analysis?.slice?.hour"
+        :quarter="analysis?.slice?.quarter"
+      />
 
       <!-- Right: Simultaneous -->
       <div class="col-right">
@@ -66,8 +55,9 @@ import { computed } from 'vue'
 import MetricsGrid from './MetricsGrid.vue'
 import StraddleDirectionalCard from '../trading/StraddleDirectionalCard.vue'
 import StraddleSimultaneousCard from '../trading/StraddleSimultaneousCard.vue'
-import QuarterlyProfileChart from '../charts/QuarterlyProfileChart.vue'
+import BidiVolatilityGraph from './BidiVolatilityGraph.vue'
 import type { SliceAnalysis } from '../../utils/straddleAnalysis'
+import { getPointsPerPip } from '../../utils/pipConverter'
 
 interface EntryWindowAnalysis { optimal_offset: number; optimal_entry_minutes: number }
 interface WhipsawAnalysis { whipsaw_frequency_percentage: number; trailing_stop_adjusted: number; optimal_entry_minutes: number }
@@ -82,11 +72,13 @@ const props = defineProps<{
   analysisData: any
   volatilityDuration: VolatilityDuration
   tradingPlan?: Record<string, unknown>
-  whipsawAnalysis?: WhipsawAnalysis
-  offsetOptimal?: OffsetOptimal
+  whipsawAnalysis?: WhipsawAnalysis | null
+  offsetOptimal?: OffsetOptimal | null
   symbol?: string
   pointValue?: number
 }>()
+
+const pointsPerPip = computed(() => getPointsPerPip(props.symbol || 'EURUSD'))
 
 // Computed values for the cards
 // Priorité à l'analyse fine (entryWindowAnalysis) pour le temps, sinon fallback sur stats
@@ -108,10 +100,34 @@ const offset = computed(() => {
   return props.entryWindowAnalysis?.optimal_offset ?? 0
 })
 
-const stopLoss = computed(() => props.offsetOptimal?.sl_adjusted_points ?? 0)
-const trailingStop = computed(() => props.whipsawAnalysis?.trailing_stop_adjusted ?? 0)
-const timeout = computed(() => Math.round((props.volatilityDuration?.peak_duration_minutes || 21) * 1.5))
-const stopLossRecovery = computed(() => stopLoss.value * 1.5) // Estimation standard
+// Conversion Points -> Pips pour affichage correct via UnitDisplay
+const stopLoss = computed(() => {
+  if (props.analysis?.slice?.stats?.straddle_parameters?.stop_loss_pips) {
+    return props.analysis.slice.stats.straddle_parameters.stop_loss_pips
+  }
+  return (props.offsetOptimal?.sl_adjusted_points ?? 0) / pointsPerPip.value
+})
+
+const trailingStop = computed(() => {
+  if (props.analysis?.slice?.stats?.straddle_parameters?.trailing_stop_pips) {
+    return props.analysis.slice.stats.straddle_parameters.trailing_stop_pips
+  }
+  return (props.whipsawAnalysis?.trailing_stop_adjusted ?? 0) / pointsPerPip.value
+})
+
+const timeout = computed(() => {
+  if (props.analysis?.slice?.stats?.straddle_parameters?.timeout_minutes) {
+    return props.analysis.slice.stats.straddle_parameters.timeout_minutes
+  }
+  return Math.round((props.volatilityDuration?.peak_duration_minutes || 21) * 1.5)
+})
+
+const stopLossRecovery = computed(() => {
+  if (props.analysis?.slice?.stats?.straddle_parameters?.sl_recovery_pips) {
+    return props.analysis.slice.stats.straddle_parameters.sl_recovery_pips
+  }
+  return stopLoss.value * 1.5
+})
 
 const volatilityProfile = computed(() => props.analysis?.slice?.stats?.volatility_profile ?? [])
 
@@ -156,60 +172,6 @@ const placementTime = computed(() => {
   align-items: stretch; /* Stretch to fill height */
   flex: 1;
   min-height: 0;
-}
-
-.col-center {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.graph-container {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 8px;
-  padding: 4px;
-  height: 100%;
-  min-height: 150px;
-  margin-bottom: 0;
-}
-
-.graph-placeholder {
-  background: #0d1117;
-  border: 1px solid #30363d;
-  border-radius: 8px;
-  padding: 20px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  min-height: 200px;
-  margin-bottom: 15px;
-}
-
-.placeholder-content {
-  margin-bottom: 30px;
-  opacity: 0.7;
-}
-
-.placeholder-content .icon {
-  font-size: 40px;
-  margin-bottom: 10px;
-  opacity: 0.5;
-}
-
-.placeholder-content .message {
-  font-size: 14px;
-  font-weight: 600;
-  color: #8b949e;
-  margin-bottom: 5px;
-}
-
-.placeholder-content .sub-message {
-  font-size: 12px;
-  color: #6e7681;
 }
 
 /* Responsive adjustments */

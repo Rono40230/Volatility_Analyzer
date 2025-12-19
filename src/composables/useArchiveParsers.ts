@@ -26,7 +26,7 @@ function parseVolatilityArchive(raw: RawArchive): NormalizedArchive | null {
       type: 'Volatilité',
       pair: symbol,
       eventType: 'Non spécifié',
-      peakAtr: (metrics?.mean_volatility || 0) * 1.5 || 20,
+      peakAtr: metrics?.mean_atr || 20,
       peakDelay: 3,
       decayTimeout: 18,
       confidence: data.confidence_score || data.analysisResult?.confidence_score || 0.5,
