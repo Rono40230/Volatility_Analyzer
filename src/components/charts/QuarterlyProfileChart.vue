@@ -1,5 +1,30 @@
 <template>
   <div class="chart-container">
+    <!-- Event Filter Controls -->
+    <div class="event-controls">
+      <button 
+        @click="filterMode = 'none'" 
+        :class="{ active: filterMode === 'none' }"
+        title="Masquer les événements"
+      >
+        🚫
+      </button>
+      <button 
+        @click="filterMode = 'peak'" 
+        :class="{ active: filterMode === 'peak' }"
+        title="Événements proches du pic"
+      >
+        🎯
+      </button>
+      <button 
+        @click="filterMode = 'all'" 
+        :class="{ active: filterMode === 'all' }"
+        title="Tous les événements"
+      >
+        👁️
+      </button>
+    </div>
+
     <svg viewBox="0 0 400 200" class="chart-svg">
       <!-- Grid Lines -->
       <line x1="40" y1="180" x2="380" y2="180" stroke="#30363d" stroke-width="1" />
@@ -56,7 +81,7 @@
       <text v-if="optimalEntry !== undefined" :x="getX(optimalEntry)" y="15" font-size="7" fill="#10b981" text-anchor="middle" font-weight="bold">{{ entryLabel || `Entrée (${formatTime(optimalEntry)})` }}</text>
 
       <!-- Event Flags -->
-      <g v-for="(event, index) in events" :key="index">
+      <g v-for="(event, index) in processedEvents" :key="index">
         <!-- Flag Pole -->
         <line 
           :x1="getX(getEventMinute(event.time))" 
@@ -71,12 +96,21 @@
         
         <!-- Flag Icon (Triangle) -->
         <path 
-          :d="`M ${getX(getEventMinute(event.time))} 20 L ${getX(getEventMinute(event.time)) + 6} 24 L ${getX(getEventMinute(event.time))} 28 Z`" 
+          :d="`M ${getX(getEventMinute(event.time))} ${20 + event.stackIndex * 12} L ${getX(getEventMinute(event.time)) + 6} ${24 + event.stackIndex * 12} L ${getX(getEventMinute(event.time))} ${28 + event.stackIndex * 12} Z`" 
           :fill="getEventColor(event.impact)" 
         />
 
+        <!-- Frequency Label -->
+        <text 
+          :x="getX(getEventMinute(event.time)) + 8" 
+          :y="26 + event.stackIndex * 12" 
+          font-size="6" 
+          :fill="getEventColor(event.impact)"
+          alignment-baseline="middle"
+        >x{{ event.frequency }}</text>
+
         <!-- Event Label (on hover via title) -->
-        <title>{{ event.time }} - {{ event.name }} ({{ event.currency }}) [{{ event.impact }}]</title>
+        <title>{{ event.tooltip }}</title>
       </g>
 
       <!-- Gradients -->
@@ -91,7 +125,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, watch, ref } from 'vue'
+import { eventTranslations } from '../../utils/eventTranslations'
 import { 
   formatTime as formatTimeUtil, 
   getEventMinute as getEventMinuteUtil, 
@@ -115,6 +150,8 @@ const props = defineProps<{
     frequency: number
   }>
 }>()
+
+const filterMode = ref<'none' | 'all' | 'peak'>('none')
 
 onMounted(() => {
   // Mounted
@@ -189,6 +226,96 @@ const volatilityZoneWidth = computed(() => {
   const maxX = 380
   return Math.min(endX, maxX) - startX
 })
+
+const processedEvents = computed(() => {
+  if (!props.events || filterMode.value === 'none') return []
+
+  let eventsToProcess = props.events
+
+  // Filter for peak mode
+  if (filterMode.value === 'peak') {
+    if (props.optimalEntry !== undefined) {
+      eventsToProcess = props.events.filter(e => {
+        const eventMinute = getEventMinute(e.time)
+        // Show events within +/- 5 minutes of optimal entry
+        return Math.abs(eventMinute - props.optimalEntry!) <= 5
+      })
+    } else {
+      // No optimal entry = no events near peak
+      return []
+    }
+  }
+
+  // 1. Group by time + frequency
+  const groups = new Map<string, {
+    time: string,
+    frequency: number,
+    impacts: string[],
+    names: string[],
+    currencies: string[]
+  }>()
+
+  for (const event of eventsToProcess) {
+    const key = `${event.time}-${event.frequency}`
+    if (!groups.has(key)) {
+      groups.set(key, {
+        time: event.time,
+        frequency: event.frequency,
+        impacts: [event.impact],
+        names: [event.name],
+        currencies: [event.currency]
+      })
+    } else {
+      const g = groups.get(key)!
+      g.impacts.push(event.impact)
+      g.names.push(event.name)
+      g.currencies.push(event.currency)
+    }
+  }
+
+  // 2. Convert groups to displayable events
+  const displayEvents = Array.from(groups.values()).map(g => {
+    // Determine max impact for color
+    let maxImpact = 'Low'
+    if (g.impacts.some(i => i.toUpperCase() === 'HIGH')) maxImpact = 'High'
+    else if (g.impacts.some(i => i.toUpperCase() === 'MEDIUM')) maxImpact = 'Medium'
+    
+    // Format tooltip info
+    const eventList = g.names.map((n, i) => {
+      const translation = eventTranslations[n]
+      if (translation) {
+        return `• ${n} (${translation.fr}) ${translation.flag}`
+      }
+      return `• ${n} (${g.currencies[i]})`
+    }).join('\n')
+    const tooltip = `${g.time} [${maxImpact}]\n${eventList}`
+    
+    return {
+      time: g.time,
+      frequency: g.frequency,
+      impact: maxImpact,
+      tooltip: tooltip,
+      stackIndex: 0 // To be calculated
+    }
+  })
+
+  // 3. Sort by time, then by frequency (descending)
+  displayEvents.sort((a, b) => {
+    const timeDiff = a.time.localeCompare(b.time)
+    if (timeDiff !== 0) return timeDiff
+    return b.frequency - a.frequency
+  })
+
+  // 4. Assign stack index for same time
+  const timeStack = new Map<string, number>()
+  for (const event of displayEvents) {
+    const count = timeStack.get(event.time) || 0
+    event.stackIndex = count
+    timeStack.set(event.time, count + 1)
+  }
+
+  return displayEvents
+})
 </script>
 
 <style scoped>
@@ -198,6 +325,38 @@ const volatilityZoneWidth = computed(() => {
   min-height: 150px;
   background: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+  position: relative;
+}
+
+.event-controls {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+
+.event-controls button {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.event-controls button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.event-controls button.active {
+  background: rgba(88, 166, 255, 0.2);
+  border-color: rgba(88, 166, 255, 0.5);
+  color: #58a6ff;
 }
 
 .chart-svg {

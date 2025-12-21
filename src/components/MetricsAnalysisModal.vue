@@ -81,7 +81,17 @@ function openArchiveModal() {
   const symbol = analysisData.value?.symbol || 'EURUSD'
   archiveDefaultTitle.value = `Métriques du meilleur moment pour trader ${symbol}`
 
-  archiveDataJson.value = JSON.stringify({ analysisResult: result, sliceAnalyses: sliceAnalyses.value, movementQualities: movementQualities.value, volatilityDuration: volatilityDuration.value, tradingPlan: tradingPlan.value, entryWindowAnalysis: entryWindowAnalysis.value, offsetOptimal: offsetOptimal.value, whipsawAnalysis: whipsawAnalysis.value })
+  archiveDataJson.value = JSON.stringify({ 
+    analysisResult: result, 
+    sliceAnalyses: sliceAnalyses.value, 
+    movementQualities: movementQualities.value, 
+    volatilityDuration: volatilityDuration.value, 
+    tradingPlan: tradingPlan.value, 
+    entryWindowAnalysis: entryWindowAnalysis.value, 
+    offsetOptimal: offsetOptimal.value, 
+    whipsawAnalysis: whipsawAnalysis.value,
+    recurringEvents: recurringEvents.value
+  })
   showArchiveModal.value = true
 }
 

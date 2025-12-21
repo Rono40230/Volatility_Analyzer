@@ -4,6 +4,7 @@ import type { AnalysisResult } from '../stores/volatility'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 import { useMetricsAnalysisData } from './useMetricsAnalysisData'
 import { useStraddleAnalysis } from './useStraddleAnalysis'
+import type { RecurringEvent } from './useMetricsAnalysisData.helpers'
 
 interface MovementQuality {
   hour: number
@@ -65,6 +66,7 @@ export interface ArchivedAnalysisData {
   offsetOptimal: OptimalOffset
   winRate: WinRateMetric
   whipsawAnalysis: WhipsawMetric
+  recurringEvents?: RecurringEvent[]
 }
 
 interface ModalProps {
@@ -92,6 +94,7 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
         if (props.archivedData.offsetOptimal) offsetOptimal.value = props.archivedData.offsetOptimal
         if (props.archivedData.winRate) winRate.value = props.archivedData.winRate
         if (props.archivedData.whipsawAnalysis) whipsawAnalysis.value = props.archivedData.whipsawAnalysis
+        if (props.archivedData.recurringEvents) recurringEvents.value = props.archivedData.recurringEvents
         if (props.archivedData.analysisResult) {
           analysisData.value = {
             symbol: props.analysisResult.symbol,
