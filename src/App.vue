@@ -13,13 +13,14 @@ import ImportHub from './components/ImportHub.vue'
 import EventCorrelationView from './components/EventCorrelationView.vue'
 import ArchivesView from './views/ArchivesView.vue'
 import BacktestView from './views/BacktestView.vue'
+import PlanningView from './views/PlanningView.vue'
 
 const volatilityStore = useVolatilityStore()
 const analysisStore = useAnalysisStore()
 const { analysisResult, loading, error } = storeToRefs(volatilityStore)
 
-const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest' | null
-const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest'>(savedTab || 'heatmap')
+const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest' | 'planning' | null
+const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest' | 'planning'>(savedTab || 'heatmap')
 const selectedSymbolLocal = ref('')
 
 watch(activeTab, (newTab) => {
@@ -94,6 +95,13 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' 
         @click="switchTab('backtest')"
       >
         🧪 Backtest
+      </button>
+      <button 
+        class="tab-button" 
+        :class="{ active: activeTab === 'planning' }"
+        @click="switchTab('planning')"
+      >
+        📅 Planning
       </button>
       <button 
         class="tab-button" 
@@ -214,6 +222,10 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' 
 
       <template v-if="activeTab === 'backtest'">
         <BacktestView />
+      </template>
+
+      <template v-if="activeTab === 'planning'">
+        <PlanningView />
       </template>
     </main>
 

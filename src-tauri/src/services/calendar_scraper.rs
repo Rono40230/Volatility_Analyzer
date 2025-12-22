@@ -1,11 +1,12 @@
 // services/calendar_scraper.rs - Service de gestion des événements calendrier
 // NOTE: Ce module est conservé pour usage futur (Phase 2 - scraping événements)
 
-use crate::db::schema::calendar_events;
+use crate::schema::calendar_events;
 use crate::db::DbPool;
 use crate::models::{CalendarEvent, VolatilityError};
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
+use diesel::SelectableHelper;
 
 #[allow(dead_code)]
 pub struct CalendarScraper {

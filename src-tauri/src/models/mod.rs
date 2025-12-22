@@ -17,6 +17,8 @@ pub mod straddle_parameters;
 pub mod trading_recommendation;
 pub mod volatility_duration;
 pub mod asset_class;
+pub mod planning;
+
 
 // Re-exports pour faciliter les imports
 pub use analysis_result::{AnalysisResult, CorrelatedEvent, GlobalMetrics};

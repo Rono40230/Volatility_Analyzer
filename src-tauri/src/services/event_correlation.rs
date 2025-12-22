@@ -3,6 +3,7 @@ use crate::db::DbPool;
 use crate::models::{CalendarEvent, Candle, CorrelatedEvent, VolatilityError};
 use chrono::{Duration, NaiveDateTime, Timelike};
 use diesel::prelude::*;
+use diesel::SelectableHelper;
 
 /// Service pour analyser la corrélation entre événements économiques et volatilité
 pub struct EventCorrelationService {
@@ -21,15 +22,14 @@ impl EventCorrelationService {
         start_time: NaiveDateTime,
         end_time: NaiveDateTime,
     ) -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
-        use crate::db::schema::calendar_events::dsl::*;
+        use crate::schema::calendar_events::dsl::*;
 
         let mut conn = self.pool.get()?;
 
         let events = calendar_events
             .filter(event_time.ge(start_time))
             .filter(event_time.le(end_time))
-            .order(event_time.asc())
-            .load::<CalendarEvent>(&mut conn)?;
+            .order(event_time.asc())            .select(CalendarEvent::as_select())            .load::<CalendarEvent>(&mut conn)?;
 
         Ok(events)
     }

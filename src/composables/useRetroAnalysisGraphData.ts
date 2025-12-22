@@ -22,6 +22,13 @@ export interface RetroGraphData {
   timeout: number                    // Timeout en minutes
   offset: number                     // Offset d'entrée en points
   stop_loss_recovery: number         // SL Recovery en points
+  
+  // Nouveaux champs Simultané
+  stop_loss_simultaneous: number
+  trailing_stop_simultaneous: number
+  offset_simultaneous: number
+  stop_loss_recovery_simultaneous: number
+
   point_value: number                // Valeur d'un point pour normalisation
 }
 

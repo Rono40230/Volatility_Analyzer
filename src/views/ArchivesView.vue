@@ -31,6 +31,26 @@
       </div>
     </div>
 
+    <MetaAnalysisModal 
+      :is-open="showMetaAnalysisModal"
+      @close="showMetaAnalysisModal = false"
+    />
+
+    <HeatmapMetaModal 
+      :is-open="showHeatmapMetaModal"
+      @close="showHeatmapMetaModal = false"
+    />
+
+    <VolatilityMetaModal 
+      :is-open="showVolatilityMetaModal"
+      @close="showVolatilityMetaModal = false"
+    />
+
+    <ExportModal 
+      :is-open="showExportModal"
+      @close="showExportModal = false"
+    />
+
     <!-- GlobalAnalysisModal supprimé -->
 
     <div v-if="showDeleteConfirmModal" class="delete-confirm-overlay">
@@ -102,16 +122,26 @@
           class="section-header"
           @click="basculerExpansionType(type)"
         >
-          <span class="section-toggle">
-            {{ expandedTypes.has(type) ? '▼' : '▶' }}
-          </span>
-          <div
-            class="archive-type-badge"
-            :class="obtenirClasseType(type)"
-          >
-            {{ type }}
+          <div class="section-header-left">
+            <span class="section-toggle">
+              {{ expandedTypes.has(type) ? '▼' : '▶' }}
+            </span>
+            <div
+              class="archive-type-badge"
+              :class="obtenirClasseType(type)"
+            >
+              {{ type }}
+            </div>
+            <span class="section-count">{{ archives.length }} archive{{ archives.length > 1 ? 's' : '' }}</span>
           </div>
-          <span class="section-count">{{ archives.length }} archive{{ archives.length > 1 ? 's' : '' }}</span>
+
+          <button 
+            v-if="getMetaAnalysisType(type)" 
+            class="btn-meta-analysis-small"
+            @click.stop="openMetaAnalysis(type)"
+          >
+            📊 Méta-Analyse
+          </button>
         </div>
 
         <!-- Grille d'archives (compact) -->
@@ -231,11 +261,19 @@ import MetricsAnalysisModal from '../components/MetricsAnalysisModal.vue'
 import RetroactiveAnalysisResultsViewer from '../components/RetroactiveAnalysisResultsViewer.vue'
 import EventCorrelationHeatmap from '../components/EventCorrelationHeatmap.vue'
 import BacktestResultsPanel from '../components/BacktestResultsPanel.vue'
+import MetaAnalysisModal from '../components/MetaAnalysisModal.vue'
+import HeatmapMetaModal from '../components/HeatmapMetaModal.vue'
+import VolatilityMetaModal from '../components/VolatilityMetaModal.vue'
+import ExportModal from '../components/ExportModal.vue'
 import type { Archive as ArchiveType } from '../stores/archiveStore'
 
 const archiveStore = useArchiveStore()
 const selectedArchive = ref<Archive | null>(null)
 const showViewer = ref(false)
+const showMetaAnalysisModal = ref(false)
+const showHeatmapMetaModal = ref(false)
+const showVolatilityMetaModal = ref(false)
+const showExportModal = ref(false)
 const viewerData = ref<any>(null)
 const showDeleteConfirmModal = ref(false)
 const archiveToDelete = ref<Archive | null>(null)
@@ -288,6 +326,30 @@ function basculerExpansionType(type: string) {
     expandedTypes.value.delete(type)
   } else {
     expandedTypes.value.add(type)
+  }
+}
+
+function getMetaAnalysisType(type: string): 'retro' | 'heatmap' | 'volatility' | null {
+  if (type === 'RETRO_ANALYSIS' || type === 'Métriques Rétrospectives' || type === 'Correlation de la volatilité Paire/Evenement') {
+    return 'retro'
+  }
+  if (type === 'Heatmap' || type === 'HEATMAP') {
+    return 'heatmap'
+  }
+  if (type === 'Volatilité brute' || type === 'Volatilité brute Paire/Période' || type === 'METRICS') {
+    return 'volatility'
+  }
+  return null
+}
+
+function openMetaAnalysis(type: string) {
+  const metaType = getMetaAnalysisType(type)
+  if (metaType === 'retro') {
+    showMetaAnalysisModal.value = true
+  } else if (metaType === 'heatmap') {
+    showHeatmapMetaModal.value = true
+  } else if (metaType === 'volatility') {
+    showVolatilityMetaModal.value = true
   }
 }
 
@@ -590,7 +652,7 @@ function cancelDelete() {
 .section-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   padding: 16px 20px;
   background: linear-gradient(135deg, #161b22 0%, #1a2332 100%);
   cursor: pointer;
@@ -601,6 +663,30 @@ function cancelDelete() {
 .section-header:hover {
   background: linear-gradient(135deg, #1a2332 0%, #212d3d 100%);
   border-color: #58a6ff;
+}
+
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-meta-analysis-small {
+  background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.3);
+}
+
+.btn-meta-analysis-small:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
 }
 
 .section-toggle {
@@ -849,6 +935,26 @@ function cancelDelete() {
   padding: 40px;
   color: #8b949e;
   font-size: 1.2em;
+}
+
+.btn-meta-analysis {
+  background: linear-gradient(135deg, #9c27b0 0%, #673ab7 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 15px rgba(156, 39, 176, 0.3);
+}
+
+.btn-meta-analysis:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
 }
 
 .delete-confirm-overlay {

@@ -39,6 +39,10 @@
       :timeout="store.graphData?.timeout ?? 60"
       :offset="store.graphData?.offset ?? 0"
       :stop-loss-recovery="store.graphData?.stop_loss_recovery ?? 0"
+      :offset-simultaneous="store.graphData?.offset_simultaneous ?? 0"
+      :stop-loss-simultaneous="store.graphData?.stop_loss_simultaneous ?? 0"
+      :trailing-stop-simultaneous="store.graphData?.trailing_stop_simultaneous ?? 0"
+      :stop-loss-recovery-simultaneous="store.graphData?.stop_loss_recovery_simultaneous ?? 0"
       :point-value="store.graphData?.point_value"
       :event-label="getEventLabel(store.selectedEventType)"
       @archive="openArchiveModal"
@@ -71,7 +75,7 @@ import ArchiveModal from './ArchiveModal.vue'
 import RetroAnalysisControls from './RetroAnalysisControls.vue'
 import RetroAnalysisResults from './RetroAnalysisResults.vue'
 
-interface Symbol { symbol: string; file_path?: string }
+interface SymbolItem { symbol: string; file_path?: string }
 
 const props = defineProps<{ 
   calendarId: number | null
@@ -104,10 +108,14 @@ const onCalendarSelected = (filename: string) => { emit('calendar-selected', fil
 
 onMounted(async () => {
   try {
-    const s = await invoke<Symbol[]>('load_symbols')
-    pairs.value = s.map((x: Symbol) => x.symbol)
+    const s = await invoke<SymbolItem[]>('load_symbols')
+    if (s && s.length > 0) {
+      pairs.value = s.map((x: SymbolItem) => x.symbol)
+    } else {
+      pairs.value = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD']
+    }
   } catch (e) {
-    pairs.value = ['EURUSD']
+    pairs.value = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD']
   }
   await loadEventTypes(props.calendarId ?? undefined)
 })
@@ -164,12 +172,18 @@ function openArchiveModal() {
     pair: store.selectedPair,
     eventType: store.selectedEventType,
     eventLabel: getEventLabel(store.selectedEventType),
+    eventDatetime: store.graphData.event_datetime,
     meilleurMoment: store.graphData.meilleur_moment,
     stopLoss: store.graphData.stop_loss,
     trailingStop: store.graphData.trailing_stop,
     timeout: store.graphData.timeout,
     offset: store.graphData.offset,
-    stopLossRecovery: store.graphData.stop_loss_recovery
+    stopLossRecovery: store.graphData.stop_loss_recovery,
+    stopLossSimultaneous: store.graphData.stop_loss_simultaneous,
+    trailingStopSimultaneous: store.graphData.trailing_stop_simultaneous,
+    offsetSimultaneous: store.graphData.offset_simultaneous,
+    stopLossRecoverySimultaneous: store.graphData.stop_loss_recovery_simultaneous,
+    pointValue: store.graphData.point_value
   })
   showArchiveModal.value = true
 }

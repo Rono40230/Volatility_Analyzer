@@ -53,8 +53,8 @@ pub async fn run_backtest_time(
                 id: 0, // Dummy ID
                 symbol: "USD".to_string(), // Dummy currency
                 event_time,
-                impact: "Medium".to_string(),
                 description: format!("Time Backtest {}", time),
+                impact: "Medium".to_string(),
                 actual: None,
                 forecast: None,
                 previous: None,

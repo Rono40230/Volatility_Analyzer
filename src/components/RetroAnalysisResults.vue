@@ -53,9 +53,9 @@
       <div class="col-right">
         <StraddleSimultaneousCard
           :meilleur-moment="props.meilleurMoment"
-          :offset="props.offset"
-          :stop-loss-recovery="props.stopLossRecovery"
-          :trailing-stop="props.trailingStop"
+          :offset="props.offsetSimultaneous ?? props.offset"
+          :stop-loss-recovery="props.stopLossRecoverySimultaneous ?? props.stopLossRecovery"
+          :trailing-stop="props.trailingStopSimultaneous ?? props.trailingStop"
           :timeout="props.timeout"
           :pair="props.pair"
           :point-value="props.pointValue"
@@ -95,6 +95,11 @@ const props = defineProps<{
   offset?: number
   stopLossRecovery?: number
   pointValue?: number
+  // Nouveaux champs optionnels (pour compatibilité ascendante)
+  stopLossSimultaneous?: number
+  trailingStopSimultaneous?: number
+  offsetSimultaneous?: number
+  stopLossRecoverySimultaneous?: number
 }>()
 
 defineEmits<{ archive: [] }>()

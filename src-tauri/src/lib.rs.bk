@@ -236,6 +236,9 @@ pub fn run() {
             // Backtest commands
             run_backtest,
             run_backtest_time,
+            // Planning commands
+            project_stats_on_calendar,
+            sync_forex_factory_week,
         ]);
 
     tracing::info!("✅ Tauri Builder configuré");

@@ -5,7 +5,7 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::db::schema::calendar_events;
+use crate::schema::calendar_events;
 
 /// Événement du calendrier économique (pour SELECT queries)
 #[derive(Debug, Clone, Queryable, Selectable, Serialize, Deserialize)]
@@ -17,9 +17,9 @@ pub struct CalendarEvent {
     pub event_time: NaiveDateTime,
     pub impact: String,
     pub description: String,
-    pub actual: Option<f64>,
-    pub forecast: Option<f64>,
-    pub previous: Option<f64>,
+    pub actual: Option<f32>,
+    pub forecast: Option<f32>,
+    pub previous: Option<f32>,
     pub created_at: NaiveDateTime,
 }
 
@@ -31,9 +31,9 @@ pub struct NewCalendarEvent {
     pub event_time: NaiveDateTime,
     pub impact: String,
     pub description: String,
-    pub actual: Option<f64>,
-    pub forecast: Option<f64>,
-    pub previous: Option<f64>,
+    pub actual: Option<f32>,
+    pub forecast: Option<f32>,
+    pub previous: Option<f32>,
 }
 
 #[cfg(test)]
@@ -46,15 +46,16 @@ mod tests {
         let event = NewCalendarEvent {
             symbol: "EUR/USD".to_string(),
             event_time: Utc::now().naive_utc(),
-            impact: "HIGH".to_string(),
-            description: "Fed Rate Decision".to_string(),
-            actual: Some(5.50),
-            forecast: Some(5.25),
-            previous: Some(5.00),
+            event_type: "Interest Rate".to_string(),
+            impact_level: "HIGH".to_string(),
+            description: Some("Fed Rate Decision".to_string()),
+            actual_value: Some(5.50),
+            forecast_value: Some(5.25),
+            previous_value: Some(5.00),
         };
 
         assert_eq!(event.symbol, "EUR/USD");
-        assert_eq!(event.impact, "HIGH");
-        assert_eq!(event.actual, Some(5.50));
+        assert_eq!(event.impact_level, "HIGH");
+        assert_eq!(event.actual_value, Some(5.50));
     }
 }

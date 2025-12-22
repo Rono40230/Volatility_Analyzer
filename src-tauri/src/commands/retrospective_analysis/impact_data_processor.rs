@@ -159,12 +159,17 @@ impl ImpactDataProcessor {
         };
 
         let avg_timestamp = if event_count > 0 {
-            events
-                .iter()
-                .take(event_count)
-                .map(|e| e.event_time.and_utc().timestamp())
-                .sum::<i64>()
-                / event_count as i64
+            // Use the last event's time to have a realistic and current reference time (e.g. 14:30)
+            // instead of a mathematical average that drifts (e.g. 06:20)
+            // Prioritize USD events if available, otherwise take the last one
+            let last_usd_event = events.iter().rev().find(|e| e.symbol == "USD");
+            match last_usd_event {
+                Some(e) => e.event_time.and_utc().timestamp(),
+                None => events
+                    .last()
+                    .map(|e| e.event_time.and_utc().timestamp())
+                    .unwrap_or(0),
+            }
         } else {
             0
         };

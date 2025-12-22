@@ -2,6 +2,7 @@
 pub mod archive_commands;
 pub mod backtest;
 pub mod calendar_commands;
+pub mod calendar_db_helper;
 pub mod calendar_import_commands;
 pub mod calendar_parser;
 pub mod candle_helpers;
@@ -21,7 +22,9 @@ pub mod metadata;
 pub mod movement_analysis_commands;
 pub mod pair_data;
 pub mod pair_importer;
+pub mod planning;
 pub mod retrospective_analysis;
+
 pub mod session_commands;
 pub mod volatility;
 pub mod volatility_duration_commands;
@@ -56,6 +59,7 @@ pub use metadata::{
 };
 pub use movement_analysis_commands::{analyze_movement_quality, get_movement_qualities};
 pub use pair_data::{import_pair_data, get_symbol_properties};
+pub use planning::projection::project_stats_on_calendar;
 // Phase 7: Retrospective analysis commands (fully integrated)
 pub use retrospective_analysis::{analyze_decay_profile, analyze_peak_delay, get_event_types};
 pub use session_commands::*;

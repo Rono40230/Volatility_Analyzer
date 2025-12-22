@@ -9,27 +9,21 @@
       </label>
 
       <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('bidi')" @change="toggleReport('bidi')">
-        <span class="label-text">Fiche Paramètres Bidi</span>
-        <span class="label-desc">Paramètres optimaux (Offset, TP, SL) pour le robot</span>
+        <input type="checkbox" :checked="selectedReports.includes('bidi_period')" @change="toggleReport('bidi_period')">
+        <span class="label-text">Fiche Bidi : Paire/Période</span>
+        <span class="label-desc">Volatilité Brute (Session Trading)</span>
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" :checked="selectedReports.includes('bidi_event')" @change="toggleReport('bidi_event')">
+        <span class="label-text">Fiche Bidi : Paire/Événements</span>
+        <span class="label-desc">Corrélation (News Trading)</span>
       </label>
       
       <label class="checkbox-label">
         <input type="checkbox" :checked="selectedReports.includes('ranking')" @change="toggleReport('ranking')">
         <span class="label-text">Classement des Opportunités</span>
         <span class="label-desc">Top des meilleures configurations par score</span>
-      </label>
-      
-      <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('danger')" @change="toggleReport('danger')">
-        <span class="label-text">Zones de Danger</span>
-        <span class="label-desc">Heures et paires à éviter (Blacklist)</span>
-      </label>
-      
-      <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('identity')" @change="toggleReport('identity')">
-        <span class="label-text">Carte d'Identité Paire</span>
-        <span class="label-desc">Résumé détaillé par instrument</span>
       </label>
     </div>
 
@@ -58,7 +52,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SymbolProperties } from '../../stores/volatilityTypes'
+import type { SymbolInfo } from '../../stores/volatilityTypes'
 
 export interface CalendarMetadata {
   id: number
@@ -73,7 +67,7 @@ const props = defineProps<{
   selectedCalendarId: number | null
   selectedPairMode: string
   calendars: CalendarMetadata[]
-  symbols: SymbolProperties[]
+  symbols: SymbolInfo[]
 }>()
 
 const emit = defineEmits<{

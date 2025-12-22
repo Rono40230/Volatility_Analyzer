@@ -18,12 +18,11 @@ diesel::table! {
         id -> Integer,
         symbol -> Text,
         event_time -> Timestamp,
-        event_type -> Text,
-        impact_level -> Text,
-        actual_value -> Nullable<Float>,
-        forecast_value -> Nullable<Float>,
-        previous_value -> Nullable<Float>,
-        description -> Nullable<Text>,
+        impact -> Text,
+        description -> Text,
+        actual -> Nullable<Float>,
+        forecast -> Nullable<Float>,
+        previous -> Nullable<Float>,
         created_at -> Timestamp,
     }
 }

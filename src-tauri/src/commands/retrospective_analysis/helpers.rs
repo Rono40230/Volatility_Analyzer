@@ -1,9 +1,10 @@
 // commands/retrospective_analysis/helpers.rs
 // Fonctions utilitaires pour la analyse rétrospective (extracted)
 
-use crate::db::schema::calendar_events::dsl::*;
+use crate::schema::calendar_events::dsl::*;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
+use diesel::SelectableHelper;
 use rusqlite;
 
 pub async fn setup_databases(
@@ -32,10 +33,11 @@ pub async fn setup_databases(
 
 pub async fn load_events_by_type(
     mut conn: diesel::r2d2::PooledConnection<diesel::r2d2::ConnectionManager<SqliteConnection>>,
-    event_type: &str,
+    event_type_param: &str,
 ) -> Result<Vec<crate::models::CalendarEvent>, String> {
     calendar_events
-        .filter(description.eq(event_type))
+        .filter(description.eq(event_type_param))
+        .select(crate::models::CalendarEvent::as_select())
         .order(event_time.asc())
         .load(&mut conn)
         .map_err(|e| format!("Load failed: {}", e))

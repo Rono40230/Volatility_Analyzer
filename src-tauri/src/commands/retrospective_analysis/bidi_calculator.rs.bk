@@ -5,7 +5,7 @@ pub struct BidiCalculator;
 
 impl BidiCalculator {
     /// Calcul des 4 paramètres Bidi à partir des données d'impact
-    /// Retourne: (meilleur_moment, stop_loss, trailing_stop, timeout, offset, stop_loss_recovery)
+    /// Retourne: (meilleur_moment, stop_loss, trailing_stop, timeout, offset, stop_loss_recovery, sl_sim, ts_sim, offset_sim)
     pub fn calculer_depuis_impact(
         atr_before: &[f64],
         atr_after: &[f64],
@@ -14,7 +14,7 @@ impl BidiCalculator {
         _event_count: usize,
         point_value: f64,
         p95_wick: f64,
-    ) -> (f64, f64, f64, i32, f64, f64) {
+    ) -> (f64, f64, f64, i32, f64, f64, f64, f64, f64, f64) {
         // 1. Calcul de l'ATR récent (5 dernières minutes avant l'événement)
         // C'est ce que le robot verrait en temps réel
         let start_idx = atr_before.len().saturating_sub(5);
@@ -29,9 +29,8 @@ impl BidiCalculator {
         // 2. Calcul du Timeout optimal basé sur la durée réelle du mouvement (rétrospectif)
         let timeout = Self::calculer_timeout(atr_after, volatility_increase);
 
-        // 3. Utilisation du Service Unifié pour les paramètres (Offset, SL, TS, Recovery)
-        // Cela garantit l'harmonisation avec l'analyse de volatilité brute (Spread Margin, etc.)
-        let mut params = StraddleParameterService::calculate_parameters(
+        // 3. STRATÉGIE DIRECTIONNELLE (Standard)
+        let mut params_dir = StraddleParameterService::calculate_parameters(
             recent_atr,
             noise_during,
             point_value,
@@ -39,31 +38,47 @@ impl BidiCalculator {
             Some(timeout as u16),
         );
 
-        // 4. Override Offset avec P95 Wick (Logique Unifiée avec Volatilité Brute)
-        // Si on a des données de mèches, on utilise le percentile 95 + 10% de marge
-        // C'est plus précis que le multiplicateur d'ATR générique
+        // 4. STRATÉGIE SIMULTANÉE (Plus conservatrice)
+        // Pour le simultané, on augmente artificiellement le bruit perçu pour durcir les paramètres
+        // car le risque de whipsaw est double (Buy + Sell ouverts)
+        let noise_simultaneous = noise_during * 1.2; // +20% de sensibilité au bruit
+        let mut params_sim = StraddleParameterService::calculate_parameters(
+            recent_atr,
+            noise_simultaneous,
+            point_value,
+            None,
+            Some(timeout as u16),
+        );
+
+        // 5. Override Offset avec P95 Wick (Logique Unifiée avec Volatilité Brute)
         if p95_wick > 0.0 && point_value > 0.0 {
             let p95_wick_points = p95_wick / point_value;
             let offset_p95 = p95_wick_points * 1.1;
             
-            // On prend le max entre l'ATR (théorique) et le P95 (réel) pour la sécurité
-            // Mais on privilégie le P95 s'il est cohérent
-            // On ajoute toujours la marge de spread
-            params.offset_pips = (offset_p95 + params.spread_safety_margin_pips).ceil();
-            
-            // Recalcul du SL Recovery qui dépend de l'offset
-            params.sl_recovery_pips = params.stop_loss_pips.max(params.offset_pips * 3.0).ceil();
+            // Directionnel : On prend le max entre l'ATR et le P95
+            params_dir.offset_pips = (offset_p95 + params_dir.spread_safety_margin_pips).ceil();
+            params_dir.sl_recovery_pips = params_dir.stop_loss_pips.max(params_dir.offset_pips * 3.0).ceil();
+
+            // Simultané : On est encore plus prudent sur l'offset pour éviter le déclenchement intempestif
+            // On ajoute 10% de marge supplémentaire par rapport au directionnel
+            params_sim.offset_pips = (params_dir.offset_pips * 1.1).ceil();
+            params_sim.sl_recovery_pips = params_sim.stop_loss_pips.max(params_sim.offset_pips * 3.0).ceil();
         }
 
         let best_moment = Self::calculer_meilleur_moment(atr_before);
 
         (
             best_moment,
-            params.stop_loss_pips,
-            params.trailing_stop_pips,
-            params.timeout_minutes,
-            params.offset_pips,
-            params.sl_recovery_pips,
+            params_dir.stop_loss_pips,
+            params_dir.trailing_stop_pips,
+            params_dir.timeout_minutes,
+            params_dir.offset_pips,
+            params_dir.sl_recovery_pips,
+            // Nouveaux paramètres spécifiques Simultané
+            params_sim.stop_loss_pips,     // SL Simultané (souvent plus large)
+            params_sim.trailing_stop_pips, // TS Simultané
+            params_sim.offset_pips,        // Offset Simultané
+            params_sim.sl_recovery_pips,   // SL Recovery Simultané
         )
     }
 

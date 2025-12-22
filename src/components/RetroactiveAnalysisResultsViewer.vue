@@ -26,6 +26,11 @@
               :timeout="data?.timeout ?? 60"
               :offset="data?.offset ?? 0"
               :stop-loss-recovery="data?.stopLossRecovery ?? 0"
+              :stop-loss-simultaneous="data?.stopLossSimultaneous"
+              :trailing-stop-simultaneous="data?.trailingStopSimultaneous"
+              :offset-simultaneous="data?.offsetSimultaneous"
+              :stop-loss-recovery-simultaneous="data?.stopLossRecoverySimultaneous"
+              :point-value="data?.pointValue"
               :event-label="data?.eventLabel"
               :is-archive-mode="true"
             />
@@ -59,6 +64,11 @@ interface ArchivedRetroData {
   timeout?: number
   offset?: number
   stopLossRecovery?: number
+  stopLossSimultaneous?: number
+  trailingStopSimultaneous?: number
+  offsetSimultaneous?: number
+  stopLossRecoverySimultaneous?: number
+  pointValue?: number
 }
 
 const props = defineProps<{

@@ -29,6 +29,7 @@ pub mod movement_analyzer;
 pub mod movement_quality_analyzer;
 pub mod pair_data;
 pub mod pair_data_stats;
+pub mod planning;
 pub mod session;
 pub mod session_analyzer;
 pub mod slice_metrics_analyzer;

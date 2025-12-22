@@ -67,7 +67,9 @@ export function useRetroGraphDataPoints(props: {
     const d = new Date(baseTime + offset * 60000)
     const m = Math.round(d.getMinutes() / 5) * 5
     d.setMinutes(m)
-    return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/Paris' })
+    // Retourne uniquement le décalage relatif (ex: "T-5", "T+15") au lieu de l'heure absolue
+    if (offset === 0) return 'T0'
+    return offset > 0 ? `T+${offset}` : `T${offset}`
   }
 
   const getXPositionBefore = (min: number): number => {

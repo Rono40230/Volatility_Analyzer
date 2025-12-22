@@ -65,6 +65,11 @@ impl ImpactAnalyzer {
             timeout: bidi_params.3,
             offset: bidi_params.4,
             stop_loss_recovery: bidi_params.5,
+            // Mapping des nouveaux paramètres Simultané
+            stop_loss_simultaneous: bidi_params.6,
+            trailing_stop_simultaneous: bidi_params.7,
+            offset_simultaneous: bidi_params.8,
+            stop_loss_recovery_simultaneous: bidi_params.9,
             point_value,
         })
     }

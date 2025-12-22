@@ -2,10 +2,9 @@ import { ref } from 'vue'
 import { jsPDF } from 'jspdf'
 import { recupererDonneesArchivees, recupererDonneesBacktestArchivees } from '../utils/pdf/dataFetcher'
 import { 
-  generateBidiReport, 
-  generateRankingReport, 
-  generateDangerReport, 
-  generateIdentityReport
+  generateBidiPeriodReport,
+  generateBidiEventReport,
+  generateRankingReport
 } from '../utils/pdf/reportGenerators'
 import { generateBacktestReport } from '../utils/pdf/backtestReportGenerator'
 
@@ -44,34 +43,35 @@ export function usePdfExport() {
       const totalReports = reportTypes.length
       let currentReport = 0
 
-      // 1. Récupération des données d'analyse (si nécessaire)
-      const analysisReports = ['bidi', 'ranking', 'danger', 'identity']
-      const needsAnalysisData = reportTypes.some(r => analysisReports.includes(r))
+      // 1. Récupération des données
+      let periodDataList: any[] = []
+      let eventDataList: any[] = []
       
-      let archivedDataList: any[] = []
-      if (needsAnalysisData) {
-        archivedDataList = await recupererDonneesArchivees(filters.pairs, (p) => {
-          progress.value = p * 0.5 // 50% du progrès pour le fetch
-        })
-        
-        if (archivedDataList.length === 0 && !reportTypes.includes('backtest')) {
-          throw new Error("Aucune archive d'analyse trouvée.")
-        }
+      // Récupération Volatilité Brute (Période)
+      if (reportTypes.includes('bidi_period') || reportTypes.includes('ranking')) {
+        periodDataList = await recupererDonneesArchivees(filters.pairs, (p) => {
+          progress.value = p * 0.25
+        }, 'Volatilité brute Paire/Période')
       }
 
-      // 2. Récupération des données Backtest (si nécessaire)
+      // Récupération Corrélation (Événements)
+      if (reportTypes.includes('bidi_event')) {
+        eventDataList = await recupererDonneesArchivees(filters.pairs, (p) => {
+          progress.value = 25 + (p * 0.25)
+        }, 'Correlation de la volatilité Paire/Evenement')
+      }
+
+      // Récupération Backtest
       let backtestDataList: any[] = []
       if (reportTypes.includes('backtest')) {
         backtestDataList = await recupererDonneesBacktestArchivees(filters.pairs, (p) => {
-           // Ajuster le progrès si on fetch aussi l'analyse
-           const base = needsAnalysisData ? 50 : 0
-           const scale = needsAnalysisData ? 0.25 : 0.5
-           progress.value = base + (p * scale)
+           progress.value = 50 + (p * 0.25)
         })
+      }
 
-        if (backtestDataList.length === 0 && reportTypes.length === 1) {
-           throw new Error("Aucune archive de backtest trouvée.")
-        }
+      // Vérification des données
+      if (periodDataList.length === 0 && eventDataList.length === 0 && backtestDataList.length === 0) {
+        throw new Error("Aucune archive trouvée pour les rapports sélectionnés.")
       }
 
       // 3. Génération des rapports
@@ -82,17 +82,14 @@ export function usePdfExport() {
         }
         
         switch (type) {
-          case 'bidi':
-            if (archivedDataList.length > 0) await generateBidiReport(doc, archivedDataList, yPos)
+          case 'bidi_period':
+            if (periodDataList.length > 0) await generateBidiPeriodReport(doc, periodDataList, yPos)
+            break
+          case 'bidi_event':
+            if (eventDataList.length > 0) await generateBidiEventReport(doc, eventDataList, yPos)
             break
           case 'ranking':
-            if (archivedDataList.length > 0) await generateRankingReport(doc, archivedDataList, yPos)
-            break
-          case 'danger':
-            if (archivedDataList.length > 0) await generateDangerReport(doc, archivedDataList, yPos)
-            break
-          case 'identity':
-            if (archivedDataList.length > 0) await generateIdentityReport(doc, archivedDataList, yPos)
+            if (periodDataList.length > 0) await generateRankingReport(doc, periodDataList, yPos)
             break
           case 'backtest':
             if (backtestDataList.length > 0) await generateBacktestReport(doc, backtestDataList, yPos)
@@ -102,8 +99,7 @@ export function usePdfExport() {
         pageAdded = true
         currentReport++
         // Mise à jour du progrès restant
-        const startGen = needsAnalysisData || reportTypes.includes('backtest') ? 75 : 0
-        progress.value = startGen + ((currentReport / totalReports) * 25)
+        progress.value = 75 + ((currentReport / totalReports) * 25)
       }
 
       if (preview) {

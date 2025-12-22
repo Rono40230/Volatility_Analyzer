@@ -1,89 +1,53 @@
+use crate::commands::calendar_db_helper::save_calendar_import;
 use crate::commands::calendar_parser::parse_record;
 use csv::ReaderBuilder;
+use rusqlite::Connection;
 use std::fs;
 
 #[tauri::command]
 pub async fn import_calendar_files(paths: Vec<String>) -> Result<String, String> {
-    use rusqlite::Connection;
-
     tracing::info!("📥 Starting calendar import for {} file(s)", paths.len());
 
     if paths.is_empty() {
         return Err("Aucun fichier fourni".to_string());
     }
 
-    let path = &paths[0]; // Pour l'instant, on n'en traite qu'un
+    let path = &paths[0];
     let file_path = std::path::Path::new(path);
 
     if !file_path.exists() {
         return Err(format!("Fichier non trouvé: {}", path));
     }
 
-    // Lire le fichier CSV
     let file = fs::File::open(file_path).map_err(|e| format!("Failed to open file: {}", e))?;
-
     let mut reader = ReaderBuilder::new().delimiter(b',').from_reader(file);
 
-    let mut event_count = 0;
-    let mut oldest_date: Option<String> = None;
-    let mut newest_date: Option<String> = None;
-
-    // Parser les événements du CSV
     let mut events = Vec::new();
     let mut line_count = 0;
+
     for result in reader.records() {
         let record = result.map_err(|e| format!("CSV parsing error: {}", e))?;
         line_count += 1;
 
-        if line_count <= 5 {
-            tracing::info!(
-                "📝 Line {}: {} fields: {:?}",
-                line_count,
-                record.len(),
-                record.iter().collect::<Vec<_>>()
-            );
+        if let Some((event_time, symbol_val, impact_val, description_val)) = parse_record(&record) {
+            events.push((
+                event_time,
+                symbol_val.to_string(),
+                impact_val.to_string(),
+                description_val.to_string(),
+            ));
         }
-
-        let Some((event_time, symbol_val, impact_val, description_val)) = parse_record(&record)
-        else {
-            continue;
-        };
-
-        // Vérifier/mettre à jour les dates min/max
-        if oldest_date
-            .as_ref()
-            .map(|o| event_time < *o)
-            .unwrap_or(true)
-        {
-            oldest_date = Some(event_time.clone());
-        }
-        if newest_date
-            .as_ref()
-            .map(|n| event_time > *n)
-            .unwrap_or(true)
-        {
-            newest_date = Some(event_time.clone());
-        }
-
-        events.push((
-            event_time,
-            symbol_val.to_string(),
-            impact_val.to_string(),
-            description_val.to_string(),
-        ));
-        event_count += 1;
     }
 
-    tracing::info!("📊 Parsed {} events from {} lines", event_count, line_count);
+    tracing::info!("📊 Parsed {} events from {} lines", events.len(), line_count);
 
-    if event_count == 0 {
+    if events.is_empty() {
         return Err(format!(
             "Aucun événement trouvé dans le fichier (parsed {} lines)",
             line_count
         ));
     }
 
-    // Ouvrir volatility.db
     let data_dir = dirs::data_local_dir()
         .ok_or("Failed to get data directory")?
         .join("volatility-analyzer")
@@ -92,7 +56,6 @@ pub async fn import_calendar_files(paths: Vec<String>) -> Result<String, String>
     let conn =
         Connection::open(&data_dir).map_err(|e| format!("Failed to open volatility.db: {}", e))?;
 
-    // Extraire le nom du fichier
     let filename = file_path
         .file_name()
         .and_then(|n| n.to_str())
@@ -101,44 +64,84 @@ pub async fn import_calendar_files(paths: Vec<String>) -> Result<String, String>
 
     let calendar_name = filename.trim_end_matches(".csv").to_string();
 
-    // Insérer l'enregistrement du calendrier
-    let calendar_id: i32 = conn.query_row(
-        "INSERT INTO calendar_imports (name, filename, event_count, oldest_event_date, newest_event_date, imported_at) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
-         RETURNING id",
-        rusqlite::params![&calendar_name, &filename, event_count, &oldest_date, &newest_date, chrono::Utc::now().to_rfc3339()],
-        |row| row.get(0),
-    )
-    .map_err(|e| format!("Failed to insert calendar import record: {}", e))?;
+    let calendar_id = save_calendar_import(&conn, &calendar_name, &filename, &events)?;
 
     tracing::info!("📝 Calendar import record created with ID: {}", calendar_id);
-
-    // Insérer les événements
-    let mut stmt = conn
-        .prepare(
-            "INSERT INTO calendar_events (symbol, event_time, impact, description, calendar_import_id, created_at) 
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-        )
-        .map_err(|e| format!("Failed to prepare insert statement: {}", e))?;
-
-    for (event_time, symbol, impact, description) in events {
-        stmt.execute(rusqlite::params![
-            &symbol,
-            &event_time,
-            &impact,
-            &description,
-            calendar_id,
-            chrono::Utc::now().to_rfc3339()
-        ])
-        .map_err(|e| format!("Failed to insert event: {}", e))?;
-    }
-
     tracing::info!(
         "✅ Calendar import complete: {} events imported",
-        event_count
+        events.len()
     );
     Ok(format!(
         "Calendrier importé avec succès: {} événements",
-        event_count
+        events.len()
+    ))
+}
+
+#[tauri::command]
+pub async fn sync_forex_factory_week() -> Result<String, String> {
+    tracing::info!("🔄 Starting Forex Factory sync...");
+
+    let url = "https://nfs.faireconomy.media/ff_calendar_thisweek.csv";
+    let response = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Failed to download calendar: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Erreur de téléchargement Forex Factory: Status {}",
+            response.status()
+        ));
+    }
+
+    let content = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response text: {}", e))?;
+
+    if content.trim().starts_with("<!DOCTYPE") || content.trim().starts_with("<html") {
+        return Err("Forex Factory a bloqué la requête (Rate Limit). Veuillez réessayer plus tard.".to_string());
+    }
+
+    let mut reader = ReaderBuilder::new()
+        .delimiter(b',')
+        .from_reader(content.as_bytes());
+
+    let mut events = Vec::new();
+    for result in reader.records() {
+        let record = result.map_err(|e| format!("CSV parsing error: {}", e))?;
+        if let Some((event_time, symbol_val, impact_val, description_val)) = parse_record(&record) {
+            events.push((
+                event_time,
+                symbol_val.to_string(),
+                impact_val.to_string(),
+                description_val.to_string(),
+            ));
+        }
+    }
+
+    if events.is_empty() {
+        return Err("Aucun événement trouvé dans le fichier téléchargé".to_string());
+    }
+
+    let data_dir = dirs::data_local_dir()
+        .ok_or("Failed to get data directory")?
+        .join("volatility-analyzer")
+        .join("volatility.db");
+
+    let conn =
+        Connection::open(&data_dir).map_err(|e| format!("Failed to open volatility.db: {}", e))?;
+
+    let calendar_name = format!("ForexFactory_Sync_{}", chrono::Utc::now().format("%Y-%m-%d_%H-%M-%S"));
+    let filename = "ff_calendar_thisweek.csv";
+
+    save_calendar_import(&conn, &calendar_name, &filename, &events)?;
+
+    tracing::info!(
+        "✅ Forex Factory sync complete: {} events imported",
+        events.len()
+    );
+    Ok(format!(
+        "Synchronisation réussie: {} événements ajoutés",
+        events.len()
     ))
 }
