@@ -195,6 +195,14 @@ pub fn run() {
             delete_calendar_from_db,     // NEW: supprimer calendrier de la BD
             delete_calendar_file,
             delete_pair_files,
+            // Cleanup commands
+            list_rare_events,
+            delete_rare_events,
+            list_currencies,
+            delete_currency_events,
+            list_orphan_events,
+            delete_orphan_events,
+            preview_cleanup_events, // NEW: Prévisualiser les événements à supprimer
             // Config commands (Phase 7)
             get_selected_calendar_file,
             set_selected_calendar_file,

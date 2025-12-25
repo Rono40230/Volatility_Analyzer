@@ -16,6 +16,7 @@
       :get-heatmap-value="getHeatmapValue" 
       :get-heatmap-class="getHeatmapClass" 
       :get-formatted-event-name="getFormattedEventName" 
+      @analyze-cell="(eventName, pair) => emit('analyze-cell', eventName, pair)"
     />
   </div>
 </template>
@@ -34,6 +35,7 @@ const props = withDefaults(defineProps<{ availablePairs?: string[]; archiveData?
 
 const emit = defineEmits<{
   'archive-heatmap': []
+  'analyze-cell': [eventName: string, pair: string]
 }>()
 
 const { loadingHeatmap, heatmapData, minVolatilityThreshold, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)

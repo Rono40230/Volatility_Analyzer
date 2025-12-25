@@ -14,6 +14,19 @@ diesel::table! {
 }
 
 diesel::table! {
+    calendar_imports (id) {
+        id -> Integer,
+        name -> Text,
+        filename -> Text,
+        event_count -> Integer,
+        oldest_event_date -> Nullable<Text>,
+        newest_event_date -> Nullable<Text>,
+        imported_at -> Text,
+        is_active -> Bool,
+    }
+}
+
+diesel::table! {
     calendar_events (id) {
         id -> Integer,
         symbol -> Text,
@@ -24,6 +37,7 @@ diesel::table! {
         forecast -> Nullable<Float>,
         previous -> Nullable<Float>,
         created_at -> Timestamp,
+        calendar_import_id -> Integer,
     }
 }
 
@@ -80,10 +94,12 @@ diesel::table! {
 }
 
 diesel::joinable!(predicted_events -> calendar_events (event_id));
+diesel::joinable!(calendar_events -> calendar_imports (calendar_import_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     archives,
     calendar_events,
+    calendar_imports,
     predicted_events,
     event_metrics,
     event_movement_quality,

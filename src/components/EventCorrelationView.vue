@@ -29,6 +29,7 @@
         :calendar-id="selectedCalendarId"
         :available-pairs="availablePairs"
         @archive-heatmap="openArchiveModal"
+        @analyze-cell="openAnalysis"
       />
       <RetroactiveAnalysisView
         v-if="viewMode === 'retrospective'"
@@ -48,6 +49,14 @@
       @close="showArchiveModal = false"
       @saved="showArchiveModal = false"
     />
+
+    <!-- Analysis Modal -->
+    <AnalysisModal
+      :is-open="showAnalysisModal"
+      :event-name="analysisEventName"
+      :initial-pair="analysisInitialPair"
+      @close="showAnalysisModal = false"
+    />
   </div>
 </template>
 
@@ -58,6 +67,7 @@ import { useHeatmapState } from '../composables/useHeatmapState'
 import EventCorrelationHeatmap from './EventCorrelationHeatmap.vue'
 import RetroactiveAnalysisView from './RetroactiveAnalysisView.vue'
 import ArchiveModal from './ArchiveModal.vue'
+import AnalysisModal from './planning/AnalysisModal.vue'
 
 interface Props {
   viewMode?: 'heatmap' | 'retrospective'
@@ -68,6 +78,17 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const heatmapComponentRef = ref()
+
+// État pour la modale d'analyse
+const showAnalysisModal = ref(false)
+const analysisEventName = ref('')
+const analysisInitialPair = ref('')
+
+function openAnalysis(eventName: string, pair: string) {
+  analysisEventName.value = eventName
+  analysisInitialPair.value = pair
+  showAnalysisModal.value = true
+}
 
 const {
   viewMode,

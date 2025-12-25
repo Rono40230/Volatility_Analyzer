@@ -16,7 +16,7 @@ pub fn open_volatility_db() -> Result<Connection, String> {
 
 pub fn query_calendar_imports(conn: &Connection) -> Result<Vec<CalendarImportInfo>, String> {
     let mut stmt = conn
-        .prepare("SELECT id, name, filename, event_count, oldest_event_date, newest_event_date, imported_at, is_active FROM calendar_imports ORDER BY imported_at DESC")
+        .prepare("SELECT id, name, filename, (SELECT COUNT(*) FROM calendar_events WHERE calendar_import_id = calendar_imports.id), oldest_event_date, newest_event_date, imported_at, is_active FROM calendar_imports ORDER BY imported_at DESC")
         .map_err(|e| format!("Query failed: {}", e))?;
 
     let calendars: Vec<CalendarImportInfo> = stmt

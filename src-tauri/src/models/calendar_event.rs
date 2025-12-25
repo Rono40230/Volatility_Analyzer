@@ -21,6 +21,7 @@ pub struct CalendarEvent {
     pub forecast: Option<f32>,
     pub previous: Option<f32>,
     pub created_at: NaiveDateTime,
+    pub calendar_import_id: i32,
 }
 
 /// Structure pour insérer un nouvel événement (INSERT)

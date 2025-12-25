@@ -7,6 +7,7 @@ pub mod calendar_import_commands;
 pub mod calendar_parser;
 pub mod candle_helpers;
 pub mod candle_index_commands;
+pub mod cleanup_commands;
 pub mod config_commands;
 pub mod correlation;
 pub mod csv_cleaner_commands;
@@ -36,6 +37,10 @@ pub use calendar_import_commands::*;
 pub use candle_index_commands::{
     get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles,
     init_candle_index, load_pair_candles,
+};
+pub use cleanup_commands::{
+    delete_currency_events, delete_orphan_events, delete_rare_events, list_currencies,
+    list_orphan_events, list_rare_events, preview_cleanup_events,
 };
 pub use config_commands::*;
 pub use correlation::*;

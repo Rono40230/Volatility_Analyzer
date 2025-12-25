@@ -5,6 +5,7 @@ pub mod breakout_detector;
 pub mod calendar_converter;
 pub mod calendar_scraper;
 pub mod candle_index;
+pub mod cleanup_service;
 pub mod config_service;
 pub mod contextual_atr_analyzer;
 pub mod csv_cleaner;

@@ -29,7 +29,12 @@
               <span class="event-count" title="Nombre d'occurrences">({{ eventType.count }} occurrences)</span>
             </div>
           </td>
-          <td v-for="pair in pairs" :key="`${eventType.name}-${pair}`" :class="['heatmap-cell', getCellClass(eventType.name, pair)]">
+          <td v-for="pair in pairs" :key="`${eventType.name}-${pair}`" 
+              :class="['heatmap-cell', getCellClass(eventType.name, pair)]"
+              :title="shouldShowValue(eventType.name, pair) ? 'Analyser ce setup' : ''"
+              @click="shouldShowValue(eventType.name, pair) ? emit('analyze-cell', eventType.name, pair) : null"
+              :style="{ cursor: shouldShowValue(eventType.name, pair) ? 'pointer' : 'default' }"
+          >
             <span v-if="shouldShowValue(eventType.name, pair)" class="cell-value">
               {{ formaterPointsAvecPips(pair, getHeatmapValue(eventType.name, pair)) }}
             </span>
@@ -58,6 +63,10 @@ const props = defineProps<{
   getHeatmapValue: (e: string, p: string) => number
   getHeatmapClass: (v: number) => string
   getFormattedEventName: (e: string) => string
+}>()
+
+const emit = defineEmits<{
+  (e: 'analyze-cell', eventName: string, pair: string): void
 }>()
 
 const currentSortPair = ref<string | null>(null)

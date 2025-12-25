@@ -20,7 +20,7 @@
             <td>{{ cal.event_count.toLocaleString() }}</td>
             <td>{{ formatCalendarPeriod(cal) }}</td>
             <td class="actions-cell">
-              <button v-if="!isActiveCalendar(cal.id)" class="btn-activate" title="Utiliser ce calendrier" @click="$emit('setActive', cal.id)">Activer</button>
+              <button v-if="!isActiveCalendar(cal.id) && !cal.name.includes('Planning Hebdo') && !cal.name.startsWith('ForexFactory_Sync')" class="btn-activate" title="Utiliser ce calendrier" @click="$emit('setActive', cal.id)">Activer</button>
               <button class="btn-delete" @click="$emit('delete', cal.id)">🗑️ Supprimer</button>
             </td>
           </tr>
@@ -36,6 +36,9 @@
         <span v-if="loading" class="spinner">⏳</span>
         <span v-else>📥</span>
         Importer calendrier
+      </button>
+      <button class="btn-clean" @click="$emit('clean-rare')">
+        🧹 Nettoyage de la base de données
       </button>
     </div>
   </section>
@@ -110,4 +113,6 @@ function formatCalendarPeriod(calendar: CalendarMetadata): string {
 .actions-cell { display: flex; gap: 8px; }
 .btn-activate { padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; }
 .btn-activate:hover { background: #2563eb; }
+.btn-clean { display: block; width: 100%; padding: 12px 20px; background: #d97706; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; margin-top: 5px; transition: all 0.3s; }
+.btn-clean:hover { background: #b45309; transform: translateY(-2px); }
 </style>

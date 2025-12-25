@@ -59,6 +59,7 @@ pub async fn run_backtest_time(
                 forecast: None,
                 previous: None,
                 created_at: Utc::now().naive_utc(),
+                calendar_import_id: 0, // Dummy import ID
             });
         }
 
