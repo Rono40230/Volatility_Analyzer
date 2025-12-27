@@ -92,6 +92,7 @@ pub fn get_asset_cost(symbol: &str) -> AssetCost {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct WhipsawDetail {
     pub entry_index: usize,
     pub entry_price: f64,
@@ -103,6 +104,7 @@ pub struct WhipsawDetail {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StraddleSimulationResult {
     pub total_trades: usize,
     pub wins: usize,

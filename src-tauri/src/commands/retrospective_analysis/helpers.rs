@@ -4,7 +4,6 @@
 use crate::schema::calendar_events::dsl::*;
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
-use diesel::SelectableHelper;
 use rusqlite;
 
 pub async fn setup_databases(

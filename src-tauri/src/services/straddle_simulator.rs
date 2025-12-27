@@ -113,7 +113,7 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
             if triggered_side.is_none() {
                 // Pas encore déclenché, on surveille les deux bornes
                 // Note: On ajoute le spread au Buy Stop pour simuler l'Ask
-                let effective_buy_stop = buy_stop + normalize_to_pips(spread_cost, symbol); // Approximation conversion inverse si nécessaire, ici on suppose spread_cost en pips déjà converti ? 
+                let _effective_buy_stop = buy_stop + normalize_to_pips(spread_cost, symbol); // Approximation conversion inverse si nécessaire, ici on suppose spread_cost en pips déjà converti ? 
                 // ATTENTION: spread_cost est en PIPS. buy_stop est en PRIX.
                 // Il faut convertir spread_cost en PRIX pour l'ajouter.
                 // Pour simplifier ici sans pip_value, on va faire l'inverse : tout convertir en Pips à la fin pour le PnL.
