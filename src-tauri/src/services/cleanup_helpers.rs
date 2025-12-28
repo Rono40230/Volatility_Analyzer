@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use crate::models::calendar_event::CalendarEvent;
+// use crate::models::CalendarEvent;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RareEventSummary {

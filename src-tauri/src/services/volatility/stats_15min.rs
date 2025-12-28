@@ -194,7 +194,7 @@ impl<'a> Stats15MinCalculator<'a> {
 
         // Calcul des paramètres Straddle (Harmonisation Bidi V2)
         let straddle_params =
-            StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, asset_props.pip_value, None, half_life);
+            StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, asset_props.pip_value, symbol, half_life);
 
         // Calcul du profil de volatilité minute par minute (0-14) pour le graphique
         let mut minute_ranges: Vec<Vec<f64>> = vec![Vec::new(); 15];

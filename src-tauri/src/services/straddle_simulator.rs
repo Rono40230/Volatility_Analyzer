@@ -42,8 +42,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
     // Récupération des coûts pour cet actif
     let costs = get_asset_cost(symbol);
-    let spread_cost = costs.spread_pips;
-    let slippage_cost = costs.slippage_pips;
+    let spread_cost = costs.spread_avg;
+    let slippage_cost = costs.slippage;
     // Coût total par trade simple (Entrée + Sortie)
     // Entrée : Slippage + (Spread/2 ou Spread complet selon modèle)
     // Ici modèle conservateur : On paie le spread à l'exécution + slippage
@@ -101,13 +101,6 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         if wicks_history.len() > window_size {
             wicks_history.remove(0);
         }
-
-        // État du trade
-        let mut triggered_side: Option<&str> = None; // "BUY" ou "SELL"
-        let mut trade_result: Option<&str> = None; // "WIN", "LOSS", "WHIPSAW"
-
-        let mut buy_trigger_idx = 0;
-        let mut sell_trigger_idx = 0;
 
         // Fenêtre de 60 bougies (1h si M1) pour le déroulement du trade
         let max_duration = 60;

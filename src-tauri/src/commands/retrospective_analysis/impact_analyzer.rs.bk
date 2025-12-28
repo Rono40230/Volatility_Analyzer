@@ -44,6 +44,7 @@ impl ImpactAnalyzer {
             point_value,
             data.p95_wick,
             data.p95_range,
+            pair,
         );
 
         Ok(super::types::EventImpactResult {

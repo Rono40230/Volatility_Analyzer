@@ -139,6 +139,6 @@ pub async fn analyze_straddle_metrics(
             score: simulation.confidence_score,
             sample_size_warning: simulation.sample_size_warning,
         },
-        spread_cost: pips_to_points(get_asset_cost(&symbol).spread_pips, &symbol),
+        spread_cost: pips_to_points(get_asset_cost(&symbol).spread_avg, &symbol),
     })
 }

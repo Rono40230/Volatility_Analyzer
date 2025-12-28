@@ -142,7 +142,7 @@ impl VolatilityAnalyzer {
         let unit = asset_props.unit;
 
         // 1.6 Agrège les stats par quarter pour obtenir les moyennes historiques
-        stats_15min = QuarterlyAggregator::aggregate(&stats_15min, point_value);
+        stats_15min = QuarterlyAggregator::aggregate(&stats_15min, point_value, symbol);
 
         // 1b. Charge les événements économiques et les associe aux heures
         if let Err(e) = EventLoader::load_and_associate_events(

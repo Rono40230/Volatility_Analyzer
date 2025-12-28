@@ -18,6 +18,7 @@ pub mod trading_recommendation;
 pub mod volatility_duration;
 pub mod asset_class;
 pub mod planning;
+pub mod trading_costs;
 
 
 // Re-exports pour faciliter les imports

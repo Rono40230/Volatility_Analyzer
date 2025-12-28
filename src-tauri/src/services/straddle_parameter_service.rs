@@ -1,4 +1,5 @@
 use crate::models::StraddleParameters;
+use crate::models::trading_costs::TradingCostProfile;
 
 pub struct StraddleParameterService;
 
@@ -16,25 +17,27 @@ impl StraddleParameterService {
         atr: f64,
         noise_ratio: f64,
         _pip_value: f64, // Gardé pour compatibilité signature mais non utilisé si ATR normalisé
-        spread_margin: Option<f64>,
+        symbol: &str,
         half_life_minutes: Option<u16>,
     ) -> StraddleParameters {
-        // Marge de sécurité spread (défaut 3.0 pips)
-        let spread_safety = spread_margin.unwrap_or(3.0);
+        // Récupération du profil de coûts
+        let costs = TradingCostProfile::get_profile(symbol);
+        let spread = costs.spread_avg;
+        let slippage = costs.slippage;
 
         // 1. Offset Adaptatif (Formule Linéaire V5)
-        // Formule: Offset = ATR * (1.5 + (NoiseRatio * 0.5))
+        // Formule: Offset = (ATR * Multiplier) + Spread + Slippage
         // Min: 1.5x ATR (si Noise=0)
         // Max: Capé à 4.0x ATR pour éviter des offsets impossibles à atteindre
         let offset_multiplier = (1.5 + (noise_ratio * 0.5)).min(4.0);
-        let offset_pips = (atr * offset_multiplier).ceil() + spread_safety;
+        let offset_pips = (atr * offset_multiplier).ceil() + spread + slippage;
 
         // 2. Stop Loss Adaptatif (Formule Linéaire V5)
-        // Formule: SL = ATR * (2.0 + (NoiseRatio * 0.8))
+        // Formule: SL = (ATR * Multiplier) + Slippage
         // Min: 2.0x ATR
         // Max: Capé à 6.0x ATR
         let sl_ratio = (2.0 + (noise_ratio * 0.8)).min(6.0);
-        let stop_loss_pips = (atr * sl_ratio).ceil();
+        let stop_loss_pips = (atr * sl_ratio).ceil() + slippage;
 
         // 3. Trailing Stop (Suivi)
         // Formule: TS = ATR * (0.8 + (NoiseRatio * 0.3))
@@ -77,7 +80,7 @@ impl StraddleParameterService {
             sl_recovery_pips,
             hard_tp_pips,
             risk_reward_ratio,
-            spread_safety_margin_pips: spread_safety,
+            spread_safety_margin_pips: spread,
         }
     }
 }

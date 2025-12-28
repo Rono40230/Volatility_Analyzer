@@ -89,7 +89,7 @@ pub fn calculer_offset_optimal(
 
     // 3. Utiliser le service unifié pour calculer l'offset
     let params =
-        StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, pip_value, None, None);
+        StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, pip_value, symbol, None);
 
     let offset_pips = params.offset_pips;
 

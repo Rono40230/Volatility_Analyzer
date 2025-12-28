@@ -10,7 +10,7 @@ pub(super) struct QuarterlyAggregator;
 impl QuarterlyAggregator {
     /// Calcule les moyennes historiques pour chaque quarter (96 = 24h × 4 quarters)
     /// Prend tous les stats_15min (toute la période) et retourne les moyennes par quarter
-    pub(super) fn aggregate(stats_15min: &[Stats15Min], pip_value: f64) -> Vec<Stats15Min> {
+    pub(super) fn aggregate(stats_15min: &[Stats15Min], pip_value: f64, symbol: &str) -> Vec<Stats15Min> {
         // Groupe les stats par (hour, quarter)
         let mut quarterly_groups: std::collections::HashMap<(u8, u8), Vec<&Stats15Min>> =
             std::collections::HashMap::new();
@@ -132,7 +132,7 @@ impl QuarterlyAggregator {
                             atr_mean_avg,
                             noise_ratio_mean_avg,
                             pip_value,
-                            None,
+                            symbol,
                             volatility_half_life_mean,
                         );
 

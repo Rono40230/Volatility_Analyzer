@@ -2,7 +2,7 @@
 // Contient les fonctions utilitaires pour éviter de dépasser 300 lignes
 
 use crate::models::Candle;
-use crate::services::straddle_types::{WhipsawDetail, StraddleSimulationResult};
+// use crate::services::straddle_types::{WhipsawDetail, StraddleSimulationResult};
 
 /// Calcule l'ATR moyen (Average True Range) pour une liste de candles
 /// Utilise une EMA(14) des True Ranges pour être conforme au standard MT5
@@ -57,39 +57,11 @@ pub fn calculate_ema(values: &[f64], period: usize) -> f64 {
     ema
 }
 
-// --- STRUCTURES DE COÛT ---
-
-#[derive(Debug, Clone)]
-pub struct AssetCost {
-    pub spread_pips: f64,
-    pub slippage_pips: f64,
-}
+use crate::models::trading_costs::TradingCostProfile;
 
 /// Récupère les coûts estimés (Spread + Slippage) pour le News Trading selon l'actif
-pub fn get_asset_cost(symbol: &str) -> AssetCost {
-    let s = symbol.to_uppercase();
-    if s.contains("JPY") && (s.contains("GBP") || s.contains("EUR")) {
-        // Crosses volatils (GBPJPY, EURJPY)
-        AssetCost { spread_pips: 6.0, slippage_pips: 3.0 }
-    } else if s.contains("GBP") {
-        // Majors volatiles (GBPUSD)
-        AssetCost { spread_pips: 4.0, slippage_pips: 2.0 }
-    } else if s.contains("XAU") || s.contains("GOLD") {
-        // Or (Gold)
-        AssetCost { spread_pips: 5.0, slippage_pips: 2.0 }
-    } else if s.contains("BTC") {
-        // Crypto (BTC) - Valeurs élevées en points
-        AssetCost { spread_pips: 50.0, slippage_pips: 20.0 }
-    } else if s.contains("DAX") || s.contains("GER40") || s.contains("DE40") {
-        // DAX
-        AssetCost { spread_pips: 6.0, slippage_pips: 3.0 }
-    } else if s.contains("US30") || s.contains("DJI") {
-        // Dow Jones
-        AssetCost { spread_pips: 8.0, slippage_pips: 5.0 }
-    } else {
-        // Majors liquides (EURUSD, USDJPY) par défaut
-        AssetCost { spread_pips: 2.5, slippage_pips: 1.0 }
-    }
+pub fn get_asset_cost(symbol: &str) -> TradingCostProfile {
+    TradingCostProfile::get_profile(symbol)
 }
 
 /// Calcule le percentile 95 GLOBAL des wicks

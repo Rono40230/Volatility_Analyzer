@@ -15,6 +15,7 @@ impl BidiCalculator {
         point_value: f64,
         p95_wick: f64,
         p95_range: f64,
+        symbol: &str,
     ) -> (f64, f64, f64, i32, f64, f64, f64, f64, f64, f64) {
         // 1. Calcul de l'ATR récent (5 dernières minutes avant l'événement)
         // C'est ce que le robot verrait en temps réel
@@ -35,7 +36,7 @@ impl BidiCalculator {
             recent_atr,
             noise_during,
             point_value,
-            None, // Utilise la marge de spread par défaut (+3.0 pips)
+            symbol,
             Some(timeout as u16),
         );
 
@@ -47,7 +48,7 @@ impl BidiCalculator {
             recent_atr,
             noise_simultaneous,
             point_value,
-            None,
+            symbol,
             Some(timeout as u16),
         );
 
