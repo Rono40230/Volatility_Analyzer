@@ -14,6 +14,7 @@ impl BidiCalculator {
         _event_count: usize,
         point_value: f64,
         p95_wick: f64,
+        p95_range: f64,
     ) -> (f64, f64, f64, i32, f64, f64, f64, f64, f64, f64) {
         // 1. Calcul de l'ATR récent (5 dernières minutes avant l'événement)
         // C'est ce que le robot verrait en temps réel
@@ -50,6 +51,17 @@ impl BidiCalculator {
             Some(timeout as u16),
         );
 
+        // Cap SL Recovery based on P95 Range (Max Spike Proxy)
+        let sl_recovery_cap = if p95_range > 0.0 && point_value > 0.0 {
+            (p95_range / point_value) * 1.5
+        } else {
+            f64::MAX
+        };
+
+        // Apply cap to initial values
+        params_dir.sl_recovery_pips = params_dir.sl_recovery_pips.min(sl_recovery_cap).ceil();
+        params_sim.sl_recovery_pips = params_sim.sl_recovery_pips.min(sl_recovery_cap).ceil();
+
         // 5. Override Offset avec P95 Wick (Logique Unifiée avec Volatilité Brute)
         if p95_wick > 0.0 && point_value > 0.0 {
             let p95_wick_points = p95_wick / point_value;
@@ -57,12 +69,12 @@ impl BidiCalculator {
             
             // Directionnel : On prend le max entre l'ATR et le P95
             params_dir.offset_pips = (offset_p95 + params_dir.spread_safety_margin_pips).ceil();
-            params_dir.sl_recovery_pips = params_dir.stop_loss_pips.max(params_dir.offset_pips * 3.0).ceil();
+            params_dir.sl_recovery_pips = (params_dir.stop_loss_pips * 1.2).min(sl_recovery_cap).ceil();
 
             // Simultané : On est encore plus prudent sur l'offset pour éviter le déclenchement intempestif
             // On ajoute 10% de marge supplémentaire par rapport au directionnel
             params_sim.offset_pips = (params_dir.offset_pips * 1.1).ceil();
-            params_sim.sl_recovery_pips = params_sim.stop_loss_pips.max(params_sim.offset_pips * 3.0).ceil();
+            params_sim.sl_recovery_pips = (params_sim.stop_loss_pips * 1.2).min(sl_recovery_cap).ceil();
         }
 
         let best_moment = Self::calculer_meilleur_moment(atr_before);

@@ -2,6 +2,7 @@
 // Contient les fonctions utilitaires pour éviter de dépasser 300 lignes
 
 use crate::models::Candle;
+use crate::services::straddle_types::{WhipsawDetail, StraddleSimulationResult};
 
 /// Calcule l'ATR moyen (Average True Range) pour une liste de candles
 /// Utilise une EMA(14) des True Ranges pour être conforme au standard MT5
@@ -91,42 +92,163 @@ pub fn get_asset_cost(symbol: &str) -> AssetCost {
     }
 }
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct WhipsawDetail {
-    pub entry_index: usize,
-    pub entry_price: f64,
-    pub buy_stop: f64,
-    pub sell_stop: f64,
-    pub buy_trigger_index: usize,
-    pub sell_trigger_index: usize,
-    pub net_loss_pips: f64, // Perte réelle incluant spread/slippage
+/// Calcule le percentile 95 GLOBAL des wicks
+pub fn calculate_global_p95_wick(candles: &[Candle]) -> f64 {
+    let mut all_wicks: Vec<f64> = Vec::new();
+    for candle in candles {
+        let upper_wick = candle.high - candle.close.max(candle.open);
+        let lower_wick = candle.open.min(candle.close) - candle.low;
+        if upper_wick > 0.0 { all_wicks.push(upper_wick); }
+        if lower_wick > 0.0 { all_wicks.push(lower_wick); }
+    }
+    all_wicks.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+    let global_p95_idx = ((all_wicks.len() as f64) * 0.95).ceil() as usize;
+    if !all_wicks.is_empty() && global_p95_idx < all_wicks.len() {
+        all_wicks[global_p95_idx]
+    } else {
+        0.0
+    }
 }
 
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct StraddleSimulationResult {
-    pub total_trades: usize,
-    pub wins: usize,
-    pub losses: usize,
-    pub whipsaws: usize,
-    pub win_rate_percentage: f64,
-    pub whipsaw_frequency_percentage: f64,
-    pub offset_optimal_pips: f64,
-    pub percentile_95_wicks: f64,
-    pub risk_level: String,
-    pub risk_color: String,
-    // Valeurs pondérées par le whipsaw (Option B - affichage direct)
-    pub win_rate_adjusted: f64,        // Win Rate pondéré par whipsaw
-    pub sl_adjusted_pips: f64,         // SL ajusté par whipsaw
-    pub trailing_stop_adjusted: f64,   // Trailing Stop réduit
-    pub timeout_adjusted_minutes: i32, // Timeout réduit
-    pub whipsaw_details: Vec<WhipsawDetail>, // Détails de chaque whipsaw
-    
-    // Nouvelles métriques financières (Réalité News Trading)
-    pub total_pnl_net_pips: f64,       // P&L Net cumulé
-    pub avg_trade_cost_pips: f64,      // Coût moyen par trade (Spread + Slippage)
-    pub is_profitable_net: bool,       // Si P&L Net > 0
+/// Calcule l'offset dynamique basé sur l'historique (P95 des 5 dernières bougies)
+pub fn calculate_dynamic_offset(wicks_history: &[Vec<f64>], current_candle: &Candle) -> f64 {
+    if wicks_history.is_empty() {
+        let cw = current_candle;
+        let uw = cw.high - cw.close.max(cw.open);
+        let lw = cw.open.min(cw.close) - cw.low;
+        uw.max(lw)
+    } else {
+        let mut recent_wicks: Vec<f64> = wicks_history.iter().flatten().cloned().collect();
+        if recent_wicks.is_empty() {
+            0.0
+        } else {
+            recent_wicks.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+            let idx = ((recent_wicks.len() as f64) * 0.95).ceil() as usize;
+            if idx < recent_wicks.len() { recent_wicks[idx] } else { 0.0 }
+        }
+    }
+}
+
+// --- SIMULATION LOGIC ---
+
+pub struct TradeOutcome {
+    pub result: String, // "WIN", "LOSS", "WHIPSAW", "TIMEOUT"
+    pub buy_trigger_idx: usize,
+    pub sell_trigger_idx: usize,
+}
+
+/// Simule le déroulement d'un trade sur une fenêtre de temps
+pub fn simulate_trade_outcome(
+    candles: &[Candle],
+    start_idx: usize,
+    buy_stop: f64,
+    sell_stop: f64,
+    tp_distance: f64,
+    max_duration: usize,
+) -> Option<TradeOutcome> {
+    let end_idx = candles.len().min(start_idx + max_duration + 1);
+    let mut triggered_side: Option<&str> = None;
+    let mut buy_trigger_idx = 0;
+    let mut sell_trigger_idx = 0;
+
+    for j in (start_idx + 1)..end_idx {
+        let current = &candles[j];
+
+        if triggered_side.is_none() {
+            // Pas encore déclenché
+            if current.high >= buy_stop && current.low <= sell_stop {
+                // Whipsaw immédiat (déclenchement des deux côtés dans la même bougie)
+                return Some(TradeOutcome {
+                    result: "WHIPSAW".to_string(),
+                    buy_trigger_idx: j,
+                    sell_trigger_idx: j,
+                });
+            } else if current.high >= buy_stop {
+                triggered_side = Some("BUY");
+                buy_trigger_idx = j;
+                
+                if current.low <= sell_stop {
+                    return Some(TradeOutcome {
+                        result: "WHIPSAW".to_string(),
+                        buy_trigger_idx: j,
+                        sell_trigger_idx: j,
+                    });
+                }
+                if current.high >= buy_stop + tp_distance {
+                    return Some(TradeOutcome {
+                        result: "WIN".to_string(),
+                        buy_trigger_idx: j,
+                        sell_trigger_idx: 0,
+                    });
+                }
+            } else if current.low <= sell_stop {
+                triggered_side = Some("SELL");
+                sell_trigger_idx = j;
+                
+                if current.high >= buy_stop {
+                    return Some(TradeOutcome {
+                        result: "WHIPSAW".to_string(),
+                        buy_trigger_idx: j,
+                        sell_trigger_idx: j,
+                    });
+                }
+                if current.low <= sell_stop - tp_distance {
+                    return Some(TradeOutcome {
+                        result: "WIN".to_string(),
+                        buy_trigger_idx: 0,
+                        sell_trigger_idx: j,
+                    });
+                }
+            }
+        } else {
+            // Déjà déclenché
+            match triggered_side {
+                Some("BUY") => {
+                    if current.low <= sell_stop {
+                        return Some(TradeOutcome {
+                            result: "WHIPSAW".to_string(),
+                            buy_trigger_idx,
+                            sell_trigger_idx: j,
+                        });
+                    }
+                    if current.high >= buy_stop + tp_distance {
+                        return Some(TradeOutcome {
+                            result: "WIN".to_string(),
+                            buy_trigger_idx,
+                            sell_trigger_idx: 0,
+                        });
+                    }
+                }
+                Some("SELL") => {
+                    if current.high >= buy_stop {
+                        return Some(TradeOutcome {
+                            result: "WHIPSAW".to_string(),
+                            buy_trigger_idx: j,
+                            sell_trigger_idx,
+                        });
+                    }
+                    if current.low <= sell_stop - tp_distance {
+                        return Some(TradeOutcome {
+                            result: "WIN".to_string(),
+                            buy_trigger_idx: 0,
+                            sell_trigger_idx,
+                        });
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    if triggered_side.is_some() {
+        Some(TradeOutcome {
+            result: "TIMEOUT".to_string(),
+            buy_trigger_idx,
+            sell_trigger_idx,
+        })
+    } else {
+        None
+    }
 }
 
 /// Calcule le risque et la couleur basé sur la fréquence whipsaw

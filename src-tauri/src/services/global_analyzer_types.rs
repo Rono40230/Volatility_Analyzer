@@ -79,6 +79,8 @@ pub struct PairEvent {
     pub volatility_before: f64,
     #[serde(default)]
     pub volatility_after: f64,
+    #[serde(default)]
+    pub body_pct: f64,
 }
 
 // Structure interne pour données pondérées

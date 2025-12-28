@@ -23,6 +23,38 @@
       @update:modelValue="handleEventTypeChange"
     />
 
+    <div class="control-group">
+      <MetricTooltip title="Seuil de Surprise (Min Déviation)" direction="bottom">
+        <label for="min-deviation" class="label-with-tooltip">
+          Seuil de Surprise :
+        </label>
+        <template #definition>
+          <p>Filtre les événements en fonction de l'écart (déviation) entre la valeur réelle publiée et la prévision du consensus.</p>
+        </template>
+        <template #interpretation>
+          <p>Permet d'isoler les événements qui ont réellement surpris le marché, éliminant le bruit des annonces "conformes aux attentes".</p>
+        </template>
+        <template #usage>
+          <ul style="list-style-type: disc; padding-left: 20px; margin-top: 8px;">
+            <li><strong>0.0</strong> : Affiche tout (aucune filtration).</li>
+            <li><strong>0.5 - 1.0</strong> : Filtre les petites déviations (bruit standard).</li>
+            <li><strong>1.5 - 2.0</strong> : Ne garde que les surprises significatives.</li>
+            <li><strong>> 2.0</strong> : "Cygnes Noirs" ou chocs majeurs uniquement.</li>
+          </ul>
+        </template>
+      </MetricTooltip>
+      <input 
+        id="min-deviation" 
+        type="number" 
+        v-model.number="minDeviation" 
+        step="0.1" 
+        min="0" 
+        placeholder="0.0"
+        class="deviation-input"
+        @change="handleDeviationChange"
+      />
+    </div>
+
     <div v-if="eventTypesError" class="error-small">⚠️ {{ eventTypesError }}</div>
     <div v-if="!eventTypesError && eventTypeOptions.length === 0 && !eventTypesLoading" class="warning-small">📭 Aucun événement trouvé</div>
     <div v-if="eventTypesLoading" class="warning-small">⏳ Chargement des événements...</div>
@@ -33,6 +65,7 @@
 import { ref, computed } from 'vue'
 import CalendarFileSelector from './CalendarFileSelector.vue'
 import SearchableEventDropdown from './SearchableEventDropdown.vue'
+import MetricTooltip from './MetricTooltip.vue'
 
 interface EventType {
   name: string
@@ -48,11 +81,13 @@ const props = defineProps<{
   eventTypesLoading: boolean
   eventTypesError: string | null
   showCalendarSelector?: boolean
+  minDeviation?: number | null
 }>()
 
 const emit = defineEmits<{
   'update:selected-pair': [value: string]
   'update:selected-event-type': [value: string]
+  'update:min-deviation': [value: number | null]
   'calendar-selected': [filename: string]
   'load': []
 }>()
@@ -67,19 +102,27 @@ const selectedEventType = computed({
   set: (v) => emit('update:selected-event-type', v)
 })
 
+const minDeviation = computed({
+  get: () => props.minDeviation,
+  set: (v) => emit('update:min-deviation', v === 0 ? null : v)
+})
+
 const eventTypeOptions = computed(() => props.eventTypes)
 
 const handlePairChange = () => { emit('load') }
 const handleEventTypeChange = () => { emit('load') }
+const handleDeviationChange = () => { emit('load') }
 </script>
 
 <style scoped>
 .controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; padding: 10px; background: #161b22; border-radius: 8px; border: 1px solid #30363d; }
 .control-group { display: flex; align-items: center; gap: 8px; }
+.label-with-tooltip { cursor: help; border-bottom: 1px dotted #8b949e; }
 label { color: #8b949e; font-weight: 600; font-size: 0.95em; white-space: nowrap; }
 .pair-select { padding: 10px 14px; border: 2px solid #30363d; border-radius: 8px; background: #ffffff; color: #000000; cursor: pointer; transition: all 0.3s; }
 .pair-select:hover:not(:disabled) { border-color: #58a6ff; }
 .pair-select:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
+.deviation-input { padding: 10px 14px; border: 2px solid #30363d; border-radius: 8px; background: #ffffff; color: #000000; width: 80px; }
 .error-small { color: #f85149; font-size: 0.85em; margin-top: 5px; }
 .warning-small { color: #fbbf24; font-size: 0.85em; margin-top: 5px; }
 </style>

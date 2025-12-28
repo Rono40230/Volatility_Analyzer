@@ -4,9 +4,12 @@
       <div class="control-group">
         <button class="btn-back" @click="$emit('close')">← Retour</button>
         <span class="preview-title">Aperçu : <strong>{{ title }}</strong></span>
+        <button v-if="modifiedGroups.size > 0" class="btn-primary btn-sm ml-2" @click="saveChanges" :disabled="isSaving">
+          {{ isSaving ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+        </button>
       </div>
       <div class="stats-badge">
-        {{ events.length }} événements (max 100)
+        {{ events.length }} événements
       </div>
     </div>
 
@@ -16,59 +19,74 @@
     </div>
 
     <div v-else class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Symbole</th>
-            <th>Impact</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="ev in events" :key="ev.id">
-            <td class="text-nowrap">{{ formatDateTime(ev.event_time) }}</td>
-            <td>{{ ev.symbol }}</td>
-            <td>
-              <span class="impact-badge" :class="ev.impact.toLowerCase()">{{ ev.impact }}</span>
-            </td>
-            <td>{{ ev.description }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <CleanupPreviewTable 
+        :events="localEvents" 
+        :allCountries="allCountries"
+        @update-symbol="handleUpdateSymbol"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, ref, watch } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import CleanupPreviewTable from './CleanupPreviewTable.vue'
+import type { CalendarEvent, CurrencySummary } from '../../types/cleanup'
 
-interface CalendarEvent {
-  id: number
-  symbol: string
-  event_time: string
-  impact: string
-  description: string
-  actual: number | null
-  forecast: number | null
-  previous: number | null
-}
-
-defineProps<{
+const props = defineProps<{
   events: CalendarEvent[]
   title: string
   loading: boolean
+  allCountries?: CurrencySummary[]
 }>()
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'refresh'])
 
-function formatDateTime(dt: string) {
+const localEvents = ref<CalendarEvent[]>([])
+const modifiedGroups = ref<Map<string, { description: string, oldSymbol: string, newSymbol: string }>>(new Map())
+const isSaving = ref(false)
+
+watch(() => props.events, (newEvents) => {
+  localEvents.value = JSON.parse(JSON.stringify(newEvents))
+  modifiedGroups.value.clear()
+}, { immediate: true })
+
+function handleUpdateSymbol(event: CalendarEvent, newSymbol: string) {
+  const oldSymbol = event.symbol
+  const description = event.description
+  
+  // Update UI
+  localEvents.value.forEach(e => {
+    if (e.description === description && e.symbol === oldSymbol) {
+      e.symbol = newSymbol
+    }
+  })
+  
+  // Track change
+  const key = `${description}|${oldSymbol}`
+  modifiedGroups.value.set(key, { description, oldSymbol, newSymbol })
+}
+
+async function saveChanges() {
+  if (modifiedGroups.value.size === 0) return
+  
+  isSaving.value = true
   try {
-    return new Date(dt).toLocaleString('fr-FR', { 
-      year: 'numeric', month: '2-digit', day: '2-digit', 
-      hour: '2-digit', minute: '2-digit' 
-    })
-  } catch { return dt }
+    for (const change of modifiedGroups.value.values()) {
+      await invoke('update_symbol_for_description', {
+        description: change.description,
+        oldSymbol: change.oldSymbol,
+        newSymbol: change.newSymbol
+      })
+    }
+    emit('refresh')
+    emit('close')
+  } catch (e) {
+    // Silent error
+  } finally {
+    isSaving.value = false
+  }
 }
 </script>
 
@@ -148,54 +166,29 @@ function formatDateTime(dt: string) {
   min-height: 0;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
 }
 
-th {
-  background: #1e293b;
-  color: #94a3b8;
-  font-weight: 600;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 12px 16px;
-  position: sticky;
-  top: 0;
-  border-bottom: 1px solid #334155;
+.btn-primary:hover {
+  background: #2563eb;
 }
 
-td {
-  padding: 12px 16px;
-  border-bottom: 1px solid #1e293b;
-  color: #e2e8f0;
-  font-size: 0.9rem;
+.btn-primary:disabled {
+  background: #475569;
+  cursor: not-allowed;
 }
 
-tr:last-child td {
-  border-bottom: none;
+.ml-2 {
+  margin-left: 8px;
 }
-
-tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.text-nowrap {
-  white-space: nowrap;
-}
-
-.impact-badge {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.impact-badge.high { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
-.impact-badge.medium { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
-.impact-badge.low { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

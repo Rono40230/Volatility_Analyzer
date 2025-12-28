@@ -32,6 +32,8 @@
               :stop-loss-recovery-simultaneous="data?.stopLossRecoverySimultaneous"
               :point-value="data?.pointValue"
               :event-label="data?.eventLabel"
+              :avg-deviation="data?.avgDeviation"
+              :surprise-event-count="data?.surpriseEventCount"
               :is-archive-mode="true"
             />
           </div>
@@ -69,6 +71,8 @@ interface ArchivedRetroData {
   offsetSimultaneous?: number
   stopLossRecoverySimultaneous?: number
   pointValue?: number
+  avgDeviation?: number
+  surpriseEventCount?: number
 }
 
 const props = defineProps<{

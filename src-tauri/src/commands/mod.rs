@@ -9,6 +9,7 @@ pub mod parser_test;
 pub mod candle_helpers;
 pub mod candle_index_commands;
 pub mod cleanup_commands;
+pub mod cleanup_preview_commands;
 pub mod config_commands;
 pub mod correlation;
 pub mod csv_cleaner_commands;
@@ -40,9 +41,11 @@ pub use candle_index_commands::{
     init_candle_index, load_pair_candles,
 };
 pub use cleanup_commands::{
-    delete_currency_events, delete_orphan_events, delete_rare_events, list_currencies,
-    list_orphan_events, list_rare_events, preview_cleanup_events,
+    delete_currency_events, delete_events_by_impact, delete_orphan_events, delete_rare_events,
+    list_currencies, list_impact_groups, list_orphan_events, list_rare_events,
+    update_impact_for_description, update_symbol_for_description,
 };
+pub use cleanup_preview_commands::preview_cleanup_events;
 pub use config_commands::*;
 pub use correlation::*;
 pub use csv_cleaner_commands::*;

@@ -18,6 +18,14 @@ pub struct StraddleMetricsResponse {
     pub offset_optimal: OptimalOffsetData,
     pub win_rate: WinRateData,
     pub whipsaw: WhipsawData,
+    pub confidence: ConfidenceData,
+    pub spread_cost: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfidenceData {
+    pub score: f64,
+    pub sample_size_warning: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,6 +35,8 @@ pub struct OptimalOffsetData {
     pub with_margin: f64,
     /// Stop Loss ajusté par whipsaw: SL × (1 + whipsaw_frequency × 0.3)
     pub sl_adjusted_points: f64,
+    /// Hard Take Profit (2x SL)
+    pub hard_tp_points: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

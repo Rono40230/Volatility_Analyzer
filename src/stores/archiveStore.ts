@@ -92,6 +92,21 @@ export const useArchiveStore = defineStore('archive', () => {
         }
     }
 
+    async function supprimerToutesArchives() {
+        loading.value = true
+        error.value = null
+        try {
+            await invoke('delete_all_archives')
+            archives.value = []
+            currentArchive.value = null
+        } catch (e) {
+            error.value = e as string
+            throw e
+        } finally {
+            loading.value = false
+        }
+    }
+
     return {
         archives,
         currentArchive,
@@ -101,6 +116,7 @@ export const useArchiveStore = defineStore('archive', () => {
         chargerArchives,
         chargerArchive,
         supprimerArchive,
+        supprimerToutesArchives,
         // Aliases for compatibility
         saveArchive: sauvegarderArchive,
         loadArchives: chargerArchives,

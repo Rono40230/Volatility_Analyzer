@@ -35,6 +35,7 @@
       <ScoreWhipsawBadges
         :score="adjustedScore"
         :whipsaw-frequency="props.whipsawAnalysis?.whipsaw_frequency_percentage || 0"
+        :confidence="confidence"
       />
     </div>
 
@@ -79,12 +80,15 @@ interface MovementQuality {
   label: string
 }
 
+interface ConfidenceMetric { score: number; sample_size_warning: boolean }
+
 const props = defineProps<{
   analysis: Analysis
   symbol?: string
   volatilityDuration: VolatilityDuration
   movementQualities?: Record<string, MovementQuality>
   whipsawAnalysis?: WhipsawAnalysis
+  confidence?: ConfidenceMetric
 }>()
 
 const { getRankClass } = useMetricsCalculations()

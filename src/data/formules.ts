@@ -42,7 +42,7 @@ export const categories: Categorie[] = [
     titre: 'Paramètres Straddle',
     emoji: '🎯',
     description: 'Configuration optimale du Straddle',
-    formules: ['offset', 'take_profit', 'offset_ajuste', 'risk_level', 'meilleur_moment', 'win_rate_ajuste', 'trailing_stop', 'sl_recovery', 'timeout']
+    formules: ['offset', 'hard_tp', 'sl_ajuste', 'sl_recovery', 'risk_level', 'meilleur_moment', 'win_rate_ajuste', 'trailing_stop', 'timeout']
   },
   {
     id: 'whipsaw',
@@ -104,7 +104,7 @@ export const categories: Categorie[] = [
     titre: 'Coûts Spread & Slippage',
     emoji: '💸',
     description: 'Impact des coûts cachés en News Trading',
-    formules: []
+    formules: ['spread_impact']
   }
 ]
 
@@ -281,41 +281,63 @@ export const formules: Record<string, Formule> = {
     id: 'offset',
     titre: 'Offset (Distance ordres)',
     categorieId: 'straddle',
-    definition: 'Distance des ordres Buy Stop et Sell Stop. Logique "Bidi V4 Hardened" pour éviter les mèches.',
-    explication_litterale: 'On place les ordres assez loin pour ne pas être déclenché par le bruit. Si le marché est très bruyant (Noise > 2.5), on s\'écarte beaucoup (ATR x3). Sinon, on reste prudent (ATR x2). On ajoute toujours une marge de sécurité (Spread).',
-    formule: 'IF Noise > 2.5 → Offset = (ATR × 3.0) + Spread\nELSE → Offset = (ATR × 2.0) + Spread',
-    inputs: ['ATR', 'Noise Ratio', 'Spread (def: 3.0)'],
+    definition: 'Distance des ordres Buy Stop et Sell Stop. Basé sur le percentile 95 des mèches récentes.',
+    explication_litterale: 'On place les ordres juste au-dessus des mèches récentes pour éviter les faux départs. On regarde les 5 dernières bougies, on prend la taille des mèches, et on se place au-dessus de 95% d\'entre elles. C\'est une approche statistique pure.',
+    formule: 'Offset = Percentile95(Wicks_History_5) + Spread',
+    inputs: ['Wicks (5 dernières candles)', 'Spread'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'ATR=10, Noise=2.8 → Offset = (10 × 3.0) + 3 = 33 points',
+    exemple: 'P95 Wicks = 12 points, Spread = 3 points → Offset = 15 points',
     notes: [
-      'Logique V4 Durcie (fini le 1.5x trop risqué)',
-      'Filtre agressivement les faux départs',
-      'Priorité: Sécurité > Opportunité'
+      'Approche dynamique (Rolling Window)',
+      'S\'adapte instantanément à la volatilité récente',
+      'Plus précis que l\'ATR pour les mèches'
     ]
   },
 
-  take_profit: {
-    id: 'take_profit',
-    titre: 'Take Profit (Target)',
+  sl_recovery: {
+    id: 'sl_recovery',
+    titre: 'SL Recovery (Simultané)',
     categorieId: 'straddle',
-    definition: 'Objectif de profit théorique. Dans Bidi V2, la sortie est principalement gérée par le Trailing Stop, mais le TP sert de sécurité ou d\'objectif Risk:Reward.',
-    explication_litterale: 'Bien que le robot utilise un Trailing Stop pour laisser courir les gains, on définit un Take Profit de sécurité. Il est généralement placé à 2 fois la distance du Stop Loss, assurant un ratio Risk:Reward de 1:2.',
-    formule: 'TP = Stop Loss × 2.0',
-    inputs: ['Stop Loss'],
+    definition: 'Stop Loss spécifique pour le mode Simultané, conçu pour couvrir le retournement.',
+    explication_litterale: 'En mode simultané, le risque de whipsaw (double perte) est plus élevé. Le SL Recovery est donc calculé sur une base de volatilité majorée (+20% de sensibilité au bruit), puis multiplié par 1.2. Il est enfin plafonné pour ne pas dépasser les extrêmes historiques.',
+    formule: 'Base = SL(Noise × 1.2)\nSL Recovery = Base × 1.2\n(Plafonné à 1.5 × P95 Range)',
+    inputs: ['SL Directionnel', 'Noise Ratio', 'P95 Range'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'SL=40 points → TP = 80 points',
+    exemple: 'SL Dir=30 pts → Base Sim=35 pts → SL Rec = 42 pts',
     notes: [
-      'Ratio 1:2 = Standard Risk:Reward',
-      'Souvent non atteint car Trailing Stop sort avant',
-      'Sert de "Home Run" target'
+      'Sensibilité au bruit accrue (+20%) pour le mode Simultané',
+      'Ratio 1.2x pour absorber la volatilité initiale',
+      'Plafonnement de sécurité basé sur le P95 Range (Max Spike)',
+      'Essentiel pour la stratégie de couverture'
+    ]
+  },
+
+  hard_tp: {
+    id: 'hard_tp',
+    titre: 'Hard Take Profit (TP)',
+    categorieId: 'straddle',
+    definition: 'Objectif de profit fixe pour sécuriser les gains rapides.',
+    explication_litterale: 'C\'est notre cible de "Home Run". Si le marché explose dans notre direction, on prend nos profits automatiquement. Le calcul diffère selon le mode (Directionnel ou Simultané) pour garantir une espérance mathématique positive.',
+    formule: 'Directionnel: SL × 2.0\nSimultané: Max(SL × 2.0, SL Recovery × 1.5)',
+    inputs: ['Stop Loss', 'SL Recovery'],
+    output: {
+      type: 'float',
+      range: '0.0 - ∞',
+      unite: 'points'
+    },
+    exemple: 'Dir: SL=25 → TP=50 | Sim: SL Rec=40 → TP=60',
+    notes: [
+      'Ratio 1:2 (Directionnel) = Standard',
+      'Ratio 1:1.5 (Simultané) = Minimum vital',
+      'Sécurité contre les retournements violents'
     ]
   },
 
@@ -341,24 +363,24 @@ export const formules: Record<string, Formule> = {
     ]
   },
 
-  offset_ajuste: {
-    id: 'offset_ajuste',
+  sl_ajuste: {
+    id: 'sl_ajuste',
     titre: 'Stop Loss (SL) Adaptatif',
     categorieId: 'straddle',
-    definition: 'Niveau de protection élargi (Bidi V4). Plus le bruit est fort, plus le SL est large pour survivre au Whipsaw.',
-    explication_litterale: 'Le SL s\'adapte à la violence du marché. Si c\'est calme, on utilise ATR x2.5. Si c\'est le chaos (Noise > 3.5), on élargit énormément (ATR x5.0) pour ne pas se faire sortir sur un aller-retour rapide.',
-    formule: 'Noise > 3.5 → SL = ATR × 5.0\nNoise > 2.5 → SL = ATR × 4.0\nNoise > 2.0 → SL = ATR × 3.0\nElse → SL = ATR × 2.5',
-    inputs: ['ATR', 'Noise Ratio'],
+    definition: 'Stop Loss élargi dynamiquement selon la fréquence de whipsaw historique.',
+    explication_litterale: 'Le SL s\'adapte à la dangerosité de l\'heure. Si l\'historique montre beaucoup de faux départs (whipsaws), on élargit le SL pour survivre à la secousse. Si l\'heure est calme, on garde un SL serré.',
+    formule: 'Ratio = f(Whipsaw%)\nSL = Offset × Ratio\n\nWhipsaw > 50% → x3.5\nWhipsaw > 30% → x3.0\nWhipsaw > 20% → x2.5\nWhipsaw > 10% → x2.0\nWhipsaw > 5% → x1.5\nElse → x1.2',
+    inputs: ['Offset', 'Whipsaw Frequency %'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'ATR=10, Noise=3.6 → SL = 10 × 5.0 = 50 points',
+    exemple: 'Offset=10, Whipsaw=25% → Ratio 2.5 → SL = 25 points',
     notes: [
-      'Logique V4 Élargie',
-      'But: Survivre à la volatilité initiale',
-      'Minimum 2.5x ATR (vs 1.5x avant)'
+      'Logique adaptative V5',
+      'Plus de whipsaw = Plus de marge de survie',
+      'Minimum x1.2 pour les heures très propres'
     ]
   },
 
@@ -425,45 +447,24 @@ export const formules: Record<string, Formule> = {
     ]
   },
 
-  sl_recovery: {
-    id: 'sl_recovery',
-    titre: 'SL Recovery (Mode Panique)',
-    categorieId: 'straddle',
-    definition: 'Stop Loss de secours en cas de mouvement violent inverse. Assure que le SL couvre au moins 3 fois l\'offset.',
-    explication_litterale: 'C\'est une sécurité supplémentaire. Parfois, le SL calculé normalement est trop proche si le marché fait un "gap" violent. Cette formule force le SL à être au moins 3 fois plus loin que l\'entrée (Offset). C\'est le "filet de sécurité" ultime.',
-    formule: 'SL_Recovery = max(SL, Offset × 3.0)',
-    inputs: ['Stop Loss', 'Offset'],
-    output: {
-      type: 'float',
-      range: '0.0 - ∞',
-      unite: 'points'
-    },
-    exemple: 'Offset=10, SL=20 → SL_Recovery = max(20, 30) = 30 points',
-    notes: [
-      'Sécurité anti-gap',
-      'Garantit un espace de respiration minimal',
-      'Activé surtout quand l\'Offset est très petit'
-    ]
-  },
-
   timeout: {
     id: 'timeout',
     titre: 'Timeout (Durée position)',
     categorieId: 'straddle',
-    definition: 'Durée maximale pour tenir la position. Dynamique basé sur la décroissance de volatilité (Half-Life).',
-    explication_litterale: 'Pour le trading d\'annonces, l\'impulsion est rapide. On utilise la "demi-vie" de la volatilité pour savoir quand sortir. Si la volatilité retombe vite, on sort vite. Sinon, on garde jusqu\'à 15 minutes max. Par défaut 3 minutes si pas de données.',
-    formule: 'Timeout = Half-Life (clamped 1-15 min) OR 3 min (default)',
-    inputs: ['Half-Life', 'Default (3 min)'],
+    definition: 'Durée maximale pour tenir la position. Inversement proportionnel à la volatilité (ATR).',
+    explication_litterale: 'Si la volatilité est très forte (ATR élevé), le mouvement s\'épuise vite, donc on sort tôt (18 min). Si la volatilité est faible, le mouvement prend du temps, donc on reste plus longtemps (32 min).',
+    formule: 'Timeout = 32 - (ATR_norm × 14)\nClamped: [18, 32] min',
+    inputs: ['ATR Normalisé'],
     output: {
       type: 'integer',
-      range: '1 - 15',
+      range: '18 - 32',
       unite: 'minutes'
     },
-    exemple: 'Half-Life=5 min → Timeout=5 min | Half-Life=20 min → Timeout=15 min',
+    exemple: 'ATR élevé (1.0) → 32 - 14 = 18 min\nATR faible (0.0) → 32 - 0 = 32 min',
     notes: [
       'Optimisé pour capturer l\'impulsion principale',
       'Évite le "time decay" et le retournement',
-      'Min 1 min, Max 15 min'
+      'Min 18 min, Max 32 min'
     ]
   },
 
@@ -894,6 +895,27 @@ export const formules: Record<string, Formule> = {
     notes: [
       'Doit couvrir le spread et les commissions',
       'Si < Spread, la stratégie perdra en réel'
+    ]
+  },
+
+  spread_impact: {
+    id: 'spread_impact',
+    titre: 'Impact du Spread',
+    categorieId: 'spread_cost',
+    definition: 'Pourcentage du mouvement de volatilité "mangé" par le spread.',
+    explication_litterale: 'Si le marché bouge de 20 pips mais que le spread est de 2 pips, le spread représente 10% du mouvement. Plus ce chiffre est bas, mieux c\'est. Au-dessus de 20-30%, trader devient très risqué car le coût d\'entrée est trop élevé par rapport au gain potentiel.',
+    formule: 'Impact = (Spread / Volatilité_Attendue) * 100',
+    inputs: ['Spread Moyen', 'Volatilité (ATR ou Mouvement)'],
+    output: {
+      type: 'percentage',
+      range: '0% - 100%',
+      unite: '%'
+    },
+    exemple: 'Spread 2 pips / Volatilité 10 pips = 20% Impact',
+    notes: [
+      'Critique pour le Scalping et News Trading',
+      'Si > 30%, éviter de trader',
+      'Le spread s\'élargit souvent pendant les news'
     ]
   }
 }

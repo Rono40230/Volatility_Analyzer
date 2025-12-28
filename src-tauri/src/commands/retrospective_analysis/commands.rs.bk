@@ -86,12 +86,25 @@ pub async fn analyze_decay_profile(
 pub async fn analyze_volatility_profile(
     pair: String,
     event_type: String,
+    min_deviation: Option<f64>,
     state: tauri::State<'_, crate::commands::calendar_commands::CalendarState>,
 ) -> Result<crate::commands::retrospective_analysis::types::EventImpactResult, String> {
     let (conn, loader) = setup_databases(&state).await?;
-    let events = super::helpers::load_events_by_type(conn, &event_type).await?;
+    let mut events = super::helpers::load_events_by_type(conn, &event_type).await?;
+    
+    // Filter events if min_deviation is provided
+    if let Some(threshold) = min_deviation {
+        events.retain(|e| {
+             if let (Some(actual), Some(forecast)) = (e.actual, e.forecast) {
+                 (actual - forecast).abs() >= threshold
+             } else {
+                 false // Exclude if data missing
+             }
+        });
+    }
+
     if events.is_empty() {
-        return Err(format!("No events: {}", event_type));
+        return Err(format!("No events matching criteria: {}", event_type));
     }
 
     RetroAnalysisService::calculer_impact_evenement(&pair, &event_type, &events, &loader).await

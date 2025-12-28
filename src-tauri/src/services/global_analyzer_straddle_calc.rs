@@ -9,7 +9,8 @@ use tracing::warn;
 pub fn compute_pair_straddle_rates(
     archives: &[crate::models::Archive],
 ) -> Vec<StraddleSuccessRate> {
-    let mut pair_stats: HashMap<String, (Vec<f64>, Vec<String>)> = HashMap::new();
+    // (Volatilities, EventNames, BodyPcts)
+    let mut pair_stats: HashMap<String, (Vec<f64>, Vec<String>, Vec<f64>)> = HashMap::new();
 
     for archive in archives {
         if !archive.archive_type.contains("Corrélation paire/événement") {
@@ -26,12 +27,13 @@ pub fn compute_pair_straddle_rates(
                 }
 
                 let volatilities: Vec<f64> = events.iter().map(|e| e.volatility_total).collect();
-
+                let body_pcts: Vec<f64> = events.iter().map(|e| e.body_pct).collect();
                 let event_names: Vec<String> = events.iter().map(|e| e.name.clone()).collect();
 
-                let entry = pair_stats.entry(pair).or_insert((Vec::new(), Vec::new()));
+                let entry = pair_stats.entry(pair).or_insert((Vec::new(), Vec::new(), Vec::new()));
                 entry.0.extend(volatilities);
                 entry.1.extend(event_names);
+                entry.2.extend(body_pcts);
             }
             Err(e) => {
                 warn!(
@@ -44,7 +46,7 @@ pub fn compute_pair_straddle_rates(
 
     let mut straddle_rates: Vec<StraddleSuccessRate> = pair_stats
         .into_iter()
-        .map(|(pair, (volatilities, event_names))| {
+        .map(|(pair, (volatilities, event_names, body_pcts))| {
             let total_events = volatilities.len();
 
             let avg_volatility = if total_events > 0 {
@@ -53,9 +55,11 @@ pub fn compute_pair_straddle_rates(
                 0.0
             };
 
+            // Directional Move: Volatility > 50% of avg AND Body > 40% of Range (Not a Doji)
             let directional_moves = volatilities
                 .iter()
-                .filter(|&&v| v > avg_volatility * 0.5)
+                .zip(body_pcts.iter())
+                .filter(|(&v, &body)| v > avg_volatility * 0.5 && body > 40.0)
                 .count();
             let directional_move_rate = if total_events > 0 {
                 (directional_moves as f64 / total_events as f64) * 100.0

@@ -13,18 +13,19 @@
       </div>
 
       <div class="tabs-header">
-        <button v-for="tab in (['rare', 'country', 'orphan'] as const)" :key="tab"
+        <button v-for="tab in (['rare', 'country', 'impact'] as const)" :key="tab"
           class="tab-btn" :class="{ active: activeTab === tab }" 
           @click="activeTab = tab"
         >
-          {{ tab === 'rare' ? 'Événements Rares' : tab === 'country' ? 'Par pays' : 'Événements Orphelins' }}
+          {{ tab === 'rare' ? 'Par occurences' : tab === 'country' ? 'Par pays' : 'Par impact' }}
         </button>
       </div>
 
       <div class="modal-body">
         <CleanupPreview v-if="previewMode"
           :events="previewEvents" :title="previewTitle" :loading="loadingPreview"
-          @close="closePreview"
+          :all-countries="countries"
+          @close="closePreview" @refresh="loadEvents"
         />
 
         <RareEventsTab v-else-if="activeTab === 'rare'"
@@ -37,23 +38,18 @@
           @preview="loadPreview" @delete="confirmDeleteCountry"
         />
 
-        <OrphanEventsTab v-else-if="activeTab === 'orphan'"
-          :orphans="orphans" :loading="loadingOrphans"
-          @preview="loadPreview"
+        <ImpactEventsTab v-else-if="activeTab === 'impact'"
+          :impacts="impacts" :loading="loadingImpacts"
+          @preview="loadPreview" @update="updateImpact" @delete="confirmDeleteImpact"
         />
       </div>
 
       <div class="modal-footer">
-        <button class="btn-secondary" @click="('close')">Fermer</button>
+        <button class="btn-secondary" @click="$emit('close')">Fermer</button>
         <button v-if="activeTab === 'rare' && events.length > 0 && !previewMode" 
           class="btn-primary delete-btn" @click="confirmDeleteRare"
         >
           🗑️ Supprimer {{ events.length }} types rares
-        </button>
-        <button v-if="activeTab === 'orphan' && orphans.length > 0 && !previewMode" 
-          class="btn-primary delete-btn" @click="confirmDeleteOrphans"
-        >
-          🗑️ Supprimer {{ totalOrphans }} orphelins
         </button>
       </div>
 
@@ -79,7 +75,7 @@ import { invoke } from '@tauri-apps/api/core'
 import CleanupPreview from './cleanup/CleanupPreview.vue'
 import RareEventsTab from './cleanup/RareEventsTab.vue'
 import CountryEventsTab from './cleanup/CountryEventsTab.vue'
-import OrphanEventsTab from './cleanup/OrphanEventsTab.vue'
+import ImpactEventsTab from './cleanup/ImpactEventsTab.vue'
 import { useCleanupLogic, type CurrencySummary } from '../composables/useCleanupLogic'
 
 const props = defineProps<{ minOccurrences: number; calendarId: number | null }>()
@@ -91,10 +87,15 @@ const {
   events, loading, threshold,
   countries, loadingCountries,
   orphans, loadingOrphans, totalOrphans,
-  loadEvents, loadCountries, loadOrphans, loadPreview, closePreview
+  impacts, loadingImpacts,
+  loadEvents, loadCountries, loadOrphans, loadImpacts, loadPreview, closePreview,
+  updateImpact, deleteEventsByImpact
 } = useCleanupLogic(props)
 
-onMounted(() => loadEvents())
+onMounted(() => {
+  loadEvents()
+  loadCountries()
+})
 
 function confirmDeleteRare() {
   confirmationMessage.value = `Vous êtes sur le point de supprimer définitivement ${events.value.length} types d'événements rares.`
@@ -119,6 +120,14 @@ function confirmDeleteOrphans() {
   deleteAction.value = async () => {
     await invoke('delete_orphan_events', { calendarId: props.calendarId })
     await loadOrphans()
+  }
+  showConfirmation.value = true
+}
+
+function confirmDeleteImpact(rawImpacts: string[], count: number, label: string) {
+  confirmationMessage.value = `Voulez-vous vraiment supprimer TOUS les événements avec l'impact "${label}" (${count} types d'événements) ?`
+  deleteAction.value = async () => {
+    await deleteEventsByImpact(rawImpacts)
   }
   showConfirmation.value = true
 }

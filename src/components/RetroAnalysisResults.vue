@@ -8,6 +8,8 @@
       :volatility-increase-percent="props.volatilityIncreasePercent"
       :noise-ratio-after="props.noiseRatioAfter"
       :is-archive-mode="props.isArchiveMode"
+      :avg-deviation="props.avgDeviation"
+      :surprise-event-count="props.surpriseEventCount"
       @archive="$emit('archive')"
     />
 
@@ -19,6 +21,7 @@
           :meilleur-moment="props.meilleurMoment"
           :offset="props.offset"
           :stop-loss="props.stopLoss"
+          :hard-tp="hardTpDirectional"
           :trailing-stop="props.trailingStop"
           :timeout="props.timeout"
           :pair="props.pair"
@@ -55,6 +58,7 @@
           :meilleur-moment="props.meilleurMoment"
           :offset="props.offsetSimultaneous ?? props.offset"
           :stop-loss-recovery="props.stopLossRecoverySimultaneous ?? props.stopLossRecovery"
+          :hard-tp="hardTpSimultaneous"
           :trailing-stop="props.trailingStopSimultaneous ?? props.trailingStop"
           :timeout="props.timeout"
           :pair="props.pair"
@@ -100,6 +104,8 @@ const props = defineProps<{
   trailingStopSimultaneous?: number
   offsetSimultaneous?: number
   stopLossRecoverySimultaneous?: number
+  avgDeviation?: number
+  surpriseEventCount?: number
 }>()
 
 defineEmits<{ archive: [] }>()
@@ -109,6 +115,23 @@ const trailingStopRecovery = computed(() => {
   if (!props.trailingStop || !props.stopLoss || !props.stopLossRecovery) return props.trailingStop
   const ratio = props.stopLossRecovery / props.stopLoss
   return props.trailingStop * ratio
+})
+
+const hardTpSimultaneous = computed(() => {
+  const slRec = props.stopLossRecoverySimultaneous ?? props.stopLossRecovery ?? 0
+  const slDir = props.stopLoss ?? 0
+  const hardTpDir = slDir * 2 // Default Hard TP Directional assumption if not passed
+  
+  // Ensure R:R is at least 1.5 for Simultaneous
+  const minRiskReward = 1.5
+  const minTp = slRec * minRiskReward
+  
+  // Use the max of directional Hard TP and calculated min TP
+  return Math.max(hardTpDir, minTp)
+})
+
+const hardTpDirectional = computed(() => {
+  return (props.stopLoss ?? 0) * 2.0
 })
 </script>
 

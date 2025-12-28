@@ -43,20 +43,6 @@
   padding: 0 12px !important; /* Native selects need this */
 }
 
-/* Fix for SearchableEventDropdown internals */
-.config-panel :deep(.dropdown-header) {
-  height: 42px !important;
-  padding: 0 12px !important;
-  border: 1px solid #ccc !important;
-  box-sizing: border-box;
-}
-
-.config-panel :deep(.dropdown-input) {
-  color: #000000 !important;
-  font-size: 0.9rem !important;
-  height: 100%;
-}
-
 .config-panel :deep(.symbol-select option) {
   background: #ffffff;
   color: #000000;
@@ -84,7 +70,15 @@
   grid-template-columns: repeat(6, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
+  align-items: end;
 }
+
+.config-panel .col-span-1 { grid-column: span 1; }
+.config-panel .col-span-2 { grid-column: span 2; }
+.config-panel .col-span-3 { grid-column: span 3; }
+.config-panel .col-span-4 { grid-column: span 4; }
+.config-panel .col-span-5 { grid-column: span 5; }
+.config-panel .col-span-6 { grid-column: span 6; }
 
 .config-panel .param {
   display: flex;

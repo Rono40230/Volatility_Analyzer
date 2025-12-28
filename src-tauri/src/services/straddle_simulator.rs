@@ -3,9 +3,9 @@
 
 use super::straddle_adjustments::AdjustedMetrics;
 use super::straddle_simulator_helpers::{
-    calculate_risk_level, calculer_atr_moyen, get_asset_cost, StraddleSimulationResult,
-    WhipsawDetail,
+    calculate_risk_level, calculer_atr_moyen, get_asset_cost, simulate_trade_outcome,
 };
+use super::straddle_types::{StraddleSimulationResult, WhipsawDetail};
 use crate::models::Candle;
 use crate::services::pair_data::symbol_properties::normalize_to_pips;
 
@@ -35,6 +35,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
             total_pnl_net_pips: 0.0,
             avg_trade_cost_pips: 0.0,
             is_profitable_net: false,
+            confidence_score: 0.0,
+            sample_size_warning: true,
         };
     }
 
@@ -47,29 +49,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     // Ici modèle conservateur : On paie le spread à l'exécution + slippage
     let cost_per_trade = spread_cost + (slippage_cost * 2.0); 
 
-    // Calculer le percentile 95 des wicks pour déterminer l'offset optimal
-    let mut wicks: Vec<f64> = Vec::new();
-    for candle in candles {
-        let upper_wick = candle.high - candle.close.max(candle.open);
-        let lower_wick = candle.open.min(candle.close) - candle.low;
-        if upper_wick > 0.0 {
-            wicks.push(upper_wick);
-        }
-        if lower_wick > 0.0 {
-            wicks.push(lower_wick);
-        }
-    }
-
-    wicks.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let p95_idx = ((wicks.len() as f64) * 0.95).ceil() as usize;
-    let p95_wick = if !wicks.is_empty() && p95_idx < wicks.len() {
-        wicks[p95_idx]
-    } else {
-        0.0
-    };
-
-    let offset_optimal = p95_wick * 1.1;
-    let offset_optimal_pips = normalize_to_pips(offset_optimal, symbol).ceil();
+    // Calculer le percentile 95 GLOBAL des wicks (pour info statistique uniquement)
+    let global_p95_wick = super::straddle_simulator_helpers::calculate_global_p95_wick(candles);
 
     // === CALCUL DE L'ATR (VOLATILITÉ) POUR DÉTERMINER LE TIMEOUT ===
     let raw_atr_mean = calculer_atr_moyen(candles);
@@ -82,19 +63,44 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
     let mut whipsaws = 0;
     let mut whipsaw_details_vec: Vec<WhipsawDetail> = Vec::new();
     let mut total_pnl_net = 0.0; // En pips
+    let mut sum_offsets_used = 0.0; // Pour calculer la moyenne
 
-    let marge = offset_optimal;
-    // Ratio TP:SL de 2:1 (Standard Straddle)
-    // SL = Marge (l'autre côté du straddle)
-    // TP = Marge * 2.0
-    let tp_distance = marge * 2.0;
-    let sl_distance = marge; // SL est à l'opposé (distance = marge)
+    // Historique glissant des wicks pour le calcul dynamique de l'offset (Look-ahead bias removal)
+    // On stocke les wicks de chaque bougie passée.
+    // Window size = 5 (comme demandé dans task.md)
+    let window_size = 5;
+    let mut wicks_history: Vec<Vec<f64>> = Vec::new();
 
     // Boucle sur les bougies pour placer les trades
     for i in 0..candles.len() {
+        // 1. Calculer l'offset dynamique basé sur l'historique (P95 des 5 dernières bougies)
+        let current_p95_wick = super::straddle_simulator_helpers::calculate_dynamic_offset(&wicks_history, &candles[i]);
+
+        let offset_optimal = current_p95_wick * 1.1;
+        let offset_optimal_pips = normalize_to_pips(offset_optimal, symbol).ceil();
+        sum_offsets_used += offset_optimal_pips;
+
+        let marge = offset_optimal;
+        // Ratio TP:SL de 2:1 (Standard Straddle)
+        let tp_distance = marge * 2.0;
+        let sl_distance = marge;
+
         let entry_price = candles[i].close;
         let buy_stop = entry_price + marge;
         let sell_stop = entry_price - marge;
+
+        // Mise à jour de l'historique pour le PROCHAIN tour
+        let cw = &candles[i];
+        let mut current_wicks = Vec::new();
+        let uw = cw.high - cw.close.max(cw.open);
+        let lw = cw.open.min(cw.close) - cw.low;
+        if uw > 0.0 { current_wicks.push(uw); }
+        if lw > 0.0 { current_wicks.push(lw); }
+        
+        wicks_history.push(current_wicks);
+        if wicks_history.len() > window_size {
+            wicks_history.remove(0);
+        }
 
         // État du trade
         let mut triggered_side: Option<&str> = None; // "BUY" ou "SELL"
@@ -105,111 +111,32 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
         // Fenêtre de 60 bougies (1h si M1) pour le déroulement du trade
         let max_duration = 60;
-        let end_idx = candles.len().min(i + max_duration + 1);
-
-        for j in (i + 1)..end_idx {
-            let current = &candles[j];
-
-            if triggered_side.is_none() {
-                // Pas encore déclenché, on surveille les deux bornes
-                // Note: On ajoute le spread au Buy Stop pour simuler l'Ask
-                let _effective_buy_stop = buy_stop + normalize_to_pips(spread_cost, symbol); // Approximation conversion inverse si nécessaire, ici on suppose spread_cost en pips déjà converti ? 
-                // ATTENTION: spread_cost est en PIPS. buy_stop est en PRIX.
-                // Il faut convertir spread_cost en PRIX pour l'ajouter.
-                // Pour simplifier ici sans pip_value, on va faire l'inverse : tout convertir en Pips à la fin pour le PnL.
-                // On garde la logique prix brute pour le déclenchement, mais on pénalisera le PnL.
-                
-                if current.high >= buy_stop && current.low <= sell_stop {
-                    // Cas rare : déclenchement simultané dans la même bougie -> Whipsaw immédiat
-                    triggered_side = Some("BOTH");
-                    trade_result = Some("WHIPSAW");
-                    buy_trigger_idx = j;
-                    sell_trigger_idx = j;
-                    break;
-                } else if current.high >= buy_stop {
-                    triggered_side = Some("BUY");
-                    buy_trigger_idx = j;
-                    // Vérifier si SL ou TP touché dans la même bougie après déclenchement
-                    // (Approximation : si Low < SellStop, c'est un whipsaw)
-                    if current.low <= sell_stop {
-                        trade_result = Some("WHIPSAW");
-                        sell_trigger_idx = j;
-                        break;
-                    }
-                    if current.high >= buy_stop + tp_distance {
-                        trade_result = Some("WIN");
-                        break;
-                    }
-                } else if current.low <= sell_stop {
-                    triggered_side = Some("SELL");
-                    sell_trigger_idx = j;
-                    // Vérifier si SL ou TP touché dans la même bougie
-                    if current.high >= buy_stop {
-                        trade_result = Some("WHIPSAW");
-                        buy_trigger_idx = j;
-                        break;
-                    }
-                    if current.low <= sell_stop - tp_distance {
-                        trade_result = Some("WIN");
-                        break;
-                    }
-                }
-            } else {
-                // Déjà déclenché, on gère la position
-                match triggered_side {
-                    Some("BUY") => {
-                        // SL = Sell Stop (Whipsaw)
-                        if current.low <= sell_stop {
-                            trade_result = Some("WHIPSAW");
-                            sell_trigger_idx = j;
-                            break;
-                        }
-                        // TP
-                        if current.high >= buy_stop + tp_distance {
-                            trade_result = Some("WIN");
-                            break;
-                        }
-                    }
-                    Some("SELL") => {
-                        // SL = Buy Stop (Whipsaw)
-                        if current.high >= buy_stop {
-                            trade_result = Some("WHIPSAW");
-                            buy_trigger_idx = j;
-                            break;
-                        }
-                        // TP
-                        if current.low <= sell_stop - tp_distance {
-                            trade_result = Some("WIN");
-                            break;
-                        }
-                    }
-                    _ => break, // Should not happen
-                }
-            }
-        }
+        let outcome = simulate_trade_outcome(candles, i, buy_stop, sell_stop, tp_distance, max_duration);
 
         // Enregistrement des résultats et calcul P&L Net
-        if let Some(result) = trade_result {
-            total_trades += 1;
+        if let Some(res) = outcome {
+            let buy_trigger_idx = res.buy_trigger_idx;
+            let sell_trigger_idx = res.sell_trigger_idx;
             
             // Conversion des distances en Pips pour le calcul PnL
             let tp_pips = normalize_to_pips(tp_distance, symbol);
             let sl_pips = normalize_to_pips(sl_distance, symbol);
 
-            match result {
+            match res.result.as_str() {
                 "WIN" => {
+                    total_trades += 1;
                     wins += 1;
                     // Gain Net = TP - Coûts
                     total_pnl_net += tp_pips - cost_per_trade;
                 },
                 "LOSS" => {
-                    // Note: LOSS n'est pas explicitement set dans la boucle (c'est soit WIN soit WHIPSAW pour l'instant dans ce code simplifié)
-                    // Mais si on ajoutait un timeout loss, ce serait ici.
+                    total_trades += 1;
                     losses += 1;
                     // Perte Nette = -SL - Coûts
                     total_pnl_net -= sl_pips + cost_per_trade;
                 },
                 "WHIPSAW" => {
+                    total_trades += 1;
                     whipsaws += 1;
                     // Whipsaw = Double Perte + Double Coût
                     // Perte côté 1 (SL) + Perte côté 2 (SL) + 2x Coûts
@@ -230,16 +157,17 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
                         net_loss_pips: whipsaw_loss,
                     });
                 },
+                "TIMEOUT" => {
+                    // Déclenché mais pas de résultat (Time out) -> Considéré comme perte ou neutre
+                    // Pour être conservateur, on compte comme perte si pas de TP
+                    total_trades += 1;
+                    losses += 1;
+                    // Perte au timeout = Coûts + (Prix actuel - Prix entrée)
+                    // On simplifie en comptant juste les coûts + une petite perte moyenne
+                    total_pnl_net -= cost_per_trade;
+                }
                 _ => {}
             }
-        } else if triggered_side.is_some() {
-            // Déclenché mais pas de résultat (Time out) -> Considéré comme perte ou neutre
-            // Pour être conservateur, on compte comme perte si pas de TP
-            total_trades += 1;
-            losses += 1;
-            // Perte au timeout = Coûts + (Prix actuel - Prix entrée)
-            // On simplifie en comptant juste les coûts + une petite perte moyenne
-            total_pnl_net -= cost_per_trade;
         }
     }
 
@@ -257,14 +185,34 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
 
     let (risk_level, risk_color) = calculate_risk_level(whipsaw_frequency_percentage);
 
+    // Moyenne de l'offset utilisé
+    let avg_offset_used = if total_trades > 0 {
+        sum_offsets_used / total_trades as f64
+    } else {
+        0.0
+    };
+
     // === CALCUL DES VALEURS PONDÉRÉES PAR LE WHIPSAW + VOLATILITÉ + MULTIPLICATEURS PAIR-SPÉCIFIQUES ===
     let adjusted = AdjustedMetrics::new_with_pair(
         win_rate_percentage,
-        offset_optimal_pips,
+        avg_offset_used,
         whipsaw_frequency_percentage,
         atr_mean,
         symbol,
     );
+
+    // === CALCUL DU SCORE DE CONFIANCE ===
+    let sample_size_warning = total_trades < 5;
+    
+    // 1. Score Taille Échantillon (70%)
+    // 10 trades = 100% du score échantillon
+    let sample_score = (total_trades as f64 / 10.0).min(1.0) * 100.0;
+    
+    // 2. Score Régularité (30%)
+    // Basé sur l'absence de whipsaws (plus c'est propre, plus on a confiance)
+    let regularity_score = (100.0 - whipsaw_frequency_percentage).max(0.0);
+    
+    let confidence_score = (sample_score * 0.7) + (regularity_score * 0.3);
 
     StraddleSimulationResult {
         total_trades,
@@ -273,8 +221,8 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         whipsaws,
         win_rate_percentage,
         whipsaw_frequency_percentage,
-        offset_optimal_pips,
-        percentile_95_wicks: normalize_to_pips(p95_wick, symbol).ceil(),
+        offset_optimal_pips: avg_offset_used,
+        percentile_95_wicks: normalize_to_pips(global_p95_wick, symbol).ceil(),
         risk_level,
         risk_color,
         // Valeurs pondérées
@@ -286,6 +234,44 @@ pub fn simulate_straddle(candles: &[Candle], symbol: &str) -> StraddleSimulation
         total_pnl_net_pips: total_pnl_net,
         avg_trade_cost_pips: cost_per_trade,
         is_profitable_net: total_pnl_net > 0.0,
+        confidence_score,
+        sample_size_warning,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Candle;
+    use chrono::{TimeZone, Utc};
+
+    fn create_candle(price: f64) -> Candle {
+        Candle {
+            id: Some(0),
+            symbol: "EURUSD".to_string(),
+            datetime: Utc.with_ymd_and_hms(2023, 1, 1, 0, 0, 0).expect("Invalid date"),
+            open: price,
+            high: price + 10.0,
+            low: price - 10.0,
+            close: price,
+            volume: 100.0,
+        }
+    }
+
+    #[test]
+    fn test_confidence_score_low_sample() {
+        let candles = vec![create_candle(100.0), create_candle(100.0)]; // 2 candles
+        let result = simulate_straddle(&candles, "EURUSD");
+        
+        assert!(result.sample_size_warning);
+    }
+
+    #[test]
+    fn test_confidence_score_high_sample() {
+        let candles: Vec<Candle> = (0..15).map(|_| create_candle(100.0)).collect();
+        let result = simulate_straddle(&candles, "EURUSD");
+        
+        assert!(!result.sample_size_warning);
     }
 }
 

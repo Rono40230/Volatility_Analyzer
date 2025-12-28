@@ -54,6 +54,7 @@ export interface Stats15Min {
     timeout_minutes: number
     sl_recovery_pips: number
     risk_reward_ratio: number
+    hard_tp_pips?: number
   }
   volatility_profile?: number[]
   optimal_entry_minute?: number

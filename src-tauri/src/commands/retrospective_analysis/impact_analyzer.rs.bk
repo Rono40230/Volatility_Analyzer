@@ -43,6 +43,7 @@ impl ImpactAnalyzer {
             data.event_count,
             point_value,
             data.p95_wick,
+            data.p95_range,
         );
 
         Ok(super::types::EventImpactResult {
@@ -55,6 +56,8 @@ impl ImpactAnalyzer {
             noise_ratio_after: data.noise_after,
             volatility_increase_percent: data.volatility_increase,
             event_count: data.event_count,
+            avg_deviation: data.avg_deviation,
+            surprise_event_count: data.surprise_event_count,
             event_type: event_type.into(),
             pair: pair.into(),
             event_datetime,

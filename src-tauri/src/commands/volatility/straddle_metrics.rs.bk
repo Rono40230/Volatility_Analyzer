@@ -2,6 +2,7 @@
 use super::straddle_metrics_types::*;
 use tauri::command;
 use crate::models::AssetProperties;
+use crate::services::straddle_simulator_helpers::get_asset_cost;
 
 /// Obtenir le nombre de points par pip selon le symbole
 /// Basé sur la norme MT5:
@@ -108,6 +109,7 @@ pub async fn analyze_straddle_metrics(
             percentile_95_wicks: simulation.percentile_95_wicks,
             with_margin: pips_to_points(simulation.offset_optimal_pips * 1.1, &symbol),
             sl_adjusted_points: pips_to_points(simulation.sl_adjusted_pips, &symbol),
+            hard_tp_points: pips_to_points(simulation.sl_adjusted_pips * 2.0, &symbol),
         },
         win_rate: WinRateData {
             total_trades: simulation.total_trades,
@@ -133,5 +135,10 @@ pub async fn analyze_straddle_metrics(
             timeout_adjusted_minutes: simulation.timeout_adjusted_minutes,
             whipsaw_details,
         },
+        confidence: ConfidenceData {
+            score: simulation.confidence_score,
+            sample_size_warning: simulation.sample_size_warning,
+        },
+        spread_cost: pips_to_points(get_asset_cost(&symbol).spread_pips, &symbol),
     })
 }

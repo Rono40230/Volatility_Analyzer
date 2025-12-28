@@ -21,6 +21,15 @@
       </div>
 
       <div class="bidi-param">
+        <div class="bidi-label">Hard TP</div>
+        <div class="bidi-value">
+          <UnitDisplay v-if="hardTp > 0" :value="hardTp" unit="pts" :decimals="1" :symbol="pair" />
+          <span v-else>—</span>
+        </div>
+        <div class="bidi-description">Take Profit de sécurité (SL x 2)</div>
+      </div>
+
+      <div class="bidi-param">
         <div class="bidi-label">Trailing Stop</div>
         <div class="bidi-value">
           <UnitDisplay v-if="trailingStop > 0" :value="trailingStop" unit="pts" :decimals="1" :symbol="pair" />
@@ -51,6 +60,10 @@
               <!-- SL Recovery Buy -->
               <line x1="60" :y1="148 + scaleY(stopLossRecovery)" x2="140" :y2="148 + scaleY(stopLossRecovery)" stroke="#facc15" stroke-width="1" stroke-dasharray="3,3" />
               <text x="30" :y="148 + scaleY(stopLossRecovery) + 3" font-size="9" fill="#facc15" text-anchor="end">SL Rec</text>
+
+              <!-- Hard TP Buy -->
+              <line v-if="hardTp > 0" x1="60" :y1="148 - scaleY(hardTp)" x2="140" :y2="148 - scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
+              <text v-if="hardTp > 0" x="30" :y="148 - scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
             </g>
 
             <!-- Sell Stop (At Market/Center) -->
@@ -61,6 +74,10 @@
               <!-- SL Recovery Sell -->
               <line x1="60" :y1="152 - scaleY(stopLossRecovery)" x2="140" :y2="152 - scaleY(stopLossRecovery)" stroke="#facc15" stroke-width="1" stroke-dasharray="3,3" />
               <text x="30" :y="152 - scaleY(stopLossRecovery) + 3" font-size="9" fill="#facc15" text-anchor="end">SL Rec</text>
+
+              <!-- Hard TP Sell -->
+              <line v-if="hardTp > 0" x1="60" :y1="152 + scaleY(hardTp)" x2="140" :y2="152 + scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
+              <text v-if="hardTp > 0" x="30" :y="152 + scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
             </g>
           </svg>
         </div>
@@ -77,6 +94,7 @@ interface Props {
   meilleurMoment?: number
   offset?: number
   stopLossRecovery?: number
+  hardTp?: number
   trailingStop?: number
   timeout?: number
   pair: string
@@ -88,6 +106,7 @@ const props = withDefaults(defineProps<Props>(), {
   meilleurMoment: 0,
   offset: 0,
   stopLossRecovery: 0,
+  hardTp: 0,
   trailingStop: 0,
   timeout: 60,
   pair: 'EURUSD'
@@ -99,7 +118,8 @@ function getUnit(pair: string): string {
 
 // Simple scaling function for visualization
 const scaleY = (val: number) => {
-  const maxRange = (props.stopLossRecovery || 150) * 1.2
+  const maxVal = Math.max(props.stopLossRecovery || 0, props.hardTp || 0)
+  const maxRange = (maxVal || 150) * 1.2
   const pxRange = 60 // adjusted for viewBox height 150 (half 75)
   return (val / maxRange) * pxRange
 }

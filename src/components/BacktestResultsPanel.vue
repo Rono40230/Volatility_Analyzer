@@ -3,6 +3,7 @@ import { storeToRefs } from 'pinia'
 import { useBacktestStore } from '../stores/backtest'
 import { computed, ref } from 'vue'
 import ArchiveModal from './ArchiveModal.vue'
+import BacktestAnalysisModal from './BacktestAnalysisModal.vue'
 import BacktestSummary from './backtest/BacktestSummary.vue'
 import BacktestTradesTable from './backtest/BacktestTradesTable.vue'
 import { useBacktestExport } from '../composables/useBacktestExport'
@@ -78,6 +79,9 @@ function openArchiveModal() {
   
   showArchiveModal.value = true
 }
+
+// --- Analysis Logic ---
+const showAnalysisModal = ref(false)
 </script>
 
 <template>
@@ -96,6 +100,7 @@ function openArchiveModal() {
       <div class="results-header">
         <h2>Résultats</h2>
         <div class="actions">
+          <button class="btn-icon" @click="showAnalysisModal = true" title="Analyser">🧠 Analyse</button>
           <button class="btn-icon" @click="openArchiveModal" title="Archiver">💾 Archiver</button>
           <button class="btn-icon" @click="exportPdf" title="Exporter PDF">📄 PDF</button>
         </div>
@@ -114,6 +119,14 @@ function openArchiveModal() {
       :is-open="showArchiveModal"
       :initial-data="archiveData"
       @close="showArchiveModal = false"
+    />
+
+    <BacktestAnalysisModal
+      v-if="result && config"
+      :is-open="showAnalysisModal"
+      :result="result"
+      :config="config"
+      @close="showAnalysisModal = false"
     />
   </div>
 </template>

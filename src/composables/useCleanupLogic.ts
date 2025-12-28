@@ -1,56 +1,32 @@
-import { ref, computed, watch } from 'vue'
-import { invoke } from '@tauri-apps/api/core'
-
-export interface RareEventSummary { description: string; count: number }
-export interface CurrencySummary { symbol: string; country_name: string; count: number }
-export interface OrphanEventSummary { reason: string; count: number }
-export interface CalendarEvent {
-  id: number
-  symbol: string
-  event_time: string
-  impact: string
-  description: string
-  actual: number | null
-  forecast: number | null
-  previous: number | null
-}
+import { watch } from 'vue'
+import { cleanupApi } from '../services/cleanupApi'
+import { useCleanupState } from './useCleanupState'
+import { formatEventLabel } from '../utils/cleanupFormatter'
+import { useCleanupPreview } from './useCleanupPreview'
 
 export function useCleanupLogic(props: { minOccurrences: number; calendarId: number | null }) {
-  // State
-  const activeTab = ref<'rare' | 'country' | 'orphan'>('rare')
-  const showConfirmation = ref(false)
-  const confirmationMessage = ref('')
-  const deleteAction = ref<() => Promise<void>>(async () => {})
+  const state = useCleanupState(props.minOccurrences)
+  const {
+    activeTab, showConfirmation, confirmationMessage, deleteAction,
+    previewMode, previewEvents, previewTitle, loadingPreview,
+    events, loading, threshold,
+    countries, loadingCountries,
+    orphans, loadingOrphans, totalOrphans,
+    impacts, loadingImpacts
+  } = state
 
-  // Preview State
-  const previewMode = ref(false)
-  const previewEvents = ref<CalendarEvent[]>([])
-  const previewTitle = ref('')
-  const loadingPreview = ref(false)
-
-  // Rare Events State
-  const events = ref<RareEventSummary[]>([])
-  const loading = ref(true)
-  const threshold = ref(props.minOccurrences)
-
-  // Country State
-  const countries = ref<CurrencySummary[]>([])
-  const loadingCountries = ref(false)
-
-  // Orphan State
-  const orphans = ref<OrphanEventSummary[]>([])
-  const loadingOrphans = ref(false)
-  const totalOrphans = computed(() => orphans.value.reduce((acc, o) => acc + o.count, 0))
+  const { loadPreview, closePreview } = useCleanupPreview(state, props)
 
   // --- LOADERS ---
 
   async function loadEvents() {
     loading.value = true
     try {
-      events.value = await invoke('list_rare_events', { 
-        minOccurrences: threshold.value,
-        calendarId: props.calendarId 
-      })
+      const rawEvents = await cleanupApi.listRareEvents(threshold.value, props.calendarId)
+      events.value = rawEvents.map(e => ({
+        ...e,
+        label: formatEventLabel(e.description)
+      }))
     } catch (e) {
       // Silent error
     } finally {
@@ -61,9 +37,7 @@ export function useCleanupLogic(props: { minOccurrences: number; calendarId: num
   async function loadCountries() {
     loadingCountries.value = true
     try {
-      countries.value = await invoke('list_currencies', {
-        calendarId: props.calendarId
-      })
+      countries.value = await cleanupApi.listCurrencies(props.calendarId)
     } catch (e) {
       // Silent error
     } finally {
@@ -74,9 +48,7 @@ export function useCleanupLogic(props: { minOccurrences: number; calendarId: num
   async function loadOrphans() {
     loadingOrphans.value = true
     try {
-      orphans.value = await invoke('list_orphan_events', {
-        calendarId: props.calendarId
-      })
+      orphans.value = await cleanupApi.listOrphanEvents(props.calendarId)
     } catch (e) {
       // Silent error
     } finally {
@@ -84,28 +56,39 @@ export function useCleanupLogic(props: { minOccurrences: number; calendarId: num
     }
   }
 
-  async function loadPreview(filterType: string, filterValue: string, title: string) {
-    previewMode.value = true
-    loadingPreview.value = true
-    previewTitle.value = title
-    previewEvents.value = []
-    
+  async function loadImpacts() {
+    loadingImpacts.value = true
     try {
-      previewEvents.value = await invoke('preview_cleanup_events', {
-        filterType,
-        filterValue,
-        calendarId: props.calendarId
-      })
+      const rawImpacts = await cleanupApi.listImpactGroups(props.calendarId)
+      impacts.value = rawImpacts.map(i => ({
+        ...i,
+        label: formatEventLabel(i.description)
+      }))
     } catch (e) {
       // Silent error
     } finally {
-      loadingPreview.value = false
+      loadingImpacts.value = false
     }
   }
 
-  function closePreview() {
-    previewMode.value = false
-    previewEvents.value = []
+  async function updateImpact(description: string, newImpact: string) {
+    try {
+      await cleanupApi.updateImpact(description, newImpact, props.calendarId)
+      await loadImpacts()
+    } catch (e) {
+      // Silent error
+    }
+  }
+
+  async function deleteEventsByImpact(impactsList: string[]) {
+    try {
+      for (const impact of impactsList) {
+        await cleanupApi.deleteEventsByImpact(impact, props.calendarId)
+      }
+      await loadImpacts()
+    } catch (e) {
+      // Silent error
+    }
   }
 
   // Watch tab changes to load data
@@ -113,6 +96,14 @@ export function useCleanupLogic(props: { minOccurrences: number; calendarId: num
     if (newTab === 'rare') loadEvents()
     if (newTab === 'country') loadCountries()
     if (newTab === 'orphan') loadOrphans()
+    if (newTab === 'impact') loadImpacts()
+  })
+
+  // Watch threshold changes to reload rare events
+  watch(threshold, () => {
+    if (activeTab.value === 'rare') {
+      loadEvents()
+    }
   })
 
   return {
@@ -132,9 +123,14 @@ export function useCleanupLogic(props: { minOccurrences: number; calendarId: num
     orphans,
     loadingOrphans,
     totalOrphans,
+    impacts,
+    loadingImpacts,
     loadEvents,
     loadCountries,
     loadOrphans,
+    loadImpacts,
+    updateImpact,
+    deleteEventsByImpact,
     loadPreview,
     closePreview
   }

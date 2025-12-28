@@ -143,6 +143,13 @@ pub async fn sync_forex_factory_week() -> Result<String, String> {
     let conn =
         Connection::open(&data_dir).map_err(|e| format!("Failed to open volatility.db: {}", e))?;
 
+    // Supprimer les anciens plannings synchronisés pour éviter les doublons
+    conn.execute(
+        "DELETE FROM calendar_imports WHERE name LIKE 'ForexFactory_Sync_%'",
+        [],
+    )
+    .map_err(|e| format!("Failed to delete old syncs: {}", e))?;
+
     let calendar_name = format!("ForexFactory_Sync_{}", chrono::Utc::now().format("%Y-%m-%d_%H-%M-%S"));
     let filename = "ff_calendar_thisweek.csv";
 

@@ -5,7 +5,7 @@
         <label for="threshold">Seuil d'occurrences :</label>
         <div class="select-wrapper">
           <select id="threshold" :value="threshold" @change="$emit('update:threshold', Number(($event.target as HTMLSelectElement).value))">
-            <option v-for="n in 10" :key="n" :value="n">{{ n }}</option>
+            <option v-for="n in 20" :key="n" :value="n">{{ n }}</option>
           </select>
           <span class="select-arrow">▼</span>
         </div>
@@ -35,12 +35,12 @@
         </thead>
         <tbody>
           <tr v-for="event in events" :key="event.description">
-            <td>{{ event.description }}</td>
+            <td>{{ event.label || event.description }}</td>
             <td class="text-right">
               <span class="count-badge" :class="getCountClass(event.count)">{{ event.count }}</span>
             </td>
             <td class="text-right">
-              <button class="btn-icon" title="Voir les événements" @click="('preview', 'description', event.description, event.description)">👁️</button>
+              <button class="btn-icon" title="Voir les événements" @click="$emit('preview', 'description', event.description, event.label || event.description)">👁️</button>
             </td>
           </tr>
         </tbody>

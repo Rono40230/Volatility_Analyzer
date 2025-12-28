@@ -66,6 +66,40 @@
         </div>
       </template>
     </MetricTooltip>
+
+    <!-- Confiance -->
+    <MetricTooltip
+      v-if="confidence"
+      title="Confiance"
+      direction="bottom"
+    >
+      <div style="flex: 0 0 auto; padding: 12px 16px; background: rgba(45, 90, 123, 0.15); border: 1px solid #2d5a7b; border-radius: 6px; font-size: 12px; min-width: 140px;">
+        <div style="color: #64a5d8; margin-bottom: 6px; font-weight: bold;">
+          🛡️ CONFIANCE
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-size: 18px; font-weight: bold;" :style="{ color: getConfidenceColor(confidence.score) }">
+            {{ confidence.score.toFixed(0) }}%
+          </div>
+          <span v-if="confidence.sample_size_warning" title="Échantillon faible (< 5)" style="font-size: 16px; cursor: help;">⚠️</span>
+        </div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">Fiabilité statistique basée sur la taille de l'échantillon et la régularité des résultats.</div>
+        </div>
+      </template>
+      <template #interpretation>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="interpretation-item"><strong>🟢 Haute:</strong> ≥80% → Résultats solides</div>
+          <div class="interpretation-item"><strong>🟡 Moyenne:</strong> 50-79% → Assez fiable</div>
+          <div class="interpretation-item"><strong>🔴 Basse:</strong> &lt;50% → Peu fiable (échantillon faible ou irrégulier)</div>
+          <div class="interpretation-item" v-if="confidence.sample_size_warning"><strong>⚠️ Alerte:</strong> Moins de 5 événements analysés.</div>
+        </div>
+      </template>
+    </MetricTooltip>
   </div>
 </template>
 
@@ -76,7 +110,14 @@ import { getScoreColor, getWhipsawColor } from './BestSliceCard.helpers'
 defineProps<{
   score: number
   whipsawFrequency: number
+  confidence?: { score: number; sample_size_warning: boolean }
 }>()
+
+function getConfidenceColor(score: number): string {
+  if (score >= 80) return '#22c55e' // Green
+  if (score >= 50) return '#eab308' // Yellow
+  return '#ef4444' // Red
+}
 </script>
 
 <style scoped>

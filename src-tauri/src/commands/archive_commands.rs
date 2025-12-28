@@ -53,3 +53,10 @@ pub async fn delete_archive(
 ) -> Result<usize, String> {
     archive_service.delete_archive(archive_id)
 }
+
+#[tauri::command]
+pub async fn delete_all_archives(
+    archive_service: State<'_, ArchiveService>,
+) -> Result<usize, String> {
+    archive_service.delete_all_archives()
+}

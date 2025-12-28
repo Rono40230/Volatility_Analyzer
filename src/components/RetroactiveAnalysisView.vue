@@ -4,12 +4,14 @@
       :pairs="pairs"
       :selected-pair="store.selectedPair"
       :selected-event-type="store.selectedEventType"
+      :min-deviation="store.minDeviation"
       :event-types="eventTypeOptions"
       :event-types-loading="eventTypesLoading"
       :event-types-error="eventTypesError"
       :show-calendar-selector="props.showCalendarSelector"
       @update:selected-pair="store.selectedPair = $event"
       @update:selected-event-type="store.selectedEventType = $event"
+      @update:min-deviation="store.minDeviation = $event"
       @calendar-selected="onCalendarSelected"
       @load="load"
     />
@@ -44,6 +46,8 @@
       :trailing-stop-simultaneous="store.graphData?.trailing_stop_simultaneous ?? 0"
       :stop-loss-recovery-simultaneous="store.graphData?.stop_loss_recovery_simultaneous ?? 0"
       :point-value="store.graphData?.point_value"
+      :avg-deviation="store.graphData?.avg_deviation"
+      :surprise-event-count="store.graphData?.surprise_event_count"
       :event-label="getEventLabel(store.selectedEventType)"
       @archive="openArchiveModal"
     />
@@ -143,7 +147,7 @@ async function load() {
   try {
     await analyzePeakDelay(store.selectedPair, store.selectedEventType)
     await analyzeDecayProfile(store.selectedPair, store.selectedEventType)
-    await chargerDonnéesGraph(store.selectedPair, store.selectedEventType)
+    await chargerDonnéesGraph(store.selectedPair, store.selectedEventType, store.minDeviation)
     
     // Sync to store
     store.peakDelayResults = peakDelayResults.value

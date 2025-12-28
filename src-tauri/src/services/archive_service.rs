@@ -82,4 +82,15 @@ impl ArchiveService {
                 e.to_string()
             })
     }
+
+    pub fn delete_all_archives(&self) -> Result<usize, String> {
+        let mut conn = self.pool.get().map_err(|e| e.to_string())?;
+
+        diesel::delete(archives::table)
+            .execute(&mut conn)
+            .map_err(|e| {
+                error!("Error deleting all archives: {}", e);
+                e.to_string()
+            })
+    }
 }

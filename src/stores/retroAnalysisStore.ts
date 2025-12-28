@@ -6,6 +6,7 @@ import type { PeakDelayData, DecayProfileData } from '../composables/useRetrospe
 export const useRetroAnalysisStore = defineStore('retroAnalysis', () => {
   const selectedPair = ref('')
   const selectedEventType = ref('')
+  const minDeviation = ref<number | null>(null)
   
   const graphData = ref<RetroGraphData | null>(null)
   const peakDelayResults = ref<PeakDelayData | null>(null)
@@ -17,6 +18,7 @@ export const useRetroAnalysisStore = defineStore('retroAnalysis', () => {
   function reset() {
     selectedPair.value = ''
     selectedEventType.value = ''
+    minDeviation.value = null
     graphData.value = null
     peakDelayResults.value = null
     decayResults.value = null
@@ -27,6 +29,7 @@ export const useRetroAnalysisStore = defineStore('retroAnalysis', () => {
   return {
     selectedPair,
     selectedEventType,
+    minDeviation,
     graphData,
     peakDelayResults,
     decayResults,

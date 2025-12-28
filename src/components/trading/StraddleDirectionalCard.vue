@@ -38,6 +38,14 @@
         <div class="bidi-description">Distance d'arrêt (Risque)</div>
       </div>
       <div class="bidi-param">
+        <div class="bidi-label">Hard TP</div>
+        <div class="bidi-value">
+          <UnitDisplay v-if="hardTp > 0" :value="hardTp" unit="pts" :decimals="1" :symbol="pair" />
+          <span v-else>—</span>
+        </div>
+        <div class="bidi-description">Take Profit de sécurité (SL x 2)</div>
+      </div>
+      <div class="bidi-param">
         <div class="bidi-label">Trailing Stop</div>
         <div class="bidi-value">
           <UnitDisplay v-if="trailingStop > 0" :value="trailingStop" unit="pts" :decimals="1" :symbol="pair" />
@@ -59,6 +67,10 @@
             <line x1="20" y1="150" x2="180" y2="150" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,4" />
             <text x="185" y="153" font-size="10" fill="#8b949e">T0</text>
 
+            <!-- Spread Zone -->
+            <rect v-if="spread > 0" x="20" :y="150 - scaleY(spread/2)" width="160" :height="scaleY(spread)" fill="#4a5568" opacity="0.3" />
+            <text v-if="spread > 0" x="15" y="153" font-size="9" fill="#6b7280" text-anchor="end">Spread</text>
+
             <!-- Buy Stop -->
             <g v-if="offset > 0">
               <line x1="40" :y1="150 - scaleY(offset)" x2="160" :y2="150 - scaleY(offset)" stroke="#4ade80" stroke-width="2" />
@@ -67,6 +79,10 @@
               <!-- SL Buy -->
               <line x1="60" :y1="150 - scaleY(offset) + scaleY(stopLoss)" x2="140" :y2="150 - scaleY(offset) + scaleY(stopLoss)" stroke="#f87171" stroke-width="1" stroke-dasharray="3,3" />
               <text x="30" :y="150 - scaleY(offset) + scaleY(stopLoss) + 3" font-size="9" fill="#f87171" text-anchor="end">SL</text>
+
+              <!-- Hard TP Buy -->
+              <line v-if="hardTp > 0" x1="60" :y1="150 - scaleY(offset) - scaleY(hardTp)" x2="140" :y2="150 - scaleY(offset) - scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
+              <text v-if="hardTp > 0" x="30" :y="150 - scaleY(offset) - scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
             </g>
 
             <!-- Sell Stop -->
@@ -77,6 +93,10 @@
               <!-- SL Sell -->
               <line x1="60" :y1="150 + scaleY(offset) - scaleY(stopLoss)" x2="140" :y2="150 + scaleY(offset) - scaleY(stopLoss)" stroke="#f87171" stroke-width="1" stroke-dasharray="3,3" />
               <text x="30" :y="150 + scaleY(offset) - scaleY(stopLoss) + 3" font-size="9" fill="#f87171" text-anchor="end">SL</text>
+
+              <!-- Hard TP Sell -->
+              <line v-if="hardTp > 0" x1="60" :y1="150 + scaleY(offset) + scaleY(hardTp)" x2="140" :y2="150 + scaleY(offset) + scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
+              <text v-if="hardTp > 0" x="30" :y="150 + scaleY(offset) + scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
             </g>
           </svg>
         </div>
@@ -93,20 +113,24 @@ interface Props {
   meilleurMoment?: number
   offset?: number
   stopLoss?: number
+  hardTp?: number
   trailingStop?: number
   timeout?: number
   pair: string
   pointValue?: number
   placementTime?: string
+  spread?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   meilleurMoment: 0,
   offset: 0,
   stopLoss: 0,
+  hardTp: 0,
   trailingStop: 0,
   timeout: 60,
-  pair: 'EURUSD'
+  pair: 'EURUSD',
+  spread: 0
 })
 
 function getUnit(pair: string): string {
@@ -115,7 +139,8 @@ function getUnit(pair: string): string {
 
 // Simple scaling function for visualization
 const scaleY = (val: number) => {
-  const maxRange = (props.stopLoss || 100) * 1.5 + (props.offset || 50)
+  const maxVal = Math.max(props.stopLoss || 0, props.hardTp || 0)
+  const maxRange = (maxVal || 100) * 1.2 + (props.offset || 50)
   const pxRange = 60 // adjusted for viewBox height 150 (half 75)
   return (val / maxRange) * pxRange
 }

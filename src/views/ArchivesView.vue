@@ -26,6 +26,14 @@
               </option>
             </select>
           </div>
+          <button 
+            class="btn-delete-all" 
+            @click="showDeleteAllConfirmModal = true" 
+            v-if="archiveStore.archives.length > 0"
+            title="Tout effacer"
+          >
+            🗑️ Supprimer toutes les archives
+          </button>
         </div>
         <!-- Bouton IAnalyse supprimé -->
       </div>
@@ -81,6 +89,39 @@
             @click="confirmArchiveDeletion"
           >
             🗑️ Supprimer définitivement
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteAllConfirmModal" class="delete-confirm-overlay">
+      <div class="delete-confirm-modal delete-all-modal">
+        <div class="delete-confirm-header">
+          <div class="delete-confirm-icon">⚠️</div>
+          <h2>ATTENTION<br>SUPPRESSION TOTALE</h2>
+        </div>
+        
+        <div class="delete-confirm-body">
+          <p class="warning-text big-warning">
+            Toutes les archives seront<br><strong>DÉFINITIVEMENT SUPPRIMÉES</strong>.
+          </p>
+          <p class="warning-detail">
+            Cette action est irréversible.<br>Êtes-vous absolument sûr de vouloir tout effacer ?
+          </p>
+        </div>
+        
+        <div class="delete-confirm-actions">
+          <button 
+            class="btn-cancel"
+            @click="showDeleteAllConfirmModal = false"
+          >
+            ❌ Annuler
+          </button>
+          <button 
+            class="btn-confirm-delete btn-danger-zone"
+            @click="confirmDeleteAll"
+          >
+            🔥 TOUT EFFACER
           </button>
         </div>
       </div>
@@ -276,6 +317,7 @@ const showVolatilityMetaModal = ref(false)
 const showExportModal = ref(false)
 const viewerData = ref<any>(null)
 const showDeleteConfirmModal = ref(false)
+const showDeleteAllConfirmModal = ref(false)
 const archiveToDelete = ref<Archive | null>(null)
 const selectedPair = ref<string>('all')
 const expandedTypes = ref<Set<string>>(new Set())
@@ -288,6 +330,15 @@ onMounted(async () => {
     expandedTypes.value.add(firstType)
   }
 })
+
+async function confirmDeleteAll() {
+  try {
+    await archiveStore.supprimerToutesArchives()
+    showDeleteAllConfirmModal.value = false
+  } catch (e) {
+    // Silent error
+  }
+}
 
 // Computed property pour grouper et filtrer les archives par type
 const archivesByType = computed(() => {
@@ -1092,6 +1143,59 @@ function cancelDelete() {
 
 .btn-confirm-delete:active {
   transform: translateY(0) scale(0.98);
+}
+
+.btn-delete-all {
+  background: #2a2a3e;
+  border: 1px solid #f85149;
+  color: #f85149;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+  margin-left: auto;
+}
+
+.btn-delete-all:hover {
+  background: #f85149;
+  color: white;
+  transform: scale(1.05);
+}
+
+.delete-all-modal {
+  border-color: #ff0000;
+  box-shadow: 0 0 50px rgba(255, 0, 0, 0.2);
+}
+
+.big-warning {
+  font-size: 1.2em;
+  color: #ff4444 !important;
+  text-align: center;
+  margin-bottom: 15px !important;
+}
+
+.warning-detail {
+  color: #cbd5e0;
+  text-align: center;
+  margin: 0;
+}
+
+.btn-danger-zone {
+  background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+  border: 2px solid #ff0000;
+  font-size: 1.1em;
+  padding: 12px 30px;
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 0, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }
 }
 
 /* Responsive styles for accordion and compact cards */

@@ -70,18 +70,31 @@ function isActiveCalendar(id: number): boolean {
 
 function formatCalendarPeriod(calendar: CalendarMetadata): string {
   if (!calendar.start_date && !calendar.end_date) return 'N/A'
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return '?'
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
-    } catch {
-      return dateString.substring(0, 10)
+  
+  try {
+    const startDate = calendar.start_date ? new Date(calendar.start_date) : null
+    const endDate = calendar.end_date ? new Date(calendar.end_date) : null
+
+    if (!startDate || !endDate) return 'Dates incomplètes'
+
+    // Format spécifique pour les calendriers hebdo synchronisés
+    if (calendar.name.startsWith('ForexFactory_Sync')) {
+      const startDay = startDate.getDate()
+      const startMonth = startDate.toLocaleDateString('fr-FR', { month: 'long' })
+      
+      const endDay = endDate.getDate()
+      const endMonth = endDate.toLocaleDateString('fr-FR', { month: 'long' })
+      const endYear = endDate.getFullYear()
+
+      return `News du ${startDay} ${startMonth} au ${endDay} ${endMonth} ${endYear}`
     }
+
+    // Format standard pour les autres calendriers (dd/mm/yyyy)
+    const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+    return `du ${formatDate(startDate)} au ${formatDate(endDate)}`
+  } catch {
+    return 'Format invalide'
   }
-  const start = formatDate(calendar.start_date)
-  const end = formatDate(calendar.end_date)
-  return `du ${start} au ${end}`
 }
 </script>
 

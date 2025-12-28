@@ -3,7 +3,7 @@ import { watch, onMounted, Ref } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 import { useMetricsAnalysisData } from './useMetricsAnalysisData'
-import { useStraddleAnalysis } from './useStraddleAnalysis'
+import { useStraddleAnalysis, type ConfidenceMetric, type OptimalOffset } from './useStraddleAnalysis'
 import type { RecurringEvent } from './useMetricsAnalysisData.helpers'
 
 interface MovementQuality {
@@ -25,13 +25,6 @@ interface EntryWindowAnalysis {
   optimal_offset: number
   optimal_win_rate: number
   [key: string]: any
-}
-
-interface OptimalOffset {
-  offset_points: number // Points MetaTrader 5
-  percentile_95_wicks: number
-  with_margin: number
-  sl_adjusted_points: number // Points MetaTrader 5
 }
 
 interface WinRateMetric {
@@ -66,7 +59,9 @@ export interface ArchivedAnalysisData {
   offsetOptimal: OptimalOffset
   winRate: WinRateMetric
   whipsawAnalysis: WhipsawMetric
+  confidence?: ConfidenceMetric
   recurringEvents?: RecurringEvent[]
+  spreadCost?: number
 }
 
 interface ModalProps {
@@ -79,7 +74,7 @@ interface ModalProps {
 
 export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
   const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, updateAnalysis, updateAnalysisForQuarter } = useMetricsAnalysisData()
-  const { offsetOptimal, winRate, whipsawAnalysis, analyzeStraddleMetrics } = useStraddleAnalysis()
+  const { offsetOptimal, winRate, whipsawAnalysis, confidence, spreadCost, analyzeStraddleMetrics } = useStraddleAnalysis()
 
   const loadAnalysis = async () => {
     if (!props.analysisResult) return
@@ -94,7 +89,9 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
         if (props.archivedData.offsetOptimal) offsetOptimal.value = props.archivedData.offsetOptimal
         if (props.archivedData.winRate) winRate.value = props.archivedData.winRate
         if (props.archivedData.whipsawAnalysis) whipsawAnalysis.value = props.archivedData.whipsawAnalysis
+        if (props.archivedData.confidence) confidence.value = props.archivedData.confidence
         if (props.archivedData.recurringEvents) recurringEvents.value = props.archivedData.recurringEvents
+        if (props.archivedData.spreadCost) spreadCost.value = props.archivedData.spreadCost
         if (props.archivedData.analysisResult) {
           analysisData.value = {
             symbol: props.analysisResult.symbol,
@@ -136,6 +133,6 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
   })
   onMounted(loadAnalysis)
 
-  return { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, winRate, whipsawAnalysis }
+  return { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, winRate, whipsawAnalysis, confidence, spreadCost }
 }
 

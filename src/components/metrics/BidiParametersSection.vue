@@ -15,11 +15,13 @@
           :meilleur-moment="meilleurMoment"
           :offset="offset"
           :stop-loss="stopLoss"
+          :hard-tp="hardTp"
           :trailing-stop="trailingStop"
           :timeout="timeout"
           :pair="symbol || 'EURUSD'"
           :point-value="pointValue"
           :placement-time="placementTime"
+          :spread="spread"
         />
       </div>
 
@@ -40,6 +42,7 @@
           :meilleur-moment="meilleurMoment"
           :offset="offset"
           :stop-loss-recovery="stopLossRecovery"
+          :hard-tp="hardTpSimultaneous"
           :trailing-stop="trailingStop"
           :timeout="timeout"
           :pair="symbol || 'EURUSD'"
@@ -62,7 +65,7 @@ import { obtenirPointsParPip } from '../../utils/pipConverter'
 
 interface EntryWindowAnalysis { optimal_offset: number; optimal_entry_minutes: number }
 interface WhipsawAnalysis { whipsaw_frequency_percentage: number; trailing_stop_adjusted: number; optimal_entry_minutes: number }
-interface OffsetOptimal { sl_adjusted_points: number; optimal_offset: number }
+interface OffsetOptimal { sl_adjusted_points: number; optimal_offset: number; hard_tp_points?: number }
 // Use any for VolatilityDuration to match Record<string, unknown> expected by child component
 type VolatilityDuration = any 
 
@@ -77,6 +80,7 @@ const props = defineProps<{
   offsetOptimal?: OffsetOptimal | null
   symbol?: string
   pointValue?: number
+  spread?: number
   recurringEvents?: Array<{
     time: string
     name: string
@@ -116,6 +120,16 @@ const stopLoss = computed(() => {
   return (props.offsetOptimal?.sl_adjusted_points ?? 0) / pointsPerPip.value
 })
 
+const hardTp = computed(() => {
+  if (props.analysis?.slice?.stats?.straddle_parameters?.hard_tp_pips) {
+    return props.analysis.slice.stats.straddle_parameters.hard_tp_pips
+  }
+  if (props.offsetOptimal?.hard_tp_points !== undefined) {
+    return props.offsetOptimal.hard_tp_points / pointsPerPip.value
+  }
+  return stopLoss.value * 2.0
+})
+
 const trailingStop = computed(() => {
   if (props.analysis?.slice?.stats?.straddle_parameters?.trailing_stop_pips) {
     return props.analysis.slice.stats.straddle_parameters.trailing_stop_pips
@@ -131,10 +145,33 @@ const timeout = computed(() => {
 })
 
 const stopLossRecovery = computed(() => {
+  let val = 0
   if (props.analysis?.slice?.stats?.straddle_parameters?.sl_recovery_pips) {
-    return props.analysis.slice.stats.straddle_parameters.sl_recovery_pips
+    val = props.analysis.slice.stats.straddle_parameters.sl_recovery_pips
+  } else {
+    val = stopLoss.value * 1.2
   }
-  return stopLoss.value * 1.5
+
+  // Cap at 1.5x Max Spike if available to keep it realistic
+  const maxSpike = props.analysis?.slice?.stats?.max_true_range
+  if (maxSpike && maxSpike > 0) {
+    const cap = maxSpike * 1.5
+    if (val > cap) {
+      val = cap
+    }
+  }
+
+  return val
+})
+
+const hardTpSimultaneous = computed(() => {
+  // Ensure R:R is at least 1.5 for Simultaneous
+  const minRiskReward = 1.5
+  const minTp = stopLossRecovery.value * minRiskReward
+  
+  // If the directional Hard TP is already high enough, use it. 
+  // Otherwise use the calculated minTp.
+  return Math.max(hardTp.value, minTp)
 })
 
 const volatilityProfile = computed(() => props.analysis?.slice?.stats?.volatility_profile ?? [])

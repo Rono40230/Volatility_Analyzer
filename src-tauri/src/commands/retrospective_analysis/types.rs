@@ -68,6 +68,8 @@ pub struct EventImpactResult {
     pub noise_ratio_after: f64,        // Noise Ratio moyen après événement
     pub volatility_increase_percent: f64, // % d'augmentation ATR (après vs avant)
     pub event_count: usize,            // Nombre d'occurrences analysées
+    pub avg_deviation: f64,            // Écart moyen |Actual - Forecast|
+    pub surprise_event_count: usize,   // Nombre d'événements avec surprise (dev > 0)
     pub event_type: String,
     pub pair: String,
     pub event_datetime: String,  // ISO 8601: heure moyenne de l'événement

@@ -4,7 +4,7 @@
       <div class="modal-header"><div class="header-title"></div><button class="close-btn" @click="close">✕</button></div>
       <div class="modal-section">
         <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
-          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis">
+          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis" :confidence="confidence">
             <BidiParametersSection 
               :slice-analyses="sliceAnalyses" 
               :entry-window-analysis="entryWindowAnalysis" 
@@ -14,6 +14,8 @@
               :trading-plan="tradingPlan"
               :whipsaw-analysis="whipsawAnalysis" 
               :offset-optimal="offsetOptimal" 
+              :confidence="confidence"
+              :spread="spreadCost"
               :symbol="analysisData?.symbol || 'EURUSD'"
               :point-value="props.analysisResult?.point_value"
               :recurring-events="recurringEvents"
@@ -61,7 +63,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ close: [] }>()
 
 const isOpenRef = ref(props.isOpen)
-const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, whipsawAnalysis } = useMetricsModalLoad(props, isOpenRef)
+const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, whipsawAnalysis, confidence, spreadCost } = useMetricsModalLoad(props, isOpenRef)
 
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
@@ -90,6 +92,7 @@ function openArchiveModal() {
     entryWindowAnalysis: entryWindowAnalysis.value, 
     offsetOptimal: offsetOptimal.value, 
     whipsawAnalysis: whipsawAnalysis.value,
+    confidence: confidence.value,
     recurringEvents: recurringEvents.value
   })
   showArchiveModal.value = true
