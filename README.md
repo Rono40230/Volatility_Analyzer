@@ -32,7 +32,29 @@ L'application permet de répondre précisément aux questions suivantes avant ch
 
 ---
 
-## 🛠️ Workflow par Onglet
+## � Gestion Intelligente des Actifs & Coûts
+
+L'application ne traite pas le Bitcoin comme l'Euro-Dollar. Elle intègre une intelligence financière pour adapter les calculs à chaque classe d'actif :
+
+### 1. Détection Automatique des Classes d'Actifs
+L'application reconnaît automatiquement le type d'actif importé et adapte l'unité de mesure (Pips vs Points) :
+*   **Forex Majeur** (ex: EURUSD) : Calcul en Pips (0.0001).
+*   **Forex JPY & Exotiques** (ex: USDJPY, USDHUF) : Calcul adapté (0.01).
+*   **Or & Métaux** (ex: XAUUSD) : Calcul standardisé (0.1$ = 1 pip).
+*   **Indices** (ex: DAX, US30, NAS100) : Calcul en Points.
+*   **Cryptos** (ex: BTCUSD, ETHUSD, DOGE...) : Calcul en Points (1$ = 1 point).
+*   **Matières Premières** (ex: WTI, BRENT, NGAS) : Calcul spécifique (0.01 ou 0.001).
+
+### 2. Coûts de Trading Réalistes (Spread + Slippage)
+Pour que les paramètres (Offset, SL) soient utilisables dans la vraie vie, l'application inclut automatiquement les coûts de trading moyens dans ses calculs :
+*   **Crypto** : Spread large + Slippage élevé inclus.
+*   **Indices** : Spread variable selon l'indice.
+*   **Forex** : Spread serré.
+*   *Exemple :* Un Offset calculé pour le BTC inclura automatiquement une marge de sécurité (~60 points) bien supérieure à celle de l'EURUSD (~3.5 pips).
+
+---
+
+## �🛠️ Workflow par Onglet
 
 L'application est organisée en 6 onglets principaux suivant le flux de travail logique d'un trader.
 
@@ -54,6 +76,10 @@ L'application est organisée en 6 onglets principaux suivant le flux de travail 
     *   **Historique Général :** Importez un gros fichier CSV (ex: 2018-2024) pour nourrir les statistiques.
     *   **Planning Hebdo :** Cochez la case "Planning Hebdo" pour importer le fichier de la semaine en cours. Cela remplace automatiquement l'ancien planning sans toucher à votre historique général.
 *   **Import Paires :** Importez vos données OHLC (M1) pour permettre les calculs de volatilité.
+*   **Outils de Nettoyage :**
+    *   **Événements Orphelins :** Détecte et supprime les événements liés à des devises que vous ne tradez pas.
+    *   **Événements Rares :** Nettoie les événements qui n'apparaissent qu'une seule fois dans l'histoire pour ne pas polluer les stats.
+    *   **Nettoyage CSV :** Outil dédié pour reformater les CSV européens (point-virgule) en format standard.
 
 ### 3. 🔥 Heatmap de Corrélation
 *Pour identifier les opportunités en un coup d'œil.*
@@ -69,6 +95,10 @@ L'application est organisée en 6 onglets principaux suivant le flux de travail 
 *   **Résultat :**
     *   **Tableau Horaire :** Volatilité moyenne, bruit, mouvements pour chaque heure.
     *   **Analyse Bidi :** Cliquez sur une heure pour voir l'analyse bidirectionnelle détaillée (probabilités de mouvement haussier vs baissier).
+    *   **Métriques Avancées :**
+        *   **Peak Delay :** Temps moyen avant d'atteindre le point haut/bas de l'impulsion.
+        *   **Decay Profile :** Vitesse à laquelle la volatilité retombe après l'annonce.
+        *   **Whipsaw Detection :** Probabilité de faux départ (mèche inverse avant le vrai mouvement).
 
 ### 5. 🧪 Backtest & Archives
 *Pour valider et sauvegarder.*
