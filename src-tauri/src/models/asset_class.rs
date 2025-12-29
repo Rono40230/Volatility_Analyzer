@@ -11,6 +11,7 @@ pub enum AssetType {
     Silver,     // 3 digits (XAGUSD)
     Crypto,     // Variable (BTCUSD)
     Index,      // Variable (DAX, US30)
+    Commodity,  // Variable (OIL, NGAS)
     Unknown,
 }
 
@@ -47,12 +48,28 @@ impl AssetProperties {
                 unit: "pips".to_string(),
                 display_digits: 2,
             }
-        } else if s.contains("BTC") || s.contains("ETH") || s.contains("CRYPTO") || s.contains("SOL") || s.contains("BNB") || s.contains("XRP") || s.contains("ADA") || s.contains("DOT") {
+        } else if s.contains("BTC") || s.contains("ETH") || s.contains("CRYPTO") || s.contains("SOL") || s.contains("BNB") || s.contains("XRP") || s.contains("ADA") || s.contains("DOT")
+            || s.contains("LTC") || s.contains("BCH") || s.contains("DOGE") || s.contains("SHIB") || s.contains("LINK") || s.contains("MATIC") || s.contains("AVAX") || s.contains("UNI") || s.contains("XLM") || s.contains("TRX") || s.contains("ATOM") || s.contains("NEAR") || s.contains("PEPE")
+        {
             AssetProperties {
                 asset_type: AssetType::Crypto,
                 pip_value: 1.0, // Crypto: 1$ = 1 point
                 unit: "pts".to_string(),
                 display_digits: 0,
+            }
+        } else if s.contains("OIL") || s.contains("WTI") || s.contains("BRENT") || s.contains("CRUDE") || s.contains("XPT") || s.contains("XPD") {
+            AssetProperties {
+                asset_type: AssetType::Commodity,
+                pip_value: 0.01, // Pétrole/Platine: souvent 0.01
+                unit: "pts".to_string(),
+                display_digits: 2,
+            }
+        } else if s.contains("NGAS") {
+            AssetProperties {
+                asset_type: AssetType::Commodity,
+                pip_value: 0.001, // Gaz Naturel: souvent 0.001
+                unit: "pts".to_string(),
+                display_digits: 3,
             }
         } else if s.contains("IDX") || s.contains("US30") || s.contains("DAX") || s.contains("NAS")
             || s.contains("GER") || s.contains("SPX") || s.contains("US100") || s.contains("US500")
@@ -68,6 +85,14 @@ impl AssetProperties {
                 pip_value: 1.0, // Indices: on parle en points
                 unit: "pts".to_string(),
                 display_digits: 1,
+            }
+        } else if s.contains("HUF") || s.contains("CZK") {
+            // Forex Exotique (souvent 2 décimales comme JPY)
+            AssetProperties {
+                asset_type: AssetType::ForexJpy, // On utilise ForexJpy pour la logique de pip (0.01)
+                pip_value: 0.01,
+                unit: "pips".to_string(),
+                display_digits: 2,
             }
         } else {
             // Par défaut: Forex Major (5 digits)
@@ -96,48 +121,6 @@ impl AssetProperties {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
+#[path = "asset_class_tests.rs"]
+mod tests;
 
-    #[test]
-    fn test_detection_eurusd() {
-        let props = AssetProperties::from_symbol("EURUSD");
-        assert_eq!(props.asset_type, AssetType::ForexMajor);
-        assert_eq!(props.pip_value, 0.0001);
-        assert_eq!(props.normalize(0.0005), 5.0); // 5 pips
-    }
-
-    #[test]
-    fn test_detection_usdjpy() {
-        let props = AssetProperties::from_symbol("USDJPY");
-        assert_eq!(props.asset_type, AssetType::ForexJpy);
-        assert_eq!(props.pip_value, 0.01);
-        assert_eq!(props.normalize(0.05), 5.0); // 5 pips
-    }
-
-    #[test]
-    fn test_detection_gold() {
-        let props = AssetProperties::from_symbol("XAUUSD");
-        assert_eq!(props.asset_type, AssetType::Gold);
-        assert_eq!(props.pip_value, 0.1);
-        assert_eq!(props.normalize(1.5), 15.0); // 15 pips (1.5$)
-    }
-
-    #[test]
-    fn test_detection_btc() {
-        let props = AssetProperties::from_symbol("BTCUSD");
-        assert_eq!(props.asset_type, AssetType::Crypto);
-        assert_eq!(props.pip_value, 1.0);
-        assert_eq!(props.normalize(500.0), 500.0); // 500$
-    }
-
-    #[test]
-    fn test_detection_indices() {
-        let symbols = vec!["USATEC", "USAIDX", "DEUIDX", "NAS100", "US30", "GER40", "SPX500"];
-        for symbol in symbols {
-            let props = AssetProperties::from_symbol(symbol);
-            assert_eq!(props.asset_type, AssetType::Index, "Failed for {}", symbol);
-            assert_eq!(props.pip_value, 1.0, "Failed for {}", symbol);
-        }
-    }
-}

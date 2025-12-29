@@ -242,7 +242,7 @@ mod tests {
         Candle {
             id: Some(0),
             symbol: "EURUSD".to_string(),
-            datetime: Utc.with_ymd_and_hms(2023, 1, 1, 0, 0, 0).expect("Invalid date"),
+            datetime: Utc.with_ymd_and_hms(2023, 1, 1, 0, 0, 0).single().expect("Invalid date"),
             open: price,
             high: price + 10.0,
             low: price - 10.0,
