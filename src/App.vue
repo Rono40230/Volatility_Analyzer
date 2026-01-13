@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useVolatilityStore } from './stores/volatility'
 import { useAnalysisStore } from './stores/analysisStore'
 import AnalysisPanel from './components/AnalysisPanel.vue'
@@ -14,13 +15,19 @@ import EventCorrelationView from './components/EventCorrelationView.vue'
 import ArchivesView from './views/ArchivesView.vue'
 import BacktestView from './views/BacktestView.vue'
 import PlanningView from './views/PlanningView.vue'
+import HomeView from './views/HomeView.vue'
 
+const appWindow = getCurrentWindow()
 const volatilityStore = useVolatilityStore()
 const analysisStore = useAnalysisStore()
 const { analysisResult, loading, error } = storeToRefs(volatilityStore)
 
-const savedTab = localStorage.getItem('activeTab') as 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest' | 'planning' | null
-const activeTab = ref<'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest' | 'planning'>(savedTab || 'heatmap')
+const savedTab = localStorage.getItem('activeTab') as string | null
+const initialTab = (savedTab && ['heatmap', 'volatility', 'retrospective', 'backtest', 'planning', 'archives', 'calendar', 'home'].includes(savedTab)) 
+  ? savedTab 
+  : 'home'
+
+const activeTab = ref<string>(initialTab)
 const selectedSymbolLocal = ref('')
 
 watch(activeTab, (newTab) => {
@@ -43,6 +50,8 @@ const bidiModalHour = ref(0)
 const bidiModalQuarter = ref(0)
 const showFormulasModal = ref(false)
 const showExportModal = ref(false)
+const showImportHub = ref(false)
+const showEventCorrelation = ref(false)
 
 async function handleSymbolSelected(symbol: string) {
   await volatilityStore.analyzeSymbol(symbol)
@@ -60,175 +69,128 @@ function handleOpenBidiParams(data: { hour: number; quarter: number }) {
   showBidiModal.value = true
 }
 
-function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' | 'calendar' | 'backtest') {
+function switchTab(tab: string) {
   activeTab.value = tab
 }
+
+function handleOpenModal(modal: 'formulas' | 'export') {
+  if (modal === 'formulas') showFormulasModal.value = true
+  if (modal === 'export') showExportModal.value = true
+}
+
+// Window Actions
+function minimize() { appWindow.minimize() }
+function toggleMaximize() { appWindow.toggleMaximize() }
+function closeApp() { appWindow.close() }
 </script>
 
 <template>
-  <div class="app">
-    <nav class="app-tabs">
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'heatmap' }"
-        @click="switchTab('heatmap')"
-      >
-        🔥 Heatmap de Corrélation
+  <div class="app-shell">
+    
+    <!-- === SYSTEME WINDOW (Drag + Controls) === -->
+    <!-- 1. DRAG REGION : Invisible layer on top (z-40) -->
+    <div data-tauri-drag-region @dblclick="toggleMaximize" class="drag-region"></div>
+    
+    <!-- 2. WINDOW CONTROLS : Floating buttons on top right (z-50) -->
+    <div class="window-controls">
+      <button @click="minimize" class="win-btn" title="Réduire">
+        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
       </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'volatility' }"
-        @click="switchTab('volatility')"
-      >
-        📊 Volatilité brute Paire/Période
+      <button @click="toggleMaximize" class="win-btn" title="Agrandir">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 L1,9 z" fill="none" stroke="currentColor"/></svg>
       </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'retrospective' }"
-        @click="switchTab('retrospective')"
-      >
-        📊 Correlation de la volatilité Paire/Evénement
+      <button @click="closeApp" class="win-btn close-btn" title="Fermer">
+        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 M9,1 L1,9" stroke="currentColor"/></svg>
       </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'backtest' }"
-        @click="switchTab('backtest')"
-      >
-        🧪 Backtest
-      </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'planning' }"
-        @click="switchTab('planning')"
-      >
-        📅 Planning
-      </button>
-      <button 
-        class="tab-button" 
-        :class="{ active: activeTab === 'archives' }"
-        @click="switchTab('archives')"
-      >
-        🗄️ Archives
-      </button>
-      <div class="tab-spacer" />
-      <button 
-        class="tab-button" 
-        @click="switchTab('calendar')"
-      >
-        📥 Importer des données
-      </button>
-      <button 
-        class="tab-button formulas-btn"
-        @click="showFormulasModal = true"
-        title="Voir toutes les formules et calculs"
-      >
-        🧮 Formules
-      </button>
-      <button 
-        class="tab-button export-btn"
-        @click="showExportModal = true"
-        title="Exporter les analyses en PDF"
-      >
-        🖨️ Exports
-      </button>
-    </nav>
+    </div>
 
-    <main class="app-main">
-      <template v-if="activeTab === 'volatility'">
-        <div class="main-container">
-          <div class="content-area">
-            <div
-              v-if="loading"
-              class="loading"
-            >
-              <div class="hourglass">⏳</div>
-              <p>Analyse en cours...</p>
-            </div>
-
-            <div
-              v-if="error"
-              class="error"
-            >
-              <h3>❌ Erreur</h3>
-              <p>{{ error }}</p>
-            </div>
-
-            <div
-              v-if="!loading && !analysisResult && !error"
-              class="welcome"
-            >
-              <div class="welcome-icon">
-                💱
-              </div>
-              <h3>Sélectionnez un symbole pour commencer</h3>
-              <div class="welcome-select-container">
-                <select 
-                  id="volatility-symbol-select"
-                  v-model="selectedSymbolLocal" 
-                  :disabled="loading"
-                  class="welcome-symbol-select"
-                  @change="handleSymbolChange"
-                >
-                  <option value="">
-                    Choisir un symbole
-                  </option>
-                  <option 
-                    v-for="symbol in volatilityStore.symbols" 
-                    :key="symbol.symbol" 
-                    :value="symbol.symbol"
-                  >
-                    {{ symbol.symbol }}
-                  </option>
-                </select>
-              </div>
-            </div>
-
-            <template v-if="!loading && analysisResult">
-              <AnalysisPanel 
-                :result="analysisResult" 
-                :symbols="volatilityStore.symbols"
-                @symbol-selected="handleSymbolSelected"
-              />
-              <HourlyTable 
-                :stats="analysisResult.hourly_stats" 
-                :best-quarter="analysisResult.best_quarter"
-                :stats15min="analysisResult.stats_15min"
-                :global-metrics="analysisResult.global_metrics"
-                :point-value="analysisResult.point_value"
-                :unit="analysisResult.unit"
-                :symbol="analysisResult.symbol"
-                @open-bidi-params="handleOpenBidiParams"
-              />
-            </template>
-          </div>
+    <!-- === MAIN NAVIGATION HEADER === -->
+    <!-- Positionné en flux normal, mais doit être capable d'être cliqué si pas couvert totalement par Drag Region -->
+    <!-- Drag Region fait 32px height fixed top. Ce header fait 48px. -->
+    <header class="app-header">
+      <div class="header-left">
+        <button v-if="activeTab !== 'home'" @click="activeTab = 'home'" class="nav-home-btn" title="Retour Accueil">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span class="home-text">Accueil</span>
+        </button>
+        <div v-else class="brand">
+          <span class="brand-icon">⚡</span> Volatility Analyzer
         </div>
+      </div>
+      
+      <div class="header-center">
+        <!-- Optional: Toolbar items can go here -->
+      </div>
+    </header>
+
+    <!-- === APP CONTENT AREA === -->
+    <main class="app-viewport">
+      
+      <!-- HOME VIEW -->
+      <template v-if="activeTab === 'home'">
+        <HomeView @navigate="switchTab" @open-modal="handleOpenModal"/>
       </template>
 
-      <template v-if="activeTab === 'calendar'">
-        <ImportHub />
-      </template>
+      <!-- WORKSPACE VIEWS -->
+      <div v-else class="workspace-container">
+        <!-- Volatility Tab -->
+        <template v-if="activeTab === 'volatility'">
+           <div class="volatility-layout">
+             <!-- Loading State -->
+             <div v-if="loading" class="state-msg">
+                <div class="spinner"></div>
+                <p>Analyse en cours...</p>
+             </div>
 
-      <template v-if="activeTab === 'heatmap'">
-        <EventCorrelationView :view-mode="'heatmap'" />
-      </template>
+             <!-- Error State -->
+             <div v-if="error" class="error-msg">
+                <h3>❌ Erreur</h3>
+                <p>{{ error }}</p>
+             </div>
 
-      <template v-if="activeTab === 'retrospective'">
-        <EventCorrelationView :view-mode="'retrospective'" />
-      </template>
+             <!-- Empty State -->
+             <div v-if="!loading && !analysisResult && !error" class="empty-state">
+                <div class="welcome-icon">💱</div>
+                <h3>Sélectionnez un symbole pour commencer</h3>
+                <select v-model="selectedSymbolLocal" :disabled="loading" class="symbol-select" @change="handleSymbolChange">
+                  <option value="">Choisir un symbole</option>
+                  <option v-for="symbol in volatilityStore.symbols" :key="symbol.symbol" :value="symbol.symbol">{{ symbol.symbol }}</option>
+                </select>
+             </div>
 
-      <template v-if="activeTab === 'archives'">
-        <ArchivesView />
-      </template>
+             <!-- Results -->
+             <template v-if="!loading && analysisResult">
+                <AnalysisPanel 
+                  :result="analysisResult" 
+                  :symbols="volatilityStore.symbols"
+                  @symbol-selected="handleSymbolSelected"
+                />
+                <HourlyTable 
+                  :stats="analysisResult.hourly_stats" 
+                  :best-quarter="analysisResult.best_quarter"
+                  :stats15min="analysisResult.stats_15min"
+                  :global-metrics="analysisResult.global_metrics"
+                  :point-value="analysisResult.point_value"
+                  :unit="analysisResult.unit"
+                  :symbol="analysisResult.symbol"
+                  @open-bidi-params="handleOpenBidiParams"
+                />
+             </template>
+           </div>
+        </template>
 
-      <template v-if="activeTab === 'backtest'">
-        <BacktestView />
-      </template>
+        <!-- Other Tabs -->
+        <template v-if="activeTab === 'calendar'"><ImportHub /></template>
+        <template v-if="activeTab === 'heatmap'"><EventCorrelationView :view-mode="'heatmap'" /></template>
+        <template v-if="activeTab === 'retrospective'"><EventCorrelationView :view-mode="'retrospective'" /></template>
+        <template v-if="activeTab === 'archives'"><ArchivesView /></template>
+        <template v-if="activeTab === 'backtest'"><BacktestView /></template>
+        <template v-if="activeTab === 'planning'"><PlanningView /></template>
+      </div>
 
-      <template v-if="activeTab === 'planning'">
-        <PlanningView />
-      </template>
     </main>
 
+    <!-- MODALS -->
     <MetricsAnalysisModal 
       v-if="showBidiModal"
       :is-open="showBidiModal"
@@ -238,249 +200,173 @@ function switchTab(tab: 'volatility' | 'heatmap' | 'retrospective' | 'archives' 
       :pre-selected-quarter="bidiModalQuarter"
       @close="showBidiModal = false"
     />
-
-    <FormulasModal 
-      :is-open="showFormulasModal"
-      @close="showFormulasModal = false"
-    />
-
-    <ExportModal 
-      :is-open="showExportModal"
-      :current-symbol="selectedSymbolLocal"
-      @close="showExportModal = false"
-    />
+    <FormulasModal :is-open="showFormulasModal" @close="showFormulasModal = false" />
+    <ExportModal :is-open="showExportModal" :current-symbol="selectedSymbolLocal" @close="showExportModal = false" />
+    
   </div>
 </template>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Global Resets */
+:root {
+  --app-bg: #0f1419;
+  --panel-bg: #161b22;
+  --border-color: #30363d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --accent: #58a6ff;
 }
-
+* { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0f1419;
-  color: #e6edf3;
+  background: var(--app-bg);
+  color: var(--text-primary);
+  overflow: hidden; /* Prevent body scroll */
 }
 </style>
 
 <style scoped>
-.app {
+.app-shell {
   height: 100vh;
-  background: linear-gradient(135deg, #0f1419 0%, #1c2128 100%);
+  width: 100vw;
   display: flex;
   flex-direction: column;
+  background: var(--app-bg);
   overflow: hidden;
+  position: relative;
 }
 
-.app-tabs {
+/* --- TITLE BAR SYSTEM (TagOtomatik Style) --- */
+
+/* 1. Drag Region */
+.drag-region {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  z-index: 40; /* Lower than buttons, higher than content usually */
+  /* background: rgba(255,0,0,0.1); Debug only */
+}
+
+/* 2. Window Controls */
+.window-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 32px;
   display: flex;
-  gap: 10px;
-  padding: 10px 20px;
-  background: #161b22;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-  border-bottom: 1px solid #30363d;
-  flex-shrink: 0;
+  align-items: center;
+  z-index: 50; /* Topmost */
+  padding-right: 4px;
 }
-
-.tab-button {
+.win-btn {
+  width: 46px;
+  height: 32px;
   background: transparent;
   border: none;
   color: #8b949e;
-  padding: 8px 16px;
-  font-size: 0.95em;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+}
+.win-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.close-btn:hover { background: #d32f2f; color: #fff; }
+
+/* 3. Header Navigation (In Flow) */
+.app-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  padding-top: 10px; /* Compensate for visually hidden top part if needed, though 32px drag covers top 32px */
+  border-bottom: 1px solid var(--border-color);
+  background: var(--panel-bg);
+  flex-shrink: 0;
+}
+/* NOTE: Top 32px of viewport is covered by Drag Region (z-40).
+   The header is top-aligned in flex column.
+   So header top 32px is unclickable.
+   BUT header buttons must be clickable.
+   SOLUTION: Give header buttons z-index 41+ or move header down.
+   We'll use z-index relative on the buttons.
+*/
+.header-left {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 45; /* Higher than Drag Region */
+}
+
+.nav-home-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
-}
-
-.tab-button:hover {
-  background: rgba(177, 186, 196, 0.12);
-  color: #c9d1d9;
-}
-
-.tab-button.active {
-  background: rgba(56, 139, 253, 0.15);
-  color: #58a6ff;
-}
-
-.tab-spacer {
-  flex: 1;
-}
-
-.formulas-btn {
-  color: #d29922;
-}
-
-.formulas-btn:hover {
-  background: rgba(210, 153, 34, 0.15);
-  color: #e3b341;
-}
-
-.export-btn {
-  color: #4a9eff;
-}
-
-.export-btn:hover {
-  background: rgba(74, 158, 255, 0.15);
-  color: #7abaff;
-}
-
-.app-main {
-  flex: 1;
-  padding: 10px;
-  width: 100%;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.main-container {
-  background: #161b22;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  border: 1px solid #30363d;
-  overflow: hidden;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.content-area {
-  padding: 30px;
-  min-height: 400px;
-  flex: 1;
-  overflow: hidden; /* Changed from overflow-y: auto to allow children to manage scroll */
-  display: flex;
-  flex-direction: column;
-}
-
-.loading {
-  text-align: center;
-  padding: 60px 20px;
-}
-
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 4px solid #30363d;
-  border-top: 4px solid #58a6ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 20px;
-}
-
-.hourglass {
-  font-size: 60px;
-  margin: 0 auto 20px;
-  animation: hourglassFlip 1s ease-in-out infinite;
-  display: inline-block;
-}
-
-@keyframes hourglassFlip {
-  0% {
-    transform: scaleX(1) rotateY(0deg);
-  }
-  50% {
-    transform: scaleX(-1) rotateY(180deg);
-  }
-  100% {
-    transform: scaleX(1) rotateY(360deg);
-  }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.error {
-  background: #2d1117;
-  border: 2px solid #da3633;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 20px 0;
-  color: #ff7b72;
-}
-
-.welcome {
-  text-align: center;
-  padding: 60px 20px;
-  background: #161b22;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  border: 1px solid #30363d;
-}
-
-.welcome-icon {
-  font-size: 4em;
-  margin-bottom: 20px;
-}
-
-.welcome h2 {
-  font-size: 2em;
-  color: #e6edf3;
-  margin-bottom: 10px;
-}
-
-.welcome h3 {
-  font-size: 1.8em;
-  color: #e6edf3;
-  margin-bottom: 15px;
-}
-
-.welcome p {
-  font-size: 1.2em;
-  color: #8b949e;
-  margin-bottom: 30px;
-}
-
-.info-text {
-  font-size: 1.1em;
-  color: #a0aec0;
-  max-width: 600px;
-  margin: 0 auto 30px auto;
-  line-height: 1.6;
-}
-
-.welcome-select-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 30px;
-}
-
-.welcome-symbol-select {
-  padding: 12px 24px;
-  font-size: 1.1em;
-  border-radius: 8px;
-  border: 2px solid #4a5568;
-  background: #ffffff;
-  color: #000000;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.3s;
-  min-width: 250px;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+.nav-home-btn:hover { background: rgba(255,255,255,0.1); border-color: #8b949e; }
+.brand { font-weight: 700; color: #e6edf3; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+
+/* --- VIEWPORT --- */
+.app-viewport {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.welcome-symbol-select option {
-  background: #ffffff;
-  color: #000000;
+.workspace-container {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 0 0; /* Full width */
 }
 
-.welcome-symbol-select:hover {
-  border-color: #667eea;
-  background: #f7fafc;
+.volatility-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow-y: auto;
+  gap: 16px;
 }
 
-.welcome-symbol-select:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+/* States */
+.state-msg { text-align: center; padding: 40px; color: var(--text-secondary); }
+.spinner { width: 30px; height: 30px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto 10px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.error-msg { background: rgba(211, 47, 47, 0.1); border: 1px solid rgba(211, 47, 47, 0.3); color: #ff7b72; padding: 16px; border-radius: 8px; }
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  max-width: 600px;
+  margin: 40px auto;
+}
+.welcome-icon { font-size: 4rem; margin-bottom: 20px; }
+.symbol-select {
+  margin-top: 20px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: #0d1117;
+  color: white;
+  min-width: 200px;
 }
 </style>
