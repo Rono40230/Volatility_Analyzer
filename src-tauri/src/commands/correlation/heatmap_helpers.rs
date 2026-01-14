@@ -1,4 +1,5 @@
-use rusqlite::{Connection, Result as SqliteResult};
+use chrono::NaiveDateTime;
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -27,86 +28,24 @@ pub struct HeatmapData {
     pub data: HashMap<String, HashMap<String, f64>>,
 }
 
-pub fn get_event_types(
-    conn: &Connection,
-    calendar_id: Option<i32>,
-) -> Result<Vec<EventTypeInfo>, String> {
-    let query = if let Some(cal_id) = calendar_id {
-        format!(
-            "SELECT description, COUNT(DISTINCT event_time) as count 
-             FROM calendar_events 
-             WHERE calendar_import_id = {} 
-             GROUP BY description 
-             HAVING count >= 1
-             ORDER BY count DESC, description",
-            cal_id
-        )
-    } else {
-        "SELECT description, COUNT(DISTINCT event_time) as count 
-         FROM calendar_events 
-         GROUP BY description 
-         HAVING count >= 1
-         ORDER BY count DESC, description"
-            .to_string()
-    };
-
-    let mut stmt = conn
-        .prepare(&query)
-        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
-
-    let event_types = stmt
-        .query_map([], |row| {
-            Ok(EventTypeInfo {
-                name: row.get(0)?,
-                count: row.get(1)?,
-                has_data: None,
-            })
-        })
-        .map_err(|e| format!("Failed to query event types: {}", e))?
-        .collect::<SqliteResult<Vec<EventTypeInfo>>>()
-        .map_err(|e| format!("Failed to collect event types: {}", e))?;
-
-    Ok(event_types)
-}
-
 pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
-    conn: &Connection,
+    _conn: &Connection,
     event_name: &str,
     pair: &str,
-    calendar_id: Option<i32>,
+    _calendar_id: Option<i32>,
     candle_index: &crate::services::candle_index::CandleIndex,
+    events_cache: Option<&HashMap<String, Vec<NaiveDateTime>>>,
 ) -> Result<VolatilityResult, String> {
-    use super::utils::parse_sqlite_datetime;
     use super::volatility_helpers::calculer_volatilites_optimise;
-
-    let query = if let Some(cal_id) = calendar_id {
-        format!(
-            "SELECT datetime(event_time) 
-             FROM calendar_events 
-             WHERE description = '{}' AND calendar_import_id = {} 
-             ORDER BY event_time",
-            event_name.replace("'", "''"),
-            cal_id
-        )
+    
+    // Si on a un cache, on l'utilise, sinon ... on devrait éviter ce cas
+    let empty_vec = Vec::new();
+    let events = if let Some(cache) = events_cache {
+        cache.get(event_name).unwrap_or(&empty_vec).clone()
     } else {
-        format!(
-            "SELECT datetime(event_time) 
-             FROM calendar_events 
-             WHERE description = '{}' 
-             ORDER BY event_time",
-            event_name.replace("'", "''")
-        )
+        // Fallback pour compatibilité (mais lent)
+        return Err("Cache events manquant (Optimisation requise)".to_string());
     };
-
-    let mut event_stmt = conn
-        .prepare(&query)
-        .map_err(|e| format!("Failed to prepare event statement: {}", e))?;
-
-    let events: Vec<String> = event_stmt
-        .query_map([], |row| row.get::<_, String>(0))
-        .map_err(|e| format!("Failed to query events: {}", e))?
-        .collect::<SqliteResult<Vec<String>>>()
-        .map_err(|e| format!("Failed to collect events: {}", e))?;
 
     if events.is_empty() {
         return Ok(VolatilityResult {
@@ -119,15 +58,13 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
     let mut valid_count = 0;
     let mut has_data_found = false;
 
-    for datetime_str in &events {
-        let event_datetime = parse_sqlite_datetime(datetime_str)?;
-
+    for event_datetime in events {
         // Vérifier si des candles existent pour cet événement
         // Si pas de candles, SKIPER complètement cet événement
         if !super::data_availability::has_candles_for_event(candle_index, pair, event_datetime) {
             continue;
         }
-
+        
         has_data_found = true;
 
         let metrics = calculer_volatilites_optimise(
@@ -165,3 +102,4 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
         has_data: has_data_found,
     })
 }
+

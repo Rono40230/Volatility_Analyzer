@@ -1,15 +1,26 @@
 pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, String, String, Option<f64>, Option<f64>, Option<f64>)> {
     // Helper to check if a string contains date separators
     let has_date_sep = |s: &str| s.contains('-') || s.contains('/') || s.contains('.');
+    
+    // Helper to check if a string looks like an impact
+    let is_likely_impact = |s: &str| {
+        let s = s.trim().to_lowercase();
+        matches!(s.as_str(), "high" | "medium" | "low" | "none" | "h" | "m" | "l" | "n")
+    };
 
     // 1. Format Forex Factory: Title(0), Country(1), Date(2), Time(3), Impact(4)
     // Ex: "Title", "USD", "12-22-2025", "1:00am", "Low"
     if record.len() >= 5 && has_date_sep(&record[2]) && (record[3].contains(':') || record[3].to_lowercase().contains("day")) {
-        let title = record[0].trim();
+        let mut title = record[0].trim().to_string();
         let currency = record[1].trim();
         let date_str = record[2].trim();
         let time_str = record[3].trim();
-        let impact = record[4].trim();
+        let mut impact = record[4].trim().to_string();
+
+        // Heuristic: Swap if title looks like impact but impact doesn't
+        if is_likely_impact(&title) && !is_likely_impact(&impact) {
+            std::mem::swap(&mut title, &mut impact);
+        }
 
         let forecast = record.get(5).and_then(|s| s.trim().parse::<f64>().ok());
         let previous = record.get(6).and_then(|s| s.trim().parse::<f64>().ok());
@@ -49,7 +60,7 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         };
 
         let dt = format!("{}-{:0>2}-{:0>2} {:0>2}:{:0>2}:00", year, month, day, hour, minute);
-        return Some((dt, currency.to_string(), impact.to_string(), title.to_string(), actual, forecast, previous));
+        return Some((dt, currency.to_string(), impact, title, actual, forecast, previous));
     }
 
     // 2. Format Legacy 1: Date(0) contains separator (YYYY-MM-DD or MM-DD-YYYY)
@@ -60,8 +71,13 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         let date = record[0].trim();
         let time = record[1].trim();
         let currency = record[2].trim();
-        let event = record[3].trim();
-        let impact = record[4].trim();
+        let mut event = record[3].trim().to_string();
+        let mut impact = record[4].trim().to_string();
+
+        // Heuristic: Swap if event looks like impact but impact doesn't
+        if is_likely_impact(&event) && !is_likely_impact(&impact) {
+            std::mem::swap(&mut event, &mut impact);
+        }
 
         let actual = record.get(5).and_then(|s| s.trim().parse::<f64>().ok());
         let forecast = record.get(6).and_then(|s| s.trim().parse::<f64>().ok());
@@ -93,8 +109,8 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         Some((
             dt,
             currency.to_string(),
-            impact.to_string(),
-            event.to_string(),
+            impact,
+            event,
             actual,
             forecast,
             previous
@@ -111,8 +127,13 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         let hour = record[3].trim();
         let minute = record[4].trim();
         let symbol = record[5].trim();
-        let impact = record[6].trim();
-        let description = record[7].trim();
+        let mut impact = record[6].trim().to_string();
+        let mut description = record[7].trim().to_string();
+
+        // Heuristic: Swap if description looks like impact but impact doesn't
+        if is_likely_impact(&description) && !is_likely_impact(&impact) {
+            std::mem::swap(&mut description, &mut impact);
+        }
 
         // Basic validation to ensure these are actually numbers
         if year.len() != 4 || !year.chars().all(char::is_numeric) {
@@ -130,8 +151,8 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         Some((
             dt,
             symbol.to_string(),
-            impact.to_string(),
-            description.to_string(),
+            impact,
+            description,
             actual,
             forecast,
             previous

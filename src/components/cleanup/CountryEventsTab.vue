@@ -69,6 +69,7 @@ const totalEvents = computed(() => props.countries.reduce((acc, c) => acc + c.co
   flex: 1;
   min-height: 0;
   gap: 20px;
+  height: 100%;
 }
 
 .controls-bar {
@@ -79,6 +80,7 @@ const totalEvents = computed(() => props.countries.reduce((acc, c) => acc + c.co
   padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid #334155;
+  flex-shrink: 0;
 }
 
 .control-group {
@@ -132,6 +134,26 @@ const totalEvents = computed(() => props.countries.reduce((acc, c) => acc + c.co
   border-radius: 8px;
   background: #0f172a;
   min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #4b5563 #1e293b;
+}
+
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 4px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }
 
 table {

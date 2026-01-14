@@ -5,6 +5,8 @@ import { invoke } from '@tauri-apps/api/core'
 interface HeatmapComponentInstance {
   getHeatmapArchiveData: () => {
     heatmapData: {
+      period_start?: string
+      period_end?: string
       pairs: string[]
       event_types: Array<{ name: string; count: number; has_data?: boolean }>
       data: Record<string, Record<string, number>>
@@ -36,7 +38,12 @@ export function useHeatmapArchive() {
       selectedEventType: archiveData.selectedEventType,
     })
 
-    if (selectedCalendarId) {
+    // Utiliser les dates retournées par la heatmap si disponibles (plus précis)
+    if (archiveData.heatmapData.period_start && archiveData.heatmapData.period_end && 
+        archiveData.heatmapData.period_start !== "N/A" && archiveData.heatmapData.period_end !== "N/A") {
+      archivePeriodStart.value = archiveData.heatmapData.period_start
+      archivePeriodEnd.value = archiveData.heatmapData.period_end
+    } else if (selectedCalendarId) {
       try {
         const period = await invoke<{
           start_date: string | null

@@ -3,6 +3,7 @@
 // Utilise BTreeMap pour requêtes range O(log n) au lieu de O(n) linéaire
 
 use crate::models::Candle;
+use crate::services::candle_loader::{load_pair_candles_in_range_strategy, load_pair_candles_strategy};
 use crate::services::{CsvLoader, DatabaseLoader};
 use chrono::{DateTime, NaiveDate, Timelike, Utc};
 use std::collections::{BTreeMap, HashMap};
@@ -82,31 +83,27 @@ impl CandleIndex {
             return Ok(false); // Déjà en cache
         }
 
-        let candles = if let Some(ref loader) = self.db_loader {
-            // Charger depuis la BD via DatabaseLoader
-            // Charger TOUTES les candles disponibles pour ce symbole
-            let start_time = DateTime::from_timestamp(0, 0)
-                .ok_or_else(|| "Failed to create start datetime".to_string())?;
-            let end_time =
-                DateTime::from_timestamp(2_000_000_000, 0) // ~2033
-                    .ok_or_else(|| "Failed to create end datetime".to_string())?;
-
-            loader
-                .load_candles_by_pair(symbol, "M1", start_time, end_time)
-                .map_err(|e| format!("Failed to load candles for {} from DB: {}", symbol, e))?
-        } else {
-            // Fallback sur CsvLoader si pas de DatabaseLoader
-            let loader = CsvLoader::new();
-            loader
-                .load_candles(symbol)
-                .map_err(|e| format!("Failed to load candles for {}: {}", symbol, e))?
-        };
+        let candles = load_pair_candles_strategy(self.db_loader.as_ref(), symbol)?;
 
         if !candles.is_empty() {
             self.add_candles(symbol, candles);
             Ok(true) // Nouvelle paire chargée
         } else {
             Err(format!("No candles found for symbol: {}", symbol))
+        }
+    }
+
+    /// Charge une paire spécifique pour une plage de dates donnée
+    /// Ne vérifie PAS si les données sont déjà chargées (force le chargement et le merge)
+    pub fn load_pair_candles_in_range(&mut self, symbol: &str, start: DateTime<Utc>, end: DateTime<Utc>) -> Result<bool, String> {
+        let candles = load_pair_candles_in_range_strategy(self.db_loader.as_ref(), symbol, start, end)?;
+
+        if !candles.is_empty() {
+            self.add_candles(symbol, candles);
+            Ok(true)
+        } else {
+            // Pas d'erreur si vide, juste bool false, car peut-être pas de données sur cette période
+            Ok(false)
         }
     }
 

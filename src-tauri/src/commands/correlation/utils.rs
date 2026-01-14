@@ -1,5 +1,61 @@
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{Datelike, DateTime, NaiveDateTime, Utc};
 use crate::models::AssetProperties;
+
+/// Helper pour afficher une date en français
+pub fn format_date_fr(date_str: &str) -> String {
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
+        let day = dt.day();
+        let month = match dt.month() {
+            1 => "janvier",
+            2 => "février",
+            3 => "mars",
+            4 => "avril",
+            5 => "mai",
+            6 => "juin",
+            7 => "juillet",
+            8 => "août",
+            9 => "septembre",
+            10 => "octobre",
+            11 => "novembre",
+            12 => "décembre",
+            _ => "?",
+        };
+        let year = dt.year();
+        return format!("{} {} {}", day, month, year);
+    }
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_str) {
+        let day = dt.day();
+        let month = match dt.month() {
+            1 => "janvier",
+            2 => "février",
+            3 => "mars",
+            4 => "avril",
+            5 => "mai",
+            6 => "juin",
+            7 => "juillet",
+            8 => "août",
+            9 => "septembre",
+            10 => "octobre",
+            11 => "novembre",
+            12 => "décembre",
+            _ => "?",
+        };
+        let year = dt.year();
+        return format!("{} {} {}", day, month, year);
+    }
+    date_str.to_string()
+}
+
+/// Helper pour parser les dates de la BD vers DateTime<Utc>
+pub fn parse_db_date(s: &str) -> Option<DateTime<Utc>> {
+    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S") {
+        return Some(DateTime::from_naive_utc_and_offset(dt, Utc));
+    }
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&Utc));
+    }
+    None
+}
 
 /// Parse une datetime depuis SQLite qui peut être soit un string formaté, soit un timestamp Unix
 pub fn parse_sqlite_datetime(s: &str) -> Result<NaiveDateTime, String> {

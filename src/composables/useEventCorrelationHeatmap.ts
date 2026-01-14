@@ -4,6 +4,8 @@ import { getEventTranslation } from '../stores/eventTranslations'
 import { useAnalysisStore } from '../stores/analysisStore'
 
 export interface HeatmapData {
+  period_start?: string
+  period_end?: string
   pairs: string[]
   event_types: Array<{ name: string; count: number; has_data?: boolean }>
   data: Record<string, Record<string, number>>

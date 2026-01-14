@@ -63,11 +63,19 @@ pub fn process_single_file(
     let mut stmt = tx
         .prepare(
             "INSERT INTO candle_data (symbol, timeframe, time, open, high, low, close, volume, imported_at, source_file)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ON CONFLICT(symbol, timeframe, time) DO UPDATE SET
+                open = excluded.open,
+                high = excluded.high,
+                low = excluded.low,
+                close = excluded.close,
+                volume = excluded.volume,
+                imported_at = excluded.imported_at,
+                source_file = excluded.source_file"
         )
         .map_err(|e| format!("Prepare error: {}", e))?;
 
-    info!("📋 Prepared INSERT statement for candle_data");
+    info!("📋 Prepared INSERT statement for candle_data (with UPSERT)");
 
     for (idx, candle) in candles.iter().enumerate() {
         let dt = chrono::DateTime::<Utc>::from_timestamp(candle.timestamp, 0)
@@ -95,19 +103,26 @@ pub fn process_single_file(
 
     drop(stmt);
 
-    info!("✅ {} candles insérés en BD", row_count);
+    info!("✅ {} candles traités (insérés ou mis à jour)", row_count);
+
+    // Recalculer le nombre réel de lignes pour cette paire/timeframe pour garantir l'exactitude
+    let actual_count: i64 = tx.query_row(
+        "SELECT COUNT(*) FROM candle_data WHERE symbol = ? AND timeframe = ?",
+        rusqlite::params![&metadata.pair, &metadata.timeframe],
+        |row| row.get(0),
+    ).map_err(|e| format!("COUNT error: {}", e))?;
 
     tx.execute(
         "INSERT INTO pair_metadata (symbol, timeframe, row_count, last_updated, last_imported_file)
          VALUES (?, ?, ?, ?, ?)
          ON CONFLICT(symbol, timeframe) DO UPDATE SET
-            row_count = row_count + excluded.row_count,
+            row_count = excluded.row_count,
             last_updated = excluded.last_updated,
             last_imported_file = excluded.last_imported_file",
         rusqlite::params![
             &metadata.pair,
             &metadata.timeframe,
-            row_count as i32,
+            actual_count,
             &imported_at,
             filename,
         ],

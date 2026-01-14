@@ -4,7 +4,8 @@
 
 mod data_availability;
 mod heatmap_command;
-mod heatmap_helpers;
+pub mod heatmap_helpers;
+pub mod heatmap_queries;
 mod pair_history;
 mod past_events;
 mod types;

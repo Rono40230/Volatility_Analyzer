@@ -1,55 +1,11 @@
-use chrono::Datelike;
+use chrono::{Duration, Utc};
 use rusqlite::Connection;
 use tauri::State;
 
-use super::heatmap_helpers::{
-    calculer_volatilite_moyenne_evenement_paire_optimise, get_event_types, HeatmapData,
-};
+use super::heatmap_helpers::{calculer_volatilite_moyenne_evenement_paire_optimise, HeatmapData};
+use super::heatmap_queries::{get_all_events_grouped, get_event_types};
+use super::utils::{format_date_fr, parse_db_date};
 use crate::commands::candle_index_commands::CandleIndexState;
-
-fn format_date_fr(date_str: &str) -> String {
-    if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S") {
-        let day = dt.day();
-        let month = match dt.month() {
-            1 => "janvier",
-            2 => "février",
-            3 => "mars",
-            4 => "avril",
-            5 => "mai",
-            6 => "juin",
-            7 => "juillet",
-            8 => "août",
-            9 => "septembre",
-            10 => "octobre",
-            11 => "novembre",
-            12 => "décembre",
-            _ => "?",
-        };
-        let year = dt.year();
-        return format!("{} {} {}", day, month, year);
-    }
-    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(date_str) {
-        let day = dt.day();
-        let month = match dt.month() {
-            1 => "janvier",
-            2 => "février",
-            3 => "mars",
-            4 => "avril",
-            5 => "mai",
-            6 => "juin",
-            7 => "juillet",
-            8 => "août",
-            9 => "septembre",
-            10 => "octobre",
-            11 => "novembre",
-            12 => "décembre",
-            _ => "?",
-        };
-        let year = dt.year();
-        return format!("{} {} {}", day, month, year);
-    }
-    date_str.to_string()
-}
 
 #[tauri::command]
 pub async fn get_correlation_heatmap(
@@ -92,7 +48,7 @@ pub async fn get_correlation_heatmap(
     let mut range_stmt = conn
         .prepare(&range_query)
         .map_err(|e| format!("Failed to prepare range query: {}", e))?;
-    let (start_str, end_str) = range_stmt
+    let (start_str_opt, end_str_opt) = range_stmt
         .query_row([], |row| {
             let start: Option<String> = row.get(0)?;
             let end: Option<String> = row.get(1)?;
@@ -100,11 +56,28 @@ pub async fn get_correlation_heatmap(
         })
         .unwrap_or((None, None));
 
-    let period_start = start_str
-        .map(|s| format_date_fr(&s))
+    // Déterminer la plage de chargement pour l'index
+    let mut load_start = Utc::now() - Duration::days(365 * 5);
+    let mut load_end = Utc::now();
+
+    if let Some(ref s) = start_str_opt {
+        if let Some(dt) = parse_db_date(s) {
+            load_start = dt;
+        }
+    }
+    if let Some(ref s) = end_str_opt {
+        if let Some(dt) = parse_db_date(s) {
+            load_end = dt;
+        }
+    }
+
+    let period_start = start_str_opt
+        .as_ref()
+        .map(|s| format_date_fr(s))
         .unwrap_or_else(|| "N/A".to_string());
-    let period_end = end_str
-        .map(|s| format_date_fr(&s))
+    let period_end = end_str_opt
+        .as_ref()
+        .map(|s| format_date_fr(s))
         .unwrap_or_else(|| "N/A".to_string());
 
     let mut event_types = get_event_types(&conn, calendar_id)?;
@@ -132,9 +105,17 @@ pub async fn get_correlation_heatmap(
         .as_mut()
         .ok_or("CandleIndex not initialized. Call init_candle_index first.")?;
 
+    // Optimisation : ajouter une marge de sécurité (ex: 5 jours avant/après)
+    let buffer = Duration::days(5);
+    let effective_start = load_start - buffer;
+    let effective_end = load_end + buffer;
+
     for pair in &pairs {
-        candle_index.load_pair_candles(pair)?;
+        candle_index.load_pair_candles_in_range(pair, effective_start, effective_end)?;
     }
+
+    // Précachage des événements pour éviter les requêtes DB répétitives
+    let events_cache = get_all_events_grouped(&conn, calendar_id)?;
 
     for pair in &pairs {
         for event_type in &mut event_types {
@@ -144,6 +125,7 @@ pub async fn get_correlation_heatmap(
                 &pair,
                 calendar_id,
                 &candle_index,
+                Some(&events_cache),
             )?;
 
             let avg_vol_rounded = if vol_result.has_data {
