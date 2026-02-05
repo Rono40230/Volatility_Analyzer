@@ -10,7 +10,6 @@ const props = defineProps<{
 
 const {
   config,
-  mode,
   loading,
   selectedSymbol,
   selectedEvent,
@@ -18,8 +17,7 @@ const {
   startDate,
   endDate,
   availableEvents,
-  lancerBacktest,
-  StrategyMode
+  lancerBacktest
 } = useBacktestConfig(props)
 
 import { computed } from 'vue'
@@ -77,31 +75,16 @@ const disabledReason = computed(() => {
         <div class="param col-span-1"></div>
       </template>
 
-      <div class="param col-span-1">
-        <label>Mode Stratégie</label>
-        <select v-model="mode" class="strategy-select">
-          <option :value="StrategyMode.Directionnel">Directionnel</option>
-          <option :value="StrategyMode.Simultane">Simultané</option>
-        </select>
-      </div>
+      <div class="param col-span-6"></div>
 
       <!-- Row 2: Parameters -->
       <div class="param col-span-1">
         <label>Offset (pips)</label>
-        <input 
-          type="number" 
-          v-model.number="config.offset_pips" 
-          step="0.1" 
-          :disabled="mode === StrategyMode.Simultane"
-        />
+        <input type="number" v-model.number="config.offset_pips" step="0.1" />
       </div>
       <div class="param col-span-1">
         <label>Stop Loss (pips)</label>
         <input type="number" v-model.number="config.stop_loss_pips" step="0.1" />
-      </div>
-      <div class="param col-span-1">
-        <label>Trailing Stop (pips)</label>
-        <input type="number" v-model.number="config.trailing_stop_pips" step="0.1" />
       </div>
       <div class="param col-span-1">
         <label>Timeout (min)</label>
@@ -116,13 +99,7 @@ const disabledReason = computed(() => {
         <input type="number" v-model.number="config.slippage_pips" step="0.1" title="Glissement estimé à l'exécution" />
       </div>
       
-      <!-- Paramètres spécifiques Simultané -->
-      <template v-if="mode === StrategyMode.Simultane">
-        <div class="param col-span-1">
-          <label>SL Recovery (pips)</label>
-          <input type="number" v-model.number="config.sl_recovery_pips" step="0.1" placeholder="Auto = SL" />
-        </div>
-      </template>
+      <!-- Paramètres spécifiques Simultané (Aucun pour l'instant) -->
     </div>
 
     <div class="actions">

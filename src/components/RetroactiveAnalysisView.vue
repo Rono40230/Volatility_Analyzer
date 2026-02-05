@@ -36,11 +36,7 @@
       :event-datetime="store.graphData?.event_datetime"
       :timezone-offset="store.graphData?.timezone_offset"
       :meilleur-moment="store.graphData?.meilleur_moment ?? 0"
-      :stop-loss="store.graphData?.stop_loss ?? 0"
-      :trailing-stop="store.graphData?.trailing_stop ?? 0"
       :timeout="store.graphData?.timeout ?? 60"
-      :offset="store.graphData?.offset ?? 0"
-      :stop-loss-recovery="store.graphData?.stop_loss_recovery ?? 0"
       :offset-simultaneous="store.graphData?.offset_simultaneous ?? 0"
       :stop-loss-simultaneous="store.graphData?.stop_loss_simultaneous ?? 0"
       :trailing-stop-simultaneous="store.graphData?.trailing_stop_simultaneous ?? 0"
@@ -194,11 +190,7 @@ function openArchiveModal() {
     eventLabel: getEventLabel(store.selectedEventType),
     eventDatetime: store.graphData.event_datetime,
     meilleurMoment: store.graphData.meilleur_moment,
-    stopLoss: store.graphData.stop_loss,
-    trailingStop: store.graphData.trailing_stop,
     timeout: store.graphData.timeout,
-    offset: store.graphData.offset,
-    stopLossRecovery: store.graphData.stop_loss_recovery,
     stopLossSimultaneous: store.graphData.stop_loss_simultaneous,
     trailingStopSimultaneous: store.graphData.trailing_stop_simultaneous,
     offsetSimultaneous: store.graphData.offset_simultaneous,

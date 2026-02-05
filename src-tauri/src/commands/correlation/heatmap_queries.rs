@@ -82,11 +82,9 @@ pub fn get_all_events_grouped(
 
     let mut map: HashMap<String, Vec<NaiveDateTime>> = HashMap::new();
 
-    for row in rows {
-        if let Ok((desc, time_str)) = row {
-            if let Ok(dt) = parse_sqlite_datetime(&time_str) {
-                map.entry(desc).or_default().push(dt);
-            }
+    for (desc, time_str) in rows.flatten() {
+        if let Ok(dt) = parse_sqlite_datetime(&time_str) {
+            map.entry(desc).or_default().push(dt);
         }
     }
 

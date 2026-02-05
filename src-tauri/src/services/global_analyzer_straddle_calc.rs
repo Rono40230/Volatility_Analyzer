@@ -10,7 +10,8 @@ pub fn compute_pair_straddle_rates(
     archives: &[crate::models::Archive],
 ) -> Vec<StraddleSuccessRate> {
     // (Volatilities, EventNames, BodyPcts)
-    let mut pair_stats: HashMap<String, (Vec<f64>, Vec<String>, Vec<f64>)> = HashMap::new();
+    type PairStats = HashMap<String, (Vec<f64>, Vec<String>, Vec<f64>)>;
+    let mut pair_stats: PairStats = HashMap::new();
 
     for archive in archives {
         if !archive.archive_type.contains("Corrélation paire/événement") {

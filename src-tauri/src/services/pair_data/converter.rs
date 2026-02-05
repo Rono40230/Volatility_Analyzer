@@ -38,25 +38,24 @@ impl PairDataConverter {
     /// Lit et normalise un fichier CSV  
     pub fn read_and_normalize(path: &str) -> Result<Vec<NormalizedCandle>, String> {
         use std::fs::File;
-        use std::io::{BufRead, BufReader};
+        use std::io::{BufRead, BufReader, Seek, SeekFrom};
 
-        let file = File::open(path).map_err(|e| format!("Erreur ouverture: {}", e))?;
-        let buf_reader = BufReader::new(file);
-        let lines: Vec<String> = buf_reader
-            .lines()
-            .collect::<Result<_, _>>()
-            .map_err(|e| e.to_string())?;
+        // 1. Ouvrir le fichier
+        let mut file = File::open(path).map_err(|e| format!("Erreur ouverture: {}", e))?;
+        let mut buf_reader = BufReader::new(file);
 
-        if lines.is_empty() {
+        // 2. Lire la première ligne pour détecter le délimiteur
+        let mut first_line = String::new();
+        buf_reader.read_line(&mut first_line).map_err(|e| e.to_string())?;
+
+        if first_line.trim().is_empty() {
             return Err("Fichier vide".to_string());
         }
 
-        // Détecter le délimiteur à partir du header
-        let header_line = &lines[0];
-        let delimiter = if header_line.contains(';') {
-            b';' // Format européen: point-virgule
+        let delimiter = if first_line.contains(';') {
+            b';' // Format européen
         } else {
-            b',' // Format standard: virgule
+            b',' // Format standard
         };
 
         tracing::info!(
@@ -64,15 +63,20 @@ impl PairDataConverter {
             if delimiter == b';' { ";" } else { "," }
         );
 
-        // Créer le contenu avec les lignes
-        let content = lines.join("\n");
+        // 3. Réinitialiser la position du fichier au début
+        file = buf_reader.into_inner(); // Récupérer le fichier sous-jacent
+        file.seek(SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+        
+        // Créer un nouveau BufReader pour le parsing
+        let buf_reader_csv = BufReader::new(file);
 
+        // 4. Configurer le CSV Reader pour streamer directement depuis le fichier (Memory Safe)
         let mut reader = csv::ReaderBuilder::new()
             .has_headers(true)
             .flexible(true)
             .trim(csv::Trim::All)
             .delimiter(delimiter)
-            .from_reader(content.as_bytes());
+            .from_reader(buf_reader_csv);
 
         // Lire les headers
         let headers: Vec<String> = reader
@@ -86,17 +90,22 @@ impl PairDataConverter {
         tracing::debug!("🔍 Format détecté: {:?}", format);
         tracing::debug!("📋 Headers: {:?}", headers);
 
-        let mut candles = Vec::new();
+        // Pré-allouer une capacité raisonnable pour éviter les réallocations fréquentes (ex: 1 million)
+        // Un fichier de 400MB contient environ 5-6M de lignes.
+        let mut candles = Vec::with_capacity(1_000_000);
+        
         let mut line_number = 1; // Commence à 1 (après header)
 
         for result in reader.records() {
             line_number += 1;
 
-            // Ignorer les lignes mal formatées au lieu de faire échouer tout le fichier
             let record = match result {
                 Ok(r) => r,
                 Err(e) => {
-                    tracing::warn!("⚠️ Ligne {} ignorée (erreur CSV): {}", line_number, e);
+                    // Loguer seulement 1 erreur sur 1000 pour éviter de spammer les logs
+                    if line_number % 1000 == 0 {
+                         tracing::warn!("⚠️ Ligne {} ignorée (erreur CSV): {}", line_number, e);
+                    }
                     continue;
                 }
             };

@@ -50,8 +50,8 @@ pub fn calculate_ema(values: &[f64], period: usize) -> f64 {
     let mut ema = sma_init;
 
     // Appliquer l'EMA sur les valeurs restantes
-    for i in period..values.len() {
-        ema = values[i] * multiplier + ema * (1.0 - multiplier);
+    for value in values.iter().skip(period) {
+        ema = *value * multiplier + ema * (1.0 - multiplier);
     }
 
     ema
@@ -116,6 +116,7 @@ pub fn simulate_trade_outcome(
     buy_stop: f64,
     sell_stop: f64,
     tp_distance: f64,
+    sl_distance: f64,
     max_duration: usize,
 ) -> Option<TradeOutcome> {
     let end_idx = candles.len().min(start_idx + max_duration + 1);
@@ -123,8 +124,7 @@ pub fn simulate_trade_outcome(
     let mut buy_trigger_idx = 0;
     let mut sell_trigger_idx = 0;
 
-    for j in (start_idx + 1)..end_idx {
-        let current = &candles[j];
+    for (j, current) in candles.iter().enumerate().take(end_idx).skip(start_idx + 1) {
 
         if triggered_side.is_none() {
             // Pas encore déclenché
@@ -146,6 +146,13 @@ pub fn simulate_trade_outcome(
                         sell_trigger_idx: j,
                     });
                 }
+                if current.low <= buy_stop - sl_distance {
+                    return Some(TradeOutcome {
+                        result: "LOSS".to_string(),
+                        buy_trigger_idx: j,
+                        sell_trigger_idx: 0,
+                    });
+                }
                 if current.high >= buy_stop + tp_distance {
                     return Some(TradeOutcome {
                         result: "WIN".to_string(),
@@ -161,6 +168,13 @@ pub fn simulate_trade_outcome(
                     return Some(TradeOutcome {
                         result: "WHIPSAW".to_string(),
                         buy_trigger_idx: j,
+                        sell_trigger_idx: j,
+                    });
+                }
+                if current.high >= sell_stop + sl_distance {
+                    return Some(TradeOutcome {
+                        result: "LOSS".to_string(),
+                        buy_trigger_idx: 0,
                         sell_trigger_idx: j,
                     });
                 }
@@ -183,6 +197,13 @@ pub fn simulate_trade_outcome(
                             sell_trigger_idx: j,
                         });
                     }
+                    if current.low <= buy_stop - sl_distance {
+                        return Some(TradeOutcome {
+                            result: "LOSS".to_string(),
+                            buy_trigger_idx,
+                            sell_trigger_idx: 0,
+                        });
+                    }
                     if current.high >= buy_stop + tp_distance {
                         return Some(TradeOutcome {
                             result: "WIN".to_string(),
@@ -196,6 +217,13 @@ pub fn simulate_trade_outcome(
                         return Some(TradeOutcome {
                             result: "WHIPSAW".to_string(),
                             buy_trigger_idx: j,
+                            sell_trigger_idx,
+                        });
+                    }
+                    if current.high >= sell_stop + sl_distance {
+                        return Some(TradeOutcome {
+                            result: "LOSS".to_string(),
+                            buy_trigger_idx: 0,
                             sell_trigger_idx,
                         });
                     }

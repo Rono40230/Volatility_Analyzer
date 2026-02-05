@@ -3,4 +3,4 @@ pub mod models;
 pub mod simulator;
 
 pub use engine::BacktestEngine;
-pub use models::{BacktestConfig, BacktestResult, StrategyMode};
+pub use models::{BacktestConfig, BacktestResult};

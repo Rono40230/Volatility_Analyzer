@@ -1,10 +1,12 @@
 use rusqlite::Connection;
 
+type CalendarEventRecord = (String, String, String, String, Option<f64>, Option<f64>, Option<f64>);
+
 pub fn save_calendar_import(
     conn: &Connection,
     name: &str,
     filename: &str,
-    events: &[(String, String, String, String, Option<f64>, Option<f64>, Option<f64>)],
+    events: &[CalendarEventRecord],
 ) -> Result<i32, String> {
     if events.is_empty() {
         return Err("Aucun événement à sauvegarder".to_string());

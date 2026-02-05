@@ -1,10 +1,8 @@
 // commands/volatility/straddle_analysis.rs - Commands pour calculs Straddle
 use crate::models::{Candle, AssetProperties};
 use crate::services::straddle_simulator_helpers::calculer_atr_moyen;
-use crate::services::volatility::{
-    calculer_frequence_whipsaw as service_calculer_frequence_whipsaw,
-    simuler_taux_reussite_straddle,
-};
+use crate::services::volatility::calculer_frequence_whipsaw as service_calculer_frequence_whipsaw;
+use crate::services::straddle_simulator::simulate_straddle;
 use crate::services::StraddleParameterService;
 use serde::{Deserialize, Serialize};
 use tauri::command;
@@ -88,11 +86,6 @@ pub fn calculer_offset_optimal(
     };
 
     // 3. Utiliser le service unifié pour calculer l'offset
-    let params =
-        StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, pip_value, symbol, None);
-
-    let offset_pips = params.offset_pips;
-
     // Calculer aussi les stats détaillées (Percentile 95 des mèches)
     let wicks: Vec<f64> = candles
         .iter()
@@ -116,6 +109,17 @@ pub fn calculer_offset_optimal(
     // Conversion correcte en pips via AssetProperties
     let p95_pips = asset_props.normalize(raw_percentile_95);
 
+    let params = StraddleParameterService::calculate_parameters(
+        atr_mean,
+        noise_ratio_mean,
+        pip_value,
+        symbol,
+        None,
+        Some(p95_pips),
+    );
+
+    let offset_pips = params.offset_pips;
+
     Ok(OptimalOffsetResponse {
         offset_pips,
         percentile_95_wicks: p95_pips,
@@ -137,16 +141,15 @@ pub fn calculer_taux_reussite(
     );
 
     let symbol = candles.first().map(|c| c.symbol.as_str()).unwrap_or("EURUSD");
-    let asset_props = AssetProperties::from_symbol(symbol);
-    let result = simuler_taux_reussite_straddle(&candles, offset_pips, asset_props.pip_value);
+    let result = simulate_straddle(&candles, symbol, Some(offset_pips));
 
     Ok(WinRateResponse {
         total_trades: result.total_trades,
         wins: result.wins,
         losses: result.losses,
         whipsaws: result.whipsaws,
-        win_rate_percentage: result.win_rate * 100.0,
-        offset_pips: result.offset_pips,
+        win_rate_percentage: result.win_rate_percentage,
+        offset_pips: result.offset_optimal_pips,
     })
 }
 

@@ -1,9 +1,9 @@
 import { ref } from 'vue'
 import { jsPDF } from 'jspdf'
 import { recupererDonneesArchivees, recupererDonneesBacktestArchivees } from '../utils/pdf/dataFetcher'
-import { 
-  generateBidiPeriodReport,
-  generateBidiEventReport,
+import {
+  generateStraddleSimultanePeriodReport,
+  generateStraddleSimultaneEventReport,
   generateRankingReport
 } from '../utils/pdf/reportGenerators'
 import { generateBacktestReport } from '../utils/pdf/backtestReportGenerator'
@@ -48,14 +48,14 @@ export function usePdfExport() {
       let eventDataList: any[] = []
       
       // Récupération Volatilité Brute (Période)
-      if (reportTypes.includes('bidi_period') || reportTypes.includes('ranking')) {
+      if (reportTypes.includes('straddle_period') || reportTypes.includes('ranking')) {
         periodDataList = await recupererDonneesArchivees(filters.pairs, (p) => {
           progress.value = p * 0.25
         }, 'Volatilité brute Paire/Période')
       }
 
       // Récupération Corrélation (Événements)
-      if (reportTypes.includes('bidi_event')) {
+      if (reportTypes.includes('straddle_event')) {
         eventDataList = await recupererDonneesArchivees(filters.pairs, (p) => {
           progress.value = 25 + (p * 0.25)
         }, 'Correlation de la volatilité Paire/Evenement')
@@ -82,11 +82,11 @@ export function usePdfExport() {
         }
         
         switch (type) {
-          case 'bidi_period':
-            if (periodDataList.length > 0) await generateBidiPeriodReport(doc, periodDataList, yPos)
+          case 'straddle_period':
+            if (periodDataList.length > 0) await generateStraddleSimultanePeriodReport(doc, periodDataList, yPos)
             break
-          case 'bidi_event':
-            if (eventDataList.length > 0) await generateBidiEventReport(doc, eventDataList, yPos)
+          case 'straddle_event':
+            if (eventDataList.length > 0) await generateStraddleSimultaneEventReport(doc, eventDataList, yPos)
             break
           case 'ranking':
             if (periodDataList.length > 0) await generateRankingReport(doc, periodDataList, yPos)

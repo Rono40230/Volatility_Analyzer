@@ -39,12 +39,3 @@ export interface SliceAnalysis {
   rank: 1 | 2 | 3; slice: Slice15minWithScore; combos: GoldenCombo[]; traps: DetectedTrap[]; tradingPlan: TradingPlan
 }
 
-export interface BidiParameters {
-  entryTime: string
-  slPips: number // Stop Loss en points MetaTrader 5
-  tpPips: number // Take Profit en points MetaTrader 5
-  winRate: number // Taux de réussite
-  avgGain: number // Gain moyen
-  tradeExpiration: number // Durée en minutes
-  bestHourReliability: number // Fiabilité %
-}

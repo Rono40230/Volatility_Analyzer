@@ -8,7 +8,7 @@
       <div class="bidi-param">
         <div class="bidi-label">Moment de placement</div>
         <div class="bidi-value">{{ placementTime || (meilleurMoment !== undefined ? (meilleurMoment === 0 ? 'T0' : Math.round(meilleurMoment)) : '—') }} <span class="bidi-unit">{{ placementTime ? '' : (meilleurMoment === 0 ? '(Début)' : 'min avant') }}</span></div>
-        <div class="bidi-description">Identique au directionnel</div>
+        <div class="bidi-description">Moment optimal basé sur la volatilité</div>
       </div>
       
       <div class="bidi-param recovery-param">
@@ -88,7 +88,6 @@
 
 <script setup lang="ts">
 import UnitDisplay from '../UnitDisplay.vue'
-import { obtenirPointsParPip } from '../../utils/pipConverter'
 
 interface Props {
   meilleurMoment?: number
@@ -111,10 +110,6 @@ const props = withDefaults(defineProps<Props>(), {
   timeout: 60,
   pair: 'EURUSD'
 })
-
-function getUnit(pair: string): string {
-  return obtenirPointsParPip(pair) === 1 ? 'pts' : 'pips'
-}
 
 // Simple scaling function for visualization
 const scaleY = (val: number) => {

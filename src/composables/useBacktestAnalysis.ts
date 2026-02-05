@@ -82,7 +82,7 @@ export function useBacktestAnalysis(result: BacktestResult, config: BacktestConf
   const exitAdvice = computed(() => {
     const mfe = parseFloat(avgMfe.value)
     const avgPips = result.average_pips_per_trade
-    if (mfe > avgPips * 2) return 'Vos trades vont souvent beaucoup plus loin que vos gains réels. Augmentez le Trailing Stop ou le TP.'
+    if (mfe > avgPips * 2) return 'Vos trades vont souvent beaucoup plus loin que vos gains réels. Augmentez l’Offset pour étendre le TP.'
     const mae = parseFloat(avgMae.value)
     const sl = config.stop_loss_pips
     if (mae < sl * 0.5 && result.losing_trades > 0) return 'Vos pertes touchent le SL rapidement. Le sens du trade est souvent invalidé dès le départ.'
@@ -94,7 +94,7 @@ export function useBacktestAnalysis(result: BacktestResult, config: BacktestConf
     if (pf.value < 1.0) return 'Réduisez le Stop Loss ou filtrez mieux les événements (utilisez le Seuil de Surprise).'
     if (noEntryPercent.value > 50) return 'Réduisez l\'Offset pour entrer plus souvent en position.'
     const mfe = parseFloat(avgMfe.value)
-    if (mfe > 50 && config.trailing_stop_pips < 20) return 'Augmentez le Trailing Stop pour laisser courir les gains sur les gros mouvements.'
+    if (mfe > 50 && config.offset_pips < 20) return 'Augmentez l\'Offset pour laisser courir les gains sur les gros mouvements.'
     return 'La configuration actuelle est équilibrée. Vous pouvez affiner le Slippage pour plus de réalisme.'
   })
 

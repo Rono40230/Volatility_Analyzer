@@ -2,12 +2,6 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { formaterPointsAvecPips, convertirPointsEnPips } from '../../pipConverter'
 
-interface JsPDFWithAutoTable extends jsPDF {
-  lastAutoTable: {
-    finalY: number
-  }
-}
-
 function calculateEntryTime(eventDatetime: string | undefined, meilleurMomentMinutes: number | undefined): string {
   if (!eventDatetime) return 'N/A'
   
@@ -39,11 +33,10 @@ function calculateEntryTime(eventDatetime: string | undefined, meilleurMomentMin
 
 export async function generateBidiEventReport(doc: jsPDF, dataList: any[], startY: number = 20) {
   doc.setFontSize(16)
-  doc.text('Fiche Bidi : Paire/Événements', 14, startY)
+  doc.text('Fiche Straddle Simultané : Paire/Événements', 14, startY)
   doc.setFontSize(10)
   doc.text('Corrélation - News Trading (Source: Archives)', 14, startY + 6)
   
-  const rowsDirectional: any[] = []
   const rowsSimultaneous: any[] = []
 
   dataList.forEach(data => {
@@ -54,34 +47,16 @@ export async function generateBidiEventReport(doc: jsPDF, dataList: any[], start
     // Les données d'archives sont généralement en POINTS
     // On doit les convertir en PIPS pour formaterPointsAvecPips
     
-    // Offset
-    let offsetPips = 0
-    if (data.offset) {
-      offsetPips = convertirPointsEnPips(symbol, data.offset)
-    } else if (data.optimalOffset) {
-      offsetPips = convertirPointsEnPips(symbol, data.optimalOffset)
-    }
-
-    // SL
-    let slPips = 0
-    if (data.stopLoss) {
-      slPips = convertirPointsEnPips(symbol, data.stopLoss)
-    } else if (data.sl) {
-      slPips = convertirPointsEnPips(symbol, data.sl)
-    }
-
-    // SL Recovery
+    // SL Recovery (Simultané)
     let slRecoveryPips = 0
-    if (data.stopLossRecovery) {
-      slRecoveryPips = convertirPointsEnPips(symbol, data.stopLossRecovery)
-    } else {
-      slRecoveryPips = slPips * 1.5 // Fallback
+    if (data.stopLossRecoverySimultaneous) {
+      slRecoveryPips = convertirPointsEnPips(symbol, data.stopLossRecoverySimultaneous)
     }
 
-    // Trailing Stop
+    // Trailing Stop (Simultané)
     let tsPips = 0
-    if (data.trailingStop) {
-      tsPips = convertirPointsEnPips(symbol, data.trailingStop)
+    if (data.trailingStopSimultaneous) {
+      tsPips = convertirPointsEnPips(symbol, data.trailingStopSimultaneous)
     }
 
     // Duration
@@ -95,18 +70,7 @@ export async function generateBidiEventReport(doc: jsPDF, dataList: any[], start
     // Entrée (Heure exacte calculée)
     const entryTime = calculateEntryTime(data.eventDatetime, data.meilleurMoment)
 
-    // Directionnel
-    rowsDirectional.push([
-      symbol,
-      event,
-      entryTime,
-      offsetPips ? formaterPointsAvecPips(symbol, offsetPips) : 'N/A',
-      slPips ? formaterPointsAvecPips(symbol, slPips) : 'N/A',
-      tsPips ? formaterPointsAvecPips(symbol, tsPips) : 'N/A',
-      duration ? `${duration}m` : 'N/A'
-    ])
-
-    // Simultané (Sans Offset)
+    // Simultané
     rowsSimultaneous.push([
       symbol,
       event,
@@ -117,69 +81,22 @@ export async function generateBidiEventReport(doc: jsPDF, dataList: any[], start
     ])
   })
 
-  // Table 1: Directionnel
   doc.setFontSize(12)
-  doc.setTextColor(41, 128, 185)
-  doc.text('Stratégie Directionnelle (Buy Stop / Sell Stop)', 14, startY + 15)
-  
+  doc.setTextColor(142, 68, 173)
+  doc.text('Stratégie Simultanée (Straddle)', 14, startY + 15)
+
   autoTable(doc, {
     startY: startY + 18,
-    head: [['Paire', 'Événement', 'Entrée', 'Offset', 'SL', 'T.Stop', 'Durée']],
-    body: rowsDirectional,
+    head: [['Paire', 'Événement', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
+    body: rowsSimultaneous,
     theme: 'grid',
-    headStyles: { fillColor: [41, 128, 185] },
+    headStyles: { fillColor: [142, 68, 173] },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: {
       0: { fontStyle: 'bold' },
       3: { halign: 'right' },
       4: { halign: 'right' },
-      5: { halign: 'right' },
-      6: { halign: 'center' }
+      5: { halign: 'center' }
     }
   })
-
-  // Table 2: Simultané
-  const finalY = (doc as unknown as JsPDFWithAutoTable).lastAutoTable.finalY + 15
-  
-  // Check if new page needed
-  if (finalY > 250) {
-    doc.addPage()
-    doc.setFontSize(12)
-    doc.setTextColor(142, 68, 173)
-    doc.text('Stratégie Simultanée (Straddle)', 14, 20)
-    
-    autoTable(doc, {
-      startY: 25,
-      head: [['Paire', 'Événement', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
-      body: rowsSimultaneous,
-      theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'center' }
-      }
-    })
-  } else {
-    doc.setFontSize(12)
-    doc.setTextColor(142, 68, 173)
-    doc.text('Stratégie Simultanée (Straddle)', 14, finalY - 3)
-    
-    autoTable(doc, {
-      startY: finalY,
-      head: [['Paire', 'Événement', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
-      body: rowsSimultaneous,
-      theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'center' }
-      }
-    })
-  }
 }

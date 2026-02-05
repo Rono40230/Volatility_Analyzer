@@ -1,4 +1,6 @@
-pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, String, String, Option<f64>, Option<f64>, Option<f64>)> {
+type CalendarEventRecord = (String, String, String, String, Option<f64>, Option<f64>, Option<f64>);
+
+pub fn parse_record(record: &csv::StringRecord) -> Option<CalendarEventRecord> {
     // Helper to check if a string contains date separators
     let has_date_sep = |s: &str| s.contains('-') || s.contains('/') || s.contains('.');
     
@@ -27,7 +29,7 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         let actual = None;
 
         // Parse Date: MM-DD-YYYY -> YYYY-MM-DD
-        let date_parts: Vec<&str> = date_str.split(|c| c == '-' || c == '/' || c == '.').collect();
+        let date_parts: Vec<&str> = date_str.split(['-', '/', '.']).collect();
         if date_parts.len() != 3 { return None; }
         let (month, day, year) = (date_parts[0], date_parts[1], date_parts[2]);
 
@@ -83,7 +85,7 @@ pub fn parse_record(record: &csv::StringRecord) -> Option<(String, String, Strin
         let forecast = record.get(6).and_then(|s| s.trim().parse::<f64>().ok());
         let previous = record.get(7).and_then(|s| s.trim().parse::<f64>().ok());
 
-        let date_parts: Vec<&str> = date.split(|c| c == '-' || c == '/' || c == '.').collect();
+        let date_parts: Vec<&str> = date.split(['-', '/', '.']).collect();
         let time_parts: Vec<&str> = time.split(':').collect();
 
         if date_parts.len() != 3 || time_parts.len() < 2 {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TradeResult } from '../../stores/backtest'
 import UnitDisplay from '../UnitDisplay.vue'
+import MetricTooltip from '../MetricTooltip.vue'
 
 const props = defineProps<{
   trades: TradeResult[]
@@ -23,6 +24,43 @@ function getOutcomeClass(outcome: string) {
     default: return ''
   }
 }
+
+function getSequenceIcons(trade: TradeResult): string {
+  let icons = ''
+  const logs = trade.logs.join(' ')
+  
+  if (logs.includes('SL Long')) icons += 'L:🛑 '
+  if (logs.includes('Timeout Long')) icons += 'L:⏰ '
+  
+  if (logs.includes('SL Short')) icons += 'S:🛑 '
+  if (logs.includes('Timeout Short')) icons += 'S:⏰ '
+  
+  if (trade.outcome === 'TakeProfit' && !icons.includes('⏰')) {
+    // Si gagnant sans timeout explicite, on suppose un TP/TS
+    // Mais en simultané, c'est souvent un mix. 
+    // On affiche juste ce qu'on sait. Si vide, on met un check
+  }
+
+  if (icons === '') {
+     if (trade.outcome === 'TakeProfit') return '🎯'
+     if (trade.outcome === 'StopLoss') return '🛑'
+     if (trade.outcome === 'Timeout') return '⏰'
+     if (trade.outcome === 'NoEntry') return '—'
+  }
+
+  return icons.trim()
+}
+
+function formatLogs(logs: string[]): string[] {
+  return logs.map(log => {
+      // Nettoyer les emojis existants pour éviter les doublons ou formater proprement
+      let clean = log.replace('💥 ', '').replace('⏰ ', '')
+      // Ajouter nos propres puces si besoin
+      if (log.includes('SL')) return `🛑 ${clean}`
+      if (log.includes('Timeout')) return `⏱️ ${clean}`
+      return `ℹ️ ${clean}`
+  })
+}
 </script>
 
 <template>
@@ -38,7 +76,26 @@ function getOutcomeClass(outcome: string) {
             <th>Durée</th>
             <th>Pips Net</th>
             <th>Résultat</th>
-            <th>MFE / MAE</th>
+            <th>
+              <div class="header-with-tooltip">
+                MFE / MAE
+                <MetricTooltip title="Excursions de Prix">
+                  <span class="info-icon">ℹ️</span>
+                  <template #definition>
+                    <p><strong>MFE (Maximum Favorable Excursion)</strong> : Le point le plus favorable atteint par le prix pendant le trade (Gain Max Latent).</p>
+                    <p><strong>MAE (Maximum Adverse Excursion)</strong> : Le point le plus défavorable atteint par le prix pendant le trade (Perte Max Latente).</p>
+                  </template>
+                  <template #interpretation>
+                    <p>Ces métriques mesurent la qualité de l'entrée et de la sortie :</p>
+                    <ul>
+                      <li>Un <strong>MFE élevé</strong> avec un gain final faible suggère une sortie tardive (TP raté ou Trailing Stop trop large).</li>
+                      <li>Un <strong>MAE élevé</strong> signifie que le trade à frôlé le Stop Loss (Entrée risquée).</li>
+                    </ul>
+                  </template>
+                </MetricTooltip>
+              </div>
+            </th>
+            <th>Séquence</th>
           </tr>
         </thead>
         <tbody>
@@ -58,6 +115,20 @@ function getOutcomeClass(outcome: string) {
             <td class="excursion">
               <span class="mfe" title="Max Favorable Excursion">+<UnitDisplay :value="trade.max_favorable_excursion" :unit="unit" :decimals="1" :symbol="symbol" /></span> / 
               <span class="mae" title="Max Adverse Excursion">-<UnitDisplay :value="trade.max_adverse_excursion" :unit="unit" :decimals="1" :symbol="symbol" /></span>
+            </td>
+            <td class="sequence-cell">
+              <span class="sequence-icons">{{ getSequenceIcons(trade) }}</span>
+              <MetricTooltip title="Journal d'exécution">
+                <span class="log-icon">📝</span>
+                <template #definition>
+                  <ul class="log-list">
+                    <li v-for="(log, i) in formatLogs(trade.logs)" :key="i">
+                      {{ log }}
+                    </li>
+                    <li v-if="trade.logs.length === 0" class="log-empty">Aucun détail disponible</li>
+                  </ul>
+                </template>
+              </MetricTooltip>
             </td>
           </tr>
         </tbody>
@@ -137,4 +208,67 @@ tr:hover {
 
 .mfe { color: #48bb78; }
 .mae { color: #f56565; }
+
+.header-with-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-icon {
+  font-size: 1.1em;
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.info-icon:hover {
+  opacity: 1;
+}
+
+.sequence-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.sequence-icons {
+  font-size: 0.85em;
+  font-family: 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+}
+
+.log-icon {
+  cursor: help;
+  font-size: 1.1em;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.log-icon:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.log-list li {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.9em;
+}
+
+.log-list li:last-child {
+  border-bottom: none;
+}
+
+.log-empty {
+  color: #a0aec0;
+  font-style: italic;
+}
 </style>

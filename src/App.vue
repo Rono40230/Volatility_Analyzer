@@ -44,10 +44,7 @@ onMounted(async () => {
   analysisStore.restoreHeatmapFromStorage()
 })
 
-// Gestion de la modal Bidi depuis le tableau
-const showBidiModal = ref(false)
-const bidiModalHour = ref(0)
-const bidiModalQuarter = ref(0)
+// Gestion des modales globales
 const showFormulasModal = ref(false)
 const showExportModal = ref(false)
 const showImportHub = ref(false)
@@ -63,11 +60,6 @@ async function handleSymbolChange() {
   }
 }
 
-function handleOpenBidiParams(data: { hour: number; quarter: number }) {
-  bidiModalHour.value = data.hour
-  bidiModalQuarter.value = data.quarter
-  showBidiModal.value = true
-}
 
 function switchTab(tab: string) {
   activeTab.value = tab
@@ -114,7 +106,7 @@ function closeApp() { appWindow.close() }
           <span class="home-text">Accueil</span>
         </button>
         <div v-else class="brand">
-          <span class="brand-icon">⚡</span> Volatility Analyzer
+          <img src="./assets/logo.png" alt="Logo" width="24" height="24" /> Volatility Analyzer
         </div>
       </div>
       
@@ -173,7 +165,6 @@ function closeApp() { appWindow.close() }
                   :point-value="analysisResult.point_value"
                   :unit="analysisResult.unit"
                   :symbol="analysisResult.symbol"
-                  @open-bidi-params="handleOpenBidiParams"
                 />
              </template>
            </div>
@@ -191,15 +182,6 @@ function closeApp() { appWindow.close() }
     </main>
 
     <!-- MODALS -->
-    <MetricsAnalysisModal 
-      v-if="showBidiModal"
-      :is-open="showBidiModal"
-      :analysis-result="analysisResult"
-      :selected-symbol="analysisResult?.symbol || ''"
-      :pre-selected-hour="bidiModalHour"
-      :pre-selected-quarter="bidiModalQuarter"
-      @close="showBidiModal = false"
-    />
     <FormulasModal :is-open="showFormulasModal" @close="showFormulasModal = false" />
     <ExportModal :is-open="showExportModal" :current-symbol="selectedSymbolLocal" @close="showExportModal = false" />
     

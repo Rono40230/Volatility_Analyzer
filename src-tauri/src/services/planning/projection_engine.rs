@@ -119,55 +119,55 @@ impl ProjectionEngine {
                 let archive_pair = data.get("symbol").and_then(|v| v.as_str());
                 
                 if let (Some(arch_evt), Some(pair)) = (archive_event_type, archive_pair) {
-                    if self.events_match(&event.description, arch_evt) {
-                        if self.pair_matches_currency(pair, &event.symbol) {
-                            // Try to get confidence score from various possible locations
-                            let score = data.get("confidence_score").and_then(|v| v.as_f64())
-                                .or_else(|| data.get("recommendation").and_then(|r| r.get("score").and_then(|v| v.as_f64())))
-                                .unwrap_or(0.0);
+                    if self.events_match(&event.description, arch_evt)
+                        && self.pair_matches_currency(pair, &event.symbol)
+                    {
+                        // Try to get confidence score from various possible locations
+                        let score = data.get("confidence_score").and_then(|v| v.as_f64())
+                            .or_else(|| data.get("recommendation").and_then(|r| r.get("score").and_then(|v| v.as_f64())))
+                            .unwrap_or(0.0);
+                        
+                        if score > best_score {
+                            best_score = score;
                             
-                            if score > best_score {
-                                best_score = score;
-                                
-                                // Extract params (support both legacy straddle_params and new root-level format)
-                                let (offset, tp, sl) = if let Some(params) = data.get("straddle_params") {
-                                    (
-                                        params.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                        params.get("tp").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                        params.get("sl").and_then(|v| v.as_f64()).unwrap_or(0.0)
-                                    )
-                                } else {
-                                    (
-                                        data.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                        data.get("trailingStop").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                        data.get("stopLoss").and_then(|v| v.as_f64()).unwrap_or(0.0)
-                                    )
-                                };
+                            // Extract params (support both legacy straddle_params and new root-level format)
+                            let (offset, tp, sl) = if let Some(params) = data.get("straddle_params") {
+                                (
+                                    params.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                                    params.get("tp").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                                    params.get("sl").and_then(|v| v.as_f64()).unwrap_or(0.0)
+                                )
+                            } else {
+                                (
+                                    data.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                                    data.get("trailingStop").and_then(|v| v.as_f64()).unwrap_or(0.0),
+                                    data.get("stopLoss").and_then(|v| v.as_f64()).unwrap_or(0.0)
+                                )
+                            };
 
-                                // Extract simultaneous params
-                                let offset_simultaneous = data.get("offsetSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                let tp_simultaneous = data.get("trailingStopSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                let sl_simultaneous = data.get("stopLossSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                                
-                                best_match = Some(ProjectedEvent {
-                                    id: event.id.to_string(),
-                                    time: event.event_time.to_string(),
-                                    name: event.description.clone(),
-                                    currency: event.symbol.clone(),
-                                    impact: event.impact.clone(),
-                                    pair: pair.to_string(),
-                                    offset,
-                                    tp,
-                                    sl,
-                                    offset_simultaneous,
-                                    tp_simultaneous,
-                                    sl_simultaneous,
-                                    confidence_score: score,
-                                    source: "Archive".to_string(),
-                                    has_history: false, // Will be updated in caller
-                                    occurrence_count: 0, // Will be updated in caller
-                                });
-                            }
+                            // Extract simultaneous params
+                            let offset_simultaneous = data.get("offsetSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let tp_simultaneous = data.get("trailingStopSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            let sl_simultaneous = data.get("stopLossSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                            
+                            best_match = Some(ProjectedEvent {
+                                id: event.id.to_string(),
+                                time: event.event_time.to_string(),
+                                name: event.description.clone(),
+                                currency: event.symbol.clone(),
+                                impact: event.impact.clone(),
+                                pair: pair.to_string(),
+                                offset,
+                                tp,
+                                sl,
+                                offset_simultaneous,
+                                tp_simultaneous,
+                                sl_simultaneous,
+                                confidence_score: score,
+                                source: "Archive".to_string(),
+                                has_history: false, // Will be updated in caller
+                                occurrence_count: 0, // Will be updated in caller
+                            });
                         }
                     }
                 }

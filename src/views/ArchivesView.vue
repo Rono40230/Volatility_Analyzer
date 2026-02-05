@@ -222,6 +222,27 @@
                 </div>
               </div>
 
+              <div v-if="archive.archive_type === 'Backtest' && getBacktestSummary(archive)" class="backtest-summary">
+                <div class="summary-item">
+                  <span class="summary-label">P/L</span>
+                  <span class="summary-value" :class="{ 'positive': getBacktestSummary(archive).total_pips > 0, 'negative': getBacktestSummary(archive).total_pips < 0 }">
+                    {{ getBacktestSummary(archive).total_pips.toFixed(1) }} pips
+                  </span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">Win Rate</span>
+                  <span class="summary-value">{{ formatPercent(getBacktestSummary(archive).win_rate_percent) }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">PF</span>
+                  <span class="summary-value">{{ getBacktestSummary(archive).profit_factor.toFixed(2) }}</span>
+                </div>
+                <div class="summary-item">
+                  <span class="summary-label">DD</span>
+                  <span class="summary-value negative">{{ getBacktestSummary(archive).max_drawdown_pips.toFixed(1) }}</span>
+                </div>
+              </div>
+
               <div class="card-actions-compact">
                 <button
                   class="btn-action-compact btn-view"
@@ -431,6 +452,7 @@ const availablePairs = computed(() => {
 
 function obtenirClasseType(type: string): string {
   const mapping: Record<string, string> = {
+    'Backtest': 'type-backtest',
     'Volatilité brute': 'type-metrics',
     'Volatilité brute Paire/Période': 'type-metrics',
     'Métriques Rétrospectives': 'type-default',
@@ -492,6 +514,24 @@ function extractEventLabel(archive: Archive): string {
   } catch (e) {
     return 'Événement inconnu'
   }
+}
+
+function getBacktestSummary(archive: Archive): any | null {
+  if (archive.archive_type !== 'Backtest') return null
+  try {
+    const data = JSON.parse(archive.data_json)
+    return data.result || null
+  } catch {
+    return null
+  }
+}
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(value)
+}
+
+function formatPercent(value: number): string {
+  return new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value / 100)
 }
 
 function viewArchive(archive: Archive) {
@@ -883,6 +923,46 @@ function cancelDelete() {
 .type-heatmap {
   background: #dc2626;
   color: white;
+}
+
+.type-backtest {
+  background: #8b5cf6;
+  color: white;
+}
+
+.backtest-summary {
+  margin-top: 8px;
+  background: #0d1117;
+  padding: 8px;
+  border-radius: 6px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 0.75em;
+  border: 1px solid #30363d;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-label {
+  color: #8b949e;
+  font-size: 0.9em;
+}
+
+.summary-value {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.summary-value.positive {
+  color: #238636;
+}
+
+.summary-value.negative {
+  color: #da3633;
 }
 
 .type-default {

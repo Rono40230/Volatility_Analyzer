@@ -82,7 +82,6 @@ export async function recupererDonneesArchivees(
 export interface ArchivedBacktestData {
   result: any // BacktestResult
   config: any // BacktestConfig
-  mode: any // StrategyMode
 }
 
 export async function recupererDonneesBacktestArchivees(pairs: string[], onProgress: (progress: number) => void): Promise<ArchivedBacktestData[]> {

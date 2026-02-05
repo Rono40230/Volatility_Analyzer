@@ -90,6 +90,12 @@ pub fn run() {
         std::process::exit(1);
     }
 
+    // Crée la table archives si elle n'existe pas
+    if let Err(e) = db::ensure_archives_table(&calendar_pool) {
+        tracing::error!("❌ ERREUR: Impossible de créer la table archives: {}", e);
+        std::process::exit(1);
+    }
+
     tracing::info!("✅ Table calendar_imports vérifiée/créée");
 
     let calendar_state = calendar_commands::CalendarState {

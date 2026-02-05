@@ -7,7 +7,8 @@ edition = "2021"
 
 [lib]
 name = "tauri_app_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
+#crate-type = ["staticlib", "cdylib", "rlib"]
+crate-type = ["rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
@@ -20,7 +21,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 
 # Calculs statistiques (PRIORITÉ 1 - Performance)
-polars = { version = "0.44", features = ["lazy", "temporal", "csv"] }
+polars = { version = "0.45", features = ["lazy", "temporal", "csv"] }
 ndarray = "0.16"
 statrs = "0.17"
 
@@ -31,7 +32,7 @@ diesel_migrations = "2.2"
 rusqlite = { version = "0.32", features = [] }
 
 # Validation des entrées
-validator = { version = "0.18", features = ["derive"] }
+validator = { version = "0.19", features = ["derive"] }
 
 # Sérialisation JSON
 serde = { version = "1.0", features = ["derive"] }
@@ -71,3 +72,16 @@ lopdf = "0.32"
 [dev-dependencies]
 mockall = "0.13"
 tempfile = "3.8"
+
+[profile.dev]
+opt-level = 0
+debug = 0
+strip = "debuginfo"
+incremental = false
+lto = false
+
+[profile.release]
+debug = 0
+strip = true
+lto = false
+codegen-units = 16

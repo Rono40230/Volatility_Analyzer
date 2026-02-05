@@ -13,23 +13,9 @@
       @archive="$emit('archive')"
     />
 
-    <!-- 2. Main Grid (3 Colonnes) -->
+    <!-- 2. Main Grid (2 Colonnes) -->
     <div class="cockpit-grid">
-      <!-- Colonne Gauche: Directionnel -->
-      <div class="col-left">
-        <StraddleDirectionalCard
-          :meilleur-moment="props.meilleurMoment"
-          :offset="props.offset"
-          :stop-loss="props.stopLoss"
-          :hard-tp="hardTpDirectional"
-          :trailing-stop="props.trailingStop"
-          :timeout="props.timeout"
-          :pair="props.pair"
-          :point-value="props.pointValue"
-        />
-      </div>
-
-      <!-- Colonne Centrale: Graphique (Métriques) -->
+      <!-- Colonne Gauche: Graphique (Métriques) -->
       <div class="col-center">
         <RetroAnalysisGraph
           :atr-timeline-before="props.atrTimelineBefore"
@@ -56,10 +42,10 @@
       <div class="col-right">
         <StraddleSimultaneousCard
           :meilleur-moment="props.meilleurMoment"
-          :offset="props.offsetSimultaneous ?? props.offset"
-          :stop-loss-recovery="props.stopLossRecoverySimultaneous ?? props.stopLossRecovery"
+          :offset="props.offsetSimultaneous"
+          :stop-loss-recovery="props.stopLossRecoverySimultaneous"
           :hard-tp="hardTpSimultaneous"
-          :trailing-stop="props.trailingStopSimultaneous ?? props.trailingStop"
+          :trailing-stop="props.trailingStopSimultaneous"
           :timeout="props.timeout"
           :pair="props.pair"
           :point-value="props.pointValue"
@@ -73,7 +59,6 @@
 import { computed } from 'vue'
 import RetroAnalysisGraph from './analysis/RetroAnalysisGraph.vue'
 import RetroAnalysisHeader from './analysis/RetroAnalysisHeader.vue'
-import StraddleDirectionalCard from './trading/StraddleDirectionalCard.vue'
 import StraddleSimultaneousCard from './trading/StraddleSimultaneousCard.vue'
 
 const props = defineProps<{
@@ -93,13 +78,8 @@ const props = defineProps<{
   isArchiveMode?: boolean
   eventLabel?: string
   meilleurMoment?: number
-  stopLoss?: number
-  trailingStop?: number
   timeout?: number
-  offset?: number
-  stopLossRecovery?: number
   pointValue?: number
-  // Nouveaux champs optionnels (pour compatibilité ascendante)
   stopLossSimultaneous?: number
   trailingStopSimultaneous?: number
   offsetSimultaneous?: number
@@ -110,29 +90,12 @@ const props = defineProps<{
 
 defineEmits<{ archive: [] }>()
 
-// Calcul du Trailing Stop ajusté pour le mode Simultané (proportionnel au SL Recovery)
-const trailingStopRecovery = computed(() => {
-  if (!props.trailingStop || !props.stopLoss || !props.stopLossRecovery) return props.trailingStop
-  const ratio = props.stopLossRecovery / props.stopLoss
-  return props.trailingStop * ratio
-})
-
 const hardTpSimultaneous = computed(() => {
-  const slRec = props.stopLossRecoverySimultaneous ?? props.stopLossRecovery ?? 0
-  const slDir = props.stopLoss ?? 0
-  const hardTpDir = slDir * 2 // Default Hard TP Directional assumption if not passed
-  
-  // Ensure R:R is at least 1.5 for Simultaneous
+  const slRec = props.stopLossRecoverySimultaneous ?? 0
   const minRiskReward = 1.5
-  const minTp = slRec * minRiskReward
-  
-  // Use the max of directional Hard TP and calculated min TP
-  return Math.max(hardTpDir, minTp)
+  return slRec * minRiskReward
 })
 
-const hardTpDirectional = computed(() => {
-  return (props.stopLoss ?? 0) * 2.0
-})
 </script>
 
 <style scoped>
@@ -148,13 +111,13 @@ const hardTpDirectional = computed(() => {
 
 .cockpit-grid {
   display: grid;
-  grid-template-columns: 1fr 3fr 1fr;
+  grid-template-columns: 3fr 1fr;
   gap: 15px;
   flex: 1;
   min-height: 0; /* Important for nested scrolling if needed */
 }
 
-.col-left, .col-right {
+.col-right {
   height: 100%;
   overflow-y: auto;
 }
@@ -169,7 +132,7 @@ const hardTpDirectional = computed(() => {
 /* Responsive adjustments */
 @media (max-width: 1400px) {
   .cockpit-grid {
-    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-columns: 2fr 1fr;
   }
 }
 

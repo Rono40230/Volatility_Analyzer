@@ -122,9 +122,9 @@ pub async fn get_correlation_heatmap(
             let vol_result = calculer_volatilite_moyenne_evenement_paire_optimise(
                 &conn,
                 &event_type.name,
-                &pair,
+                pair,
                 calendar_id,
-                &candle_index,
+                candle_index,
                 Some(&events_cache),
             )?;
 

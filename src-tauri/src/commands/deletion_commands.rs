@@ -9,7 +9,16 @@ pub async fn delete_pair_from_db(
     symbol: String,
     timeframe: String,
 ) -> Result<String, String> {
-    tracing::info!("🗑️ [Delete Pair] Request received for {}/{}", symbol, timeframe);
+    let symbol_clean = symbol.trim().to_string();
+    let timeframe_clean = timeframe.trim().to_string();
+    
+    tracing::info!(
+        "🗑️ [Delete Pair] Request received for '{}'/'{}'. (Hex Sym: {:?}, Hex TF: {:?})", 
+        symbol_clean, 
+        timeframe_clean,
+        symbol_clean.as_bytes(),
+        timeframe_clean.as_bytes()
+    );
 
     // Utiliser le pool Diesel existant au lieu d'ouvrir une nouvelle connexion Rusqlite
     tracing::debug!("🗑️ [Delete Pair] Acquiring pool lock...");
@@ -36,39 +45,46 @@ pub async fn delete_pair_from_db(
             // 1. Supprimer les candles
             tracing::debug!("🗑️ [Delete Pair] Deleting candles...");
             let candles_deleted = diesel::sql_query("DELETE FROM candle_data WHERE symbol = ? AND timeframe = ?")
-                .bind::<diesel::sql_types::Text, _>(&symbol)
-                .bind::<diesel::sql_types::Text, _>(&timeframe)
+                .bind::<diesel::sql_types::Text, _>(&symbol_clean)
+                .bind::<diesel::sql_types::Text, _>(&timeframe_clean)
                 .execute(conn)?;
 
             tracing::info!(
                 "🗑️  Deleted {} candles for {}/{}",
                 candles_deleted,
-                symbol,
-                timeframe
+                symbol_clean,
+                timeframe_clean
             );
 
             // 2. Supprimer les métadonnées
             tracing::debug!("🗑️ [Delete Pair] Deleting metadata...");
             let metadata_deleted = diesel::sql_query("DELETE FROM pair_metadata WHERE symbol = ? AND timeframe = ?")
-                .bind::<diesel::sql_types::Text, _>(&symbol)
-                .bind::<diesel::sql_types::Text, _>(&timeframe)
+                .bind::<diesel::sql_types::Text, _>(&symbol_clean)
+                .bind::<diesel::sql_types::Text, _>(&timeframe_clean)
                 .execute(conn)?;
 
             tracing::info!(
                 "🗑️  Deleted {} metadata records for {}/{}",
                 metadata_deleted,
-                symbol,
-                timeframe
+                symbol_clean,
+                timeframe_clean
             );
+
+            if metadata_deleted == 0 && candles_deleted == 0 {
+                // Si rien n'a été supprimé, cela peut être dû à une incohérence.
+                // Essayons une suppression par LIKE pour être plus permissif si le strict a échoué ?
+                // Non, restons stricts pour l'instant mais renvoyons une erreur précise.
+                return Err(diesel::result::Error::NotFound);
+            }
 
             Ok(())
         })
-        .map_err(|e| format!("Transaction failed: {}", e))?;
+        .map_err(|e| format!("Erreur suppression: {} (Cible: {}/{})", e, symbol_clean, timeframe_clean))?;
 
         tracing::debug!("🗑️ [Delete Pair] Transaction committed successfully.");
         Ok(format!(
             "Paire {}/{} supprimée avec succès",
-            symbol, timeframe
+            symbol_clean, timeframe_clean
         ))
     })
     .await

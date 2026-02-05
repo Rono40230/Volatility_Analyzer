@@ -1,8 +1,9 @@
 use super::models::*;
 use super::simulator::EventSimulator;
-use crate::models::{CalendarEvent, AssetProperties};
+use crate::models::{AssetProperties, CalendarEvent};
 use crate::services::database_loader::DatabaseLoader;
 use chrono::Duration;
+use tracing::warn;
 
 pub struct BacktestEngine;
 
@@ -11,7 +12,6 @@ impl BacktestEngine {
         pair: &str,
         events: &[CalendarEvent],
         config: BacktestConfig,
-        mode: StrategyMode,
         loader: &DatabaseLoader,
     ) -> Result<BacktestResult, String> {
         let mut trades = Vec::new();
@@ -22,16 +22,26 @@ impl BacktestEngine {
             let end_time = event.event_time.and_utc()
                 + Duration::minutes(config.timeout_minutes as i64 + 10);
 
-            let candles = loader
-                .load_candles_by_pair(pair, "M1", start_time, end_time)
-                .unwrap_or_default();
+            let candles = match loader.load_candles_by_pair(pair, "M1", start_time, end_time) {
+                Ok(data) => data,
+                Err(e) => {
+                    warn!(
+                        "Backtest: échec chargement bougies {} ({} - {}): {}",
+                        pair,
+                        start_time,
+                        end_time,
+                        e
+                    );
+                    Vec::new()
+                }
+            };
 
             if candles.is_empty() {
                 continue;
             }
 
             // 2. Simuler l'événement
-            let trade = EventSimulator::simulate(event, &candles, &config, mode);
+            let trade = EventSimulator::simulate(event, &candles, &config);
             trades.push(trade);
         }
 
@@ -39,10 +49,10 @@ impl BacktestEngine {
         // On récupère le nom de l'événement depuis le premier événement ou on utilise une valeur par défaut
         // Note: Le champ description contient le nom de l'événement (ex: "Non-Farm Employment Change")
         let event_name = events.first().map(|e| e.description.clone()).unwrap_or_else(|| "Unknown".to_string());
-        Ok(Self::calculer_synthese(pair, &event_name, trades, mode))
+        Ok(Self::calculer_synthese(pair, &event_name, trades))
     }
 
-    fn calculer_synthese(pair: &str, event_name: &str, trades: Vec<TradeResult>, mode: StrategyMode) -> BacktestResult {
+    fn calculer_synthese(pair: &str, event_name: &str, trades: Vec<TradeResult>) -> BacktestResult {
         let asset_props = AssetProperties::from_symbol(pair);
         let total_trades = trades.len();
         let mut winning = 0;
@@ -98,8 +108,10 @@ impl BacktestEngine {
 
         let profit_factor = if gross_loss > 0.0 {
             gross_profit / gross_loss
+        } else if gross_profit > 0.0 {
+            999.0
         } else {
-            if gross_profit > 0.0 { 999.0 } else { 0.0 }
+            0.0
         };
 
         BacktestResult {
@@ -116,7 +128,6 @@ impl BacktestEngine {
             max_drawdown_pips: max_drawdown,
             profit_factor,
             trades,
-            strategy_mode: mode,
         }
     }
 }

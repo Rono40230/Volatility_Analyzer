@@ -20,6 +20,14 @@ const pfClass = computed(() => {
   return 'metric-poor'
 })
 
+const plClass = computed(() => {
+  return props.result.total_pips >= 0 ? 'metric-excellent' : 'metric-poor'
+})
+
+const avgPlClass = computed(() => {
+  return props.result.average_pips_per_trade >= 0 ? 'metric-excellent' : 'metric-poor'
+})
+
 const ddClass = computed(() => {
   return 'metric-poor' 
 })
@@ -27,30 +35,6 @@ const ddClass = computed(() => {
 
 <template>
   <div class="metrics-grid">
-    <MetricTooltip title="Win Rate">
-      <div class="metric-card">
-        <h4>Win Rate</h4>
-        <div :class="['metric-value', winRateClass]">{{ result.win_rate_percent.toFixed(1) }}%</div>
-      </div>
-      <template #definition>
-        <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Pourcentage de trades gagnants par rapport au nombre total de trades.</div>
-        </div>
-      </template>
-      <template #usage>
-        <div class="tooltip-section">
-          <div class="tooltip-section-title">📊 Interprétation</div>
-          <div class="tooltip-section-text">
-            Un Win Rate faible n'est pas grave si le Profit Factor est élevé (stratégie de type "Sniper").
-            <br><br>
-            <strong>> 50%</strong> : Majorité de gains.<br>
-            <strong>< 40%</strong> : Typique des stratégies de suivi de tendance (beaucoup de petites pertes, quelques gros gains).
-          </div>
-        </div>
-      </template>
-    </MetricTooltip>
-
     <MetricTooltip title="Profit Factor">
       <div class="metric-card">
         <h4>Profit Factor</h4>
@@ -75,19 +59,6 @@ const ddClass = computed(() => {
       </template>
     </MetricTooltip>
 
-    <MetricTooltip title="Max Drawdown">
-      <div class="metric-card">
-        <h4>Max Drawdown</h4>
-        <div :class="['metric-value', ddClass]">-{{ result.max_drawdown_pips.toFixed(1) }}</div>
-      </div>
-      <template #definition>
-        <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">La plus grande baisse cumulée du capital (du plus haut sommet au plus bas creux).</div>
-        </div>
-      </template>
-    </MetricTooltip>
-
     <div class="metric-card">
       <h4>Trades</h4>
       <div class="metric-value metric-neutral">
@@ -101,6 +72,73 @@ const ddClass = computed(() => {
         </span>
       </div>
     </div>
+
+    <MetricTooltip title="Win Rate">
+      <div class="metric-card">
+        <h4>Win Rate</h4>
+        <div :class="['metric-value', winRateClass]">{{ result.win_rate_percent.toFixed(1) }}%</div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">Pourcentage de trades gagnants par rapport au nombre total de trades.</div>
+        </div>
+      </template>
+      <template #usage>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="tooltip-section-text">
+            Un Win Rate faible n'est pas grave si le Profit Factor est élevé (stratégie de type "Sniper").
+            <br><br>
+            <strong>> 50%</strong> : Majorité de gains.<br>
+            <strong>< 40%</strong> : Typique des stratégies de suivi de tendance (beaucoup de petites pertes, quelques gros gains).
+          </div>
+        </div>
+      </template>
+    </MetricTooltip>
+
+    <MetricTooltip title="Total P/L">
+      <div class="metric-card">
+        <h4>Total P/L</h4>
+        <div :class="['metric-value', plClass]">
+          {{ result.total_pips > 0 ? '+' : '' }}{{ result.total_pips.toFixed(1) }} <span style="font-size: 0.6em">pips</span>
+        </div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">Résultat net cumulé en pips (Gains - Pertes).</div>
+        </div>
+      </template>
+    </MetricTooltip>
+
+    <MetricTooltip title="P/L par Trade">
+      <div class="metric-card">
+        <h4>P/L par Trade</h4>
+        <div :class="['metric-value', avgPlClass]">
+          {{ result.average_pips_per_trade > 0 ? '+' : '' }}{{ result.average_pips_per_trade.toFixed(1) }} <span style="font-size: 0.6em">pips</span>
+        </div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">Moyenne des gains/pertes par trade (Espérance mathématique).</div>
+        </div>
+      </template>
+    </MetricTooltip>
+
+    <MetricTooltip title="Max Drawdown">
+      <div class="metric-card">
+        <h4>Max Drawdown</h4>
+        <div :class="['metric-value', ddClass]">-{{ result.max_drawdown_pips.toFixed(1) }}</div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">La plus grande baisse cumulée du capital (du plus haut sommet au plus bas creux).</div>
+        </div>
+      </template>
+    </MetricTooltip>
   </div>
 </template>
 

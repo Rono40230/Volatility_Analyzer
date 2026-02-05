@@ -1,6 +1,6 @@
 import { ref, watch, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useBacktestStore, StrategyMode, BacktestType } from '../stores/backtest'
+import { useBacktestStore, BacktestType } from '../stores/backtest'
 import { useVolatilityStore } from '../stores/volatility'
 import { invoke } from '@tauri-apps/api/core'
 import { eventTranslations } from '../utils/eventTranslations'
@@ -8,7 +8,7 @@ import { eventTranslations } from '../utils/eventTranslations'
 export function useBacktestConfig(props: { backtestType: BacktestType }) {
   const backtestStore = useBacktestStore()
   const volatilityStore = useVolatilityStore()
-  const { config, mode, loading } = storeToRefs(backtestStore)
+  const { config, loading } = storeToRefs(backtestStore)
   const { symbols } = storeToRefs(volatilityStore)
 
   const selectedSymbol = ref('')
@@ -38,13 +38,6 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
       return { spread: 2.5, slippage: 1.0 } // Majors liquides (EURUSD)
     }
   }
-
-  // Watcher pour gérer le mode Simultané (Offset forcé à 0)
-  watch(mode, (newMode) => {
-    if (newMode === StrategyMode.Simultane) {
-      config.value.offset_pips = 0
-    }
-  })
 
   // Watcher pour mettre à jour la valeur du point et les coûts quand le symbole change
   watch(selectedSymbol, async (newSymbol) => {
@@ -98,7 +91,6 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
 
   return {
     config,
-    mode,
     loading,
     symbols,
     selectedSymbol,
@@ -108,6 +100,5 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
     endDate,
     availableEvents,
     lancerBacktest,
-    StrategyMode
   }
 }

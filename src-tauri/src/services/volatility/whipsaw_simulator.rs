@@ -65,10 +65,8 @@ pub fn simulate_straddle_trade(
         }
 
         // ===== Double Trigger = Whipsaw =====
-        if buy_triggered && sell_triggered {
-            if buy_closed || sell_closed {
-                return TradeResult::Loss; // Au moins 1 position SL'd = perte
-            }
+        if buy_triggered && sell_triggered && (buy_closed || sell_closed) {
+            return TradeResult::Loss; // Au moins 1 position SL'd = perte
         }
     }
 

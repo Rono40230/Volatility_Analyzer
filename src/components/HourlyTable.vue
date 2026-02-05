@@ -100,7 +100,6 @@
                         <th title="TÂCHE 4: Durée optimale fermeture trade">
                           Trade Exp (min)
                         </th>
-                        <th style="width: 140px;">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -150,15 +149,6 @@
                             class="warning-icon"
                           >⚠️</span>
                         </td>
-                        <td class="actions-cell">
-                          <button
-                            class="btn-bidi-params"
-                            :title="`Ouvrir l'analyse pour ${formatQuarterLabel(stat.hour, quarter.quarter)}`"
-                            @click="openBidiParams(stat.hour, quarter.quarter)"
-                          >
-                            ⚙️ Paramètres Bidi
-                          </button>
-                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -204,9 +194,8 @@ const props = defineProps<{
   symbol?: string // Symbole pour conversion pips/points
 }>()
 
-const emit = defineEmits<{
-  'open-bidi-params': [{ hour: number; quarter: number }]
-}>()
+const stats = computed(() => props.stats ?? [])
+
 
 // Formate le label de quarter avec gestion du changement d'heure
 function formatQuarterLabel(hour: number, quarter: number): string {
@@ -227,7 +216,7 @@ const top3Slices = ref<Array<{ hour: number; quarter: number }>>([])
 
 // Calculer le TOP 3 au montage/changement des stats
 onMounted(() => {
-  if (props.stats.length > 0 && props.stats15min && props.stats15min.length > 0) {
+  if (stats.value.length > 0 && props.stats15min && props.stats15min.length > 0) {
     try {
       // Besoin de globalMetrics pour analyzeTop3Slices
       // On va créer une fonction locale pour identifier les TOP 3 slices
@@ -266,9 +255,6 @@ function isBestHour(hour: number): boolean {
   return props.bestQuarter[0] === hour
 }
 
-function openBidiParams(hour: number, quarter: number) {
-  emit('open-bidi-params', { hour, quarter })
-}
 
 // Fonctions pour accordion 15-minutes
 function toggleExpand(hour: number) {
@@ -668,30 +654,6 @@ tbody tr:hover {
   text-align: center;
   color: #e6edf3;
   font-size: 0.85em;
-}
-
-.trade-exp-cell {
-  text-align: center;
-  color: #e6edf3;
-  font-size: 0.85em;
-}
-
-.trade-exp-cell.warning {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-}
-
-.trade-exp-cell.warning .warning-icon {
-  margin-left: 4px;
-  font-size: 0.9em;
-}
-
-.scalping-row:hover .duration-cell {
-  color: #e6edf3;
-}
-
-.scalping-row:hover .trade-exp-cell {
-  color: #e6edf3;
 }
 
 .actions-cell {

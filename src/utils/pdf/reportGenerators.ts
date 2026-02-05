@@ -1,4 +1,4 @@
-export { generateBidiReport } from './generators/bidiReport'
-export { generateBidiPeriodReport } from './generators/bidiPeriodReport'
-export { generateBidiEventReport } from './generators/bidiEventReport'
+export { generateBidiReport as generateStraddleSimultaneReport } from './generators/bidiReport'
+export { generateBidiPeriodReport as generateStraddleSimultanePeriodReport } from './generators/bidiPeriodReport'
+export { generateBidiEventReport as generateStraddleSimultaneEventReport } from './generators/bidiEventReport'
 export { generateRankingReport } from './generators/rankingReport'

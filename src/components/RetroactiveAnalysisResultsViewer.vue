@@ -21,11 +21,7 @@
               :event-type="data?.eventType ?? ''"
               :pair="data?.pair ?? ''"
               :meilleur-moment="data?.meilleurMoment ?? 0"
-              :stop-loss="data?.stopLoss ?? 0"
-              :trailing-stop="data?.trailingStop ?? 0"
               :timeout="data?.timeout ?? 60"
-              :offset="data?.offset ?? 0"
-              :stop-loss-recovery="data?.stopLossRecovery ?? 0"
               :stop-loss-simultaneous="data?.stopLossSimultaneous"
               :trailing-stop-simultaneous="data?.trailingStopSimultaneous"
               :offset-simultaneous="data?.offsetSimultaneous"
@@ -61,11 +57,7 @@ interface ArchivedRetroData {
   pair?: string
   eventLabel?: string
   meilleurMoment?: number
-  stopLoss?: number
-  trailingStop?: number
   timeout?: number
-  offset?: number
-  stopLossRecovery?: number
   stopLossSimultaneous?: number
   trailingStopSimultaneous?: number
   offsetSimultaneous?: number

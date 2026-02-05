@@ -6,25 +6,21 @@ import ArchiveModal from './ArchiveModal.vue'
 import BacktestAnalysisModal from './BacktestAnalysisModal.vue'
 import BacktestSummary from './backtest/BacktestSummary.vue'
 import BacktestTradesTable from './backtest/BacktestTradesTable.vue'
-import { useBacktestExport } from '../composables/useBacktestExport'
-import type { BacktestResult, BacktestConfig, StrategyMode } from '../stores/backtest'
+import type { BacktestResult, BacktestConfig } from '../stores/backtest'
 
 const props = defineProps<{
   archivedData?: {
     result: BacktestResult,
-    config: BacktestConfig,
-    mode: StrategyMode
+    config: BacktestConfig
   }
 }>()
 
 const store = useBacktestStore()
-const { result: storeResult, loading, error, config: storeConfig, mode: storeMode } = storeToRefs(store)
+const { result: storeResult, loading, error, config: storeConfig } = storeToRefs(store)
 
 const result = computed(() => props.archivedData?.result || storeResult.value)
 const config = computed(() => props.archivedData?.config || storeConfig.value)
-const mode = computed(() => props.archivedData?.mode || storeMode.value)
-
-const { exportPdf } = useBacktestExport(result, config, mode)
+const mode = computed(() => 'Simultane')
 
 // --- Archive Logic ---
 const showArchiveModal = ref(false)
@@ -57,11 +53,10 @@ function openArchiveModal() {
   const strategyMode = mode.value
   const offset = config.value?.offset_pips ?? 0
   const sl = config.value?.stop_loss_pips ?? 0
-  const ts = config.value?.trailing_stop_pips ?? 0
   const timeout = config.value?.timeout_minutes ?? 0
   const spread = config.value?.spread_pips ?? 0
 
-  const defaultTitle = `${pair}-${event}-${strategyMode}-${offset}/${sl}/${ts}/${timeout}/${spread}`
+  const defaultTitle = `${pair}-${event}-${strategyMode}-${offset}/${sl}/${timeout}/${spread}`
 
   archiveData.value = {
     type: 'Backtest',
@@ -102,7 +97,6 @@ const showAnalysisModal = ref(false)
         <div class="actions">
           <button class="btn-icon" @click="showAnalysisModal = true" title="Analyser">🧠 Analyse</button>
           <button class="btn-icon" @click="openArchiveModal" title="Archiver">💾 Archiver</button>
-          <button class="btn-icon" @click="exportPdf" title="Exporter PDF">📄 PDF</button>
         </div>
       </div>
 
@@ -116,8 +110,14 @@ const showAnalysisModal = ref(false)
 
     <ArchiveModal 
       v-if="showArchiveModal"
-      :is-open="showArchiveModal"
-      :initial-data="archiveData"
+      :show="showArchiveModal"
+      :archive-type="archiveData.type"
+      :period-start="archiveData.periodStart"
+      :period-end="archiveData.periodEnd"
+      :symbol="archiveData.symbol"
+      :event-name="archiveData.eventName"
+      :data-json="archiveData.dataJson"
+      :default-title="archiveData.defaultTitle"
       @close="showArchiveModal = false"
     />
 

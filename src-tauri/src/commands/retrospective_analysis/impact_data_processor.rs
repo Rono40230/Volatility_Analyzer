@@ -97,14 +97,18 @@ impl ImpactDataProcessor {
 
             let calc_noise = |body: f64| if body > 0.0 { 100.0 / body } else { 1.0 };
 
-            for i in 0..event_index.min(atrs.len()) {
-                noise_before_sum += calc_noise(bodies[i]);
+            for body in bodies.iter().take(event_index.min(atrs.len())) {
+                noise_before_sum += calc_noise(*body);
             }
             if event_index < atrs.len() {
                 noise_during_sum += calc_noise(bodies[event_index]);
             }
-            for i in (event_index + 1)..atrs.len().min(event_index + 90) {
-                noise_after_sum += calc_noise(bodies[i]);
+            for body in bodies
+                .iter()
+                .take(atrs.len().min(event_index + 90))
+                .skip(event_index + 1)
+            {
+                noise_after_sum += calc_noise(*body);
             }
         }
 
@@ -154,8 +158,8 @@ impl ImpactDataProcessor {
         let avg_timestamp = calculate_avg_timestamp(events, event_count);
 
         // Calculate P95 Wick & Range
-        let p95_wick = calculate_p95(&mut all_wicks);
-        let p95_range = calculate_p95(&mut all_ranges);
+        let p95_wick = calculate_p95(all_wicks.as_mut_slice());
+        let p95_range = calculate_p95(all_ranges.as_mut_slice());
 
         let avg_deviation = if deviation_count > 0 {
             total_deviation / deviation_count as f64

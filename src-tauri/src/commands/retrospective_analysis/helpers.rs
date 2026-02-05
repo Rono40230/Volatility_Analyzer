@@ -58,9 +58,8 @@ pub fn get_event_types_from_db(
             cal_id
         )
     } else {
-        format!(
-            "SELECT description, COUNT(*) FROM calendar_events GROUP BY description ORDER BY COUNT(*) DESC"
-        )
+        "SELECT description, COUNT(*) FROM calendar_events GROUP BY description ORDER BY COUNT(*) DESC"
+            .to_string()
     };
 
     let mut stmt = conn.prepare(&query).map_err(|e| format!("Prep: {}", e))?;
@@ -73,7 +72,7 @@ pub fn get_event_types_from_db(
     Ok(types)
 }
 
-pub fn calculate_p95(values: &mut Vec<f64>) -> f64 {
+pub fn calculate_p95(values: &mut [f64]) -> f64 {
     if values.is_empty() { return 0.0; }
     values.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let idx = ((values.len() as f64) * 0.95).ceil() as usize;

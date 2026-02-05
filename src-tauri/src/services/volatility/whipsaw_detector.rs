@@ -31,7 +31,7 @@ pub fn calculer_frequence_whipsaw(candles: &[Candle], offset_pips: f64, symbol: 
         let day_key = candle.datetime.format("%Y-%m-%d").to_string();
         daily_groups
             .entry(day_key)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(candle);
     }
 

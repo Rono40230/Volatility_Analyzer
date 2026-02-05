@@ -14,6 +14,7 @@ pub struct Stats15Min {
     pub volatility_mean: f64,
     pub range_mean: f64,
     pub body_range_mean: f64,
+    pub p95_wick: f64,
     pub shadow_ratio_mean: f64,
     pub volume_imbalance_mean: f64,
     pub noise_ratio_mean: f64,
@@ -33,7 +34,7 @@ pub struct Stats15Min {
     pub volatility_half_life_mean: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recommended_trade_expiration_mean: Option<u16>,
-    // Paramètres Straddle calculés (Harmonisation Bidi V2)
+    // Paramètres Straddle calculés (Harmonisation Straddle simultané V2)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub straddle_parameters: Option<StraddleParameters>,
     // Profil de volatilité minute par minute (0-14) pour le graphique

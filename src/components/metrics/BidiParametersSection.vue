@@ -7,25 +7,9 @@
       :analysis-data="analysisData" 
     />
 
-    <!-- 2. Cockpit Grid (3 Columns) -->
+    <!-- 2. Cockpit Grid (2 Columns) -->
     <div class="cockpit-grid">
-      <!-- Left: Directional -->
-      <div class="col-left">
-        <StraddleDirectionalCard
-          :meilleur-moment="meilleurMoment"
-          :offset="offset"
-          :stop-loss="stopLoss"
-          :hard-tp="hardTp"
-          :trailing-stop="trailingStop"
-          :timeout="timeout"
-          :pair="symbol || 'EURUSD'"
-          :point-value="pointValue"
-          :placement-time="placementTime"
-          :spread="spread"
-        />
-      </div>
-
-      <!-- Center: Duration & Info -->
+      <!-- Left: Duration & Info -->
       <BidiVolatilityGraph
         :volatility-profile="volatilityProfile"
         :meilleur-moment="meilleurMoment"
@@ -36,7 +20,7 @@
         :events="recurringEvents"
       />
 
-      <!-- Right: Simultaneous -->
+      <!-- Right: Simultané -->
       <div class="col-right">
         <StraddleSimultaneousCard
           :meilleur-moment="meilleurMoment"
@@ -57,7 +41,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import MetricsGrid from './MetricsGrid.vue'
-import StraddleDirectionalCard from '../trading/StraddleDirectionalCard.vue'
 import StraddleSimultaneousCard from '../trading/StraddleSimultaneousCard.vue'
 import BidiVolatilityGraph from './BidiVolatilityGraph.vue'
 import type { SliceAnalysis } from '../../utils/straddleAnalysis'
@@ -211,7 +194,7 @@ const placementTime = computed(() => {
 
 .cockpit-grid {
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 1fr 300px;
   gap: 8px;
   margin-top: 8px;
   align-items: stretch; /* Stretch to fill height */
@@ -225,7 +208,7 @@ const placementTime = computed(() => {
     grid-template-columns: 1fr;
   }
   
-  .col-left, .col-right {
+  .col-right {
     max-width: 400px;
     margin: 0 auto;
     width: 100%;

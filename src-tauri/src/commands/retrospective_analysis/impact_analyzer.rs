@@ -1,6 +1,7 @@
-use super::bidi_calculator::BidiCalculator;
+use super::straddle_simultane_calculator::StraddleSimultaneCalculator;
 use super::impact_data_processor::ImpactDataProcessor;
 use crate::services::pair_data::get_point_value;
+use tracing::warn;
 
 pub struct ImpactAnalyzer;
 
@@ -18,9 +19,13 @@ impl ImpactAnalyzer {
         let date_min = events.first().ok_or("No first event")?.event_time.and_utc();
         let date_max = events.last().ok_or("No last event")?.event_time.and_utc();
 
-        let all_candles = loader
-            .load_candles_by_pair(pair, "M1", date_min, date_max)
-            .unwrap_or_default();
+        let all_candles = match loader.load_candles_by_pair(pair, "M1", date_min, date_max) {
+            Ok(data) => data,
+            Err(e) => {
+                warn!("ImpactAnalyzer: échec chargement bougies {}: {}", pair, e);
+                Vec::new()
+            }
+        };
 
         if all_candles.is_empty() {
             return Err(format!("No candle data for: {}", pair));
@@ -32,10 +37,10 @@ impl ImpactAnalyzer {
             .map(|dt| dt.format("%Y-%m-%dT%H:%M:%SZ").to_string())
             .unwrap_or_else(|| "Unknown".into());
 
-        // === CALCUL DES PARAMÈTRES BIDI POUR STRADDLE ===
+        // === CALCUL DES PARAMÈTRES STRADDLE SIMULTANÉ ===
         let point_value = get_point_value(pair);
 
-        let bidi_params = BidiCalculator::calculer_depuis_impact(
+        let params_simultanes = StraddleSimultaneCalculator::calculer_depuis_impact(
             &data.atr_timeline_before,
             &data.atr_timeline_after,
             data.noise_during,
@@ -63,17 +68,12 @@ impl ImpactAnalyzer {
             pair: pair.into(),
             event_datetime,
             timezone_offset: "UTC+0".into(),
-            meilleur_moment: bidi_params.0,
-            stop_loss: bidi_params.1,
-            trailing_stop: bidi_params.2,
-            timeout: bidi_params.3,
-            offset: bidi_params.4,
-            stop_loss_recovery: bidi_params.5,
-            // Mapping des nouveaux paramètres Simultané
-            stop_loss_simultaneous: bidi_params.6,
-            trailing_stop_simultaneous: bidi_params.7,
-            offset_simultaneous: bidi_params.8,
-            stop_loss_recovery_simultaneous: bidi_params.9,
+            meilleur_moment: params_simultanes.meilleur_moment,
+            timeout: params_simultanes.timeout,
+            stop_loss_simultaneous: params_simultanes.stop_loss_simultaneous,
+            trailing_stop_simultaneous: params_simultanes.trailing_stop_simultaneous,
+            offset_simultaneous: params_simultanes.offset_simultaneous,
+            stop_loss_recovery_simultaneous: params_simultanes.stop_loss_recovery_simultaneous,
             point_value,
         })
     }

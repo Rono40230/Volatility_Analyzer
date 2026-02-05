@@ -3,14 +3,14 @@
     <h3>1. Sélectionner les rapports</h3>
     <div class="checkbox-group">
       <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('bidi_period')" @change="toggleReport('bidi_period')">
-        <span class="label-text">Fiche Bidi : Paire/Période</span>
+        <input type="checkbox" :checked="selectedReports.includes('straddle_period')" @change="toggleReport('straddle_period')">
+        <span class="label-text">Fiche Straddle Simultané : Paire/Période</span>
         <span class="label-desc">Volatilité Brute (Session Trading)</span>
       </label>
 
       <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('bidi_event')" @change="toggleReport('bidi_event')">
-        <span class="label-text">Fiche Bidi : Paire/Événements</span>
+        <input type="checkbox" :checked="selectedReports.includes('straddle_event')" @change="toggleReport('straddle_event')">
+        <span class="label-text">Fiche Straddle Simultané : Paire/Événements</span>
         <span class="label-desc">Corrélation (News Trading)</span>
       </label>
       

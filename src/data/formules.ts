@@ -305,13 +305,13 @@ export const formules: Record<string, Formule> = {
     definition: 'Stop Loss spécifique pour le mode Simultané, conçu pour couvrir le retournement.',
     explication_litterale: 'En mode simultané, le risque de whipsaw (double perte) est plus élevé. Le SL Recovery est donc calculé sur une base de volatilité majorée (+20% de sensibilité au bruit), puis multiplié par 1.2. Il est enfin plafonné pour ne pas dépasser les extrêmes historiques.',
     formule: 'Base = SL(Noise × 1.2)\nSL Recovery = Base × 1.2\n(Plafonné à 1.5 × P95 Range)',
-    inputs: ['SL Directionnel', 'Noise Ratio', 'P95 Range'],
+    inputs: ['Stop Loss', 'Noise Ratio', 'P95 Range'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'SL Dir=30 pts → Base Sim=35 pts → SL Rec = 42 pts',
+    exemple: 'SL=30 pts → Base Sim=35 pts → SL Rec = 42 pts',
     notes: [
       'Sensibilité au bruit accrue (+20%) pour le mode Simultané',
       'Ratio 1.2x pour absorber la volatilité initiale',
@@ -325,17 +325,16 @@ export const formules: Record<string, Formule> = {
     titre: 'Hard Take Profit (TP)',
     categorieId: 'straddle',
     definition: 'Objectif de profit fixe pour sécuriser les gains rapides.',
-    explication_litterale: 'C\'est notre cible de "Home Run". Si le marché explose dans notre direction, on prend nos profits automatiquement. Le calcul diffère selon le mode (Directionnel ou Simultané) pour garantir une espérance mathématique positive.',
-    formule: 'Directionnel: SL × 2.0\nSimultané: Max(SL × 2.0, SL Recovery × 1.5)',
+    explication_litterale: 'C\'est notre cible de "Home Run". Si le marché explose, on prend nos profits automatiquement. Le calcul est ajusté pour le mode simultané afin de conserver une espérance mathématique positive.',
+    formule: 'TP = Max(SL × 2.0, SL Recovery × 1.5)',
     inputs: ['Stop Loss', 'SL Recovery'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
       unite: 'points'
     },
-    exemple: 'Dir: SL=25 → TP=50 | Sim: SL Rec=40 → TP=60',
+    exemple: 'SL=25 → TP=50 | SL Rec=40 → TP=60',
     notes: [
-      'Ratio 1:2 (Directionnel) = Standard',
       'Ratio 1:1.5 (Simultané) = Minimum vital',
       'Sécurité contre les retournements violents'
     ]
@@ -812,7 +811,7 @@ export const formules: Record<string, Formule> = {
     notes: [
       'Straddle fonctionne mal sur événements biaisés',
       'Meilleur sur événements NEUTRAL',
-      'Si biaisé, utiliser pour stratégies directionnelles'
+      'Si biaisé, éviter le Straddle simultané'
     ]
   },
 
@@ -833,7 +832,7 @@ export const formules: Record<string, Formule> = {
     exemple: '60 gagnants / 100 total = 60%',
     notes: [
       '> 50% est généralement requis pour être profitable (sauf si Risk:Reward très élevé)',
-      'Inclut les trades directionnels et simultanés'
+      'Inclut uniquement les trades simultanés'
     ]
   },
 

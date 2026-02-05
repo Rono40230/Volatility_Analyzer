@@ -10,6 +10,14 @@ pub struct AdjustedMetrics {
 }
 
 impl AdjustedMetrics {
+    /// Calcule un timeout ajusté basé sur l’ATR (volatilité)
+    pub fn calculer_timeout_from_atr(atr_mean: f64) -> i32 {
+        let atr_normalized = (atr_mean / 8.0).min(1.0);
+        let timeout_base = 32.0;
+        let timeout_min = 18.0;
+        (timeout_base - (atr_normalized * (timeout_base - timeout_min))) as i32
+    }
+
     /// Calcule tous les ajustements basés sur la fréquence whipsaw et la volatilité (ATR)
     ///
     /// Formules:
@@ -56,15 +64,7 @@ impl AdjustedMetrics {
         // Normaliser l'ATR sur une échelle 0.0 - 1.0 (basé sur percentiles typiques)
         // ATR faible typique: 1.0-3.0 pips (Forex)
         // ATR élevée typique: 5.0-10.0 pips (Forex)
-        let atr_normalized = (atr_mean / 8.0).min(1.0); // Normaliser avec 8.0 pips comme référence
-
-        // Timeout inversement proportionnel à la volatilité:
-        // - Volatilité basse (ATR faible) → timeout long (32 min)
-        // - Volatilité haute (ATR élevée) → timeout court (18 min)
-        let timeout_base = 32.0;
-        let timeout_min = 18.0;
-        let timeout_adjusted_minutes =
-            (timeout_base - (atr_normalized * (timeout_base - timeout_min))) as i32;
+        let timeout_adjusted_minutes = Self::calculer_timeout_from_atr(atr_mean);
 
         AdjustedMetrics {
             win_rate_adjusted,
@@ -96,11 +96,7 @@ impl AdjustedMetrics {
         let trailing_stop_adjusted = 1.0;
 
         // Timeout basé sur ATR (indépendant du whipsaw)
-        let atr_normalized = (atr_mean / 8.0).min(1.0);
-        let timeout_base = 32.0;
-        let timeout_min = 18.0;
-        let timeout_adjusted_minutes =
-            (timeout_base - (atr_normalized * (timeout_base - timeout_min))) as i32;
+        let timeout_adjusted_minutes = Self::calculer_timeout_from_atr(atr_mean);
 
         AdjustedMetrics {
             win_rate_adjusted,

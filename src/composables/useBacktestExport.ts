@@ -1,12 +1,11 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import type { BacktestResult, BacktestConfig, StrategyMode } from '../stores/backtest'
+import type { BacktestResult, BacktestConfig } from '../stores/backtest'
 import { Ref } from 'vue'
 
 export function useBacktestExport(
   result: Ref<BacktestResult | null>,
-  config: Ref<BacktestConfig | undefined>,
-  mode: Ref<StrategyMode | undefined>
+  config: Ref<BacktestConfig | undefined>
 ) {
 
   function formatDate(iso: string) {
@@ -41,10 +40,10 @@ export function useBacktestExport(
     doc.text('Configuration', 14, 40)
     doc.setFontSize(10)
     if (config.value) {
-      doc.text(`Mode: ${mode.value}`, 14, 48)
+      doc.text(`Mode: Simultané`, 14, 48)
       doc.text(`Offset: ${config.value.offset_pips} pips`, 14, 54)
       doc.text(`SL: ${config.value.stop_loss_pips} pips`, 80, 54)
-      doc.text(`TP: ${config.value.trailing_stop_pips} pips (Trailing)`, 140, 54)
+      doc.text(`TP: ${config.value.offset_pips * 2} pips`, 140, 54)
     }
 
     // Résultats
@@ -82,17 +81,16 @@ export function useBacktestExport(
     // Construction du nom de fichier
     const pair = result.value.symbol || 'UnknownPair'
     const event = result.value.event_name || 'UnknownEvent'
-    const strategyMode = mode.value || 'UnknownMode'
+    const strategyMode = 'Simultane'
     const offset = config.value?.offset_pips ?? 0
     const sl = config.value?.stop_loss_pips ?? 0
-    const ts = config.value?.trailing_stop_pips ?? 0
     const timeout = config.value?.timeout_minutes ?? 0
     const spread = config.value?.spread_pips ?? 0
 
     const safePair = pair.replace(/[^a-zA-Z0-9]/g, '')
     const safeEvent = event.replace(/[^a-zA-Z0-9]/g, '_')
     
-    const filename = `backtest_${safePair}_${safeEvent}_${strategyMode}_${offset}-${sl}-${ts}-${timeout}-${spread}.pdf`
+    const filename = `backtest_${safePair}_${safeEvent}_${strategyMode}_${offset}-${sl}-${timeout}-${spread}.pdf`
 
     doc.save(filename)
   }

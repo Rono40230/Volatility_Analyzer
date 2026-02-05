@@ -6,11 +6,11 @@ pub struct StraddleParameterService;
 impl StraddleParameterService {
     /// Calcule les paramètres Straddle unifiés (utilisé par Volatilité Brute et Corrélation)
     ///
-    /// Logique harmonisée (Bidi V4 - High Volatility Hardened):
-    /// - Offset : DURCI (2.0x à 3.0x ATR) pour éviter les mèches des gros mouvements
+    /// Logique harmonisée (Straddle simultané V4 - High Volatility Hardened):
+    /// - Offset : basé sur le P95 des mèches récentes + coûts (fallback ATR si indisponible)
     /// - SL : ÉLARGI (2.5x à 5.0x ATR) pour encaisser le bruit initial
     /// - TP : Non défini explicitement (Trailing Stop utilisé)
-    /// - Timeout : Basé sur la volatilité (fixe à 3 min pour l'instant ou calculé)
+    /// - Timeout : Basé sur la demi‑vie si disponible, sinon dérivé de la volatilité (ATR/Noise)
     ///
     /// NOTE: `atr` doit être déjà normalisé (en Pips/Points).
     pub fn calculate_parameters(
@@ -19,18 +19,25 @@ impl StraddleParameterService {
         _pip_value: f64, // Gardé pour compatibilité signature mais non utilisé si ATR normalisé
         symbol: &str,
         half_life_minutes: Option<u16>,
+        p95_wick_pips: Option<f64>,
     ) -> StraddleParameters {
         // Récupération du profil de coûts
         let costs = TradingCostProfile::get_profile(symbol);
         let spread = costs.spread_avg;
         let slippage = costs.slippage;
 
-        // 1. Offset Adaptatif (Formule Linéaire V5)
-        // Formule: Offset = (ATR * Multiplier) + Spread + Slippage
-        // Min: 1.5x ATR (si Noise=0)
-        // Max: Capé à 4.0x ATR pour éviter des offsets impossibles à atteindre
-        let offset_multiplier = (1.5 + (noise_ratio * 0.5)).min(4.0);
-        let offset_pips = (atr * offset_multiplier).ceil() + spread + slippage;
+        // 1. Offset Adaptatif
+        // Priorité au P95 des mèches (Straddle simultané) + coûts
+        let offset_pips = match p95_wick_pips {
+            Some(p95) if p95 > 0.0 => (p95 * 1.1).ceil() + spread + slippage,
+            _ => {
+                // Formule fallback : Offset = (ATR * Multiplier) + Spread + Slippage
+                // Min: 1.5x ATR (si Noise=0)
+                // Max: Capé à 4.0x ATR pour éviter des offsets impossibles à atteindre
+                let offset_multiplier = (1.5 + (noise_ratio * 0.5)).min(4.0);
+                (atr * offset_multiplier).ceil() + spread + slippage
+            }
+        };
 
         // 2. Stop Loss Adaptatif (Formule Linéaire V5)
         // Formule: SL = (ATR * Multiplier) + Slippage
@@ -47,7 +54,7 @@ impl StraddleParameterService {
         let trailing_stop_pips = (atr * ts_ratio).ceil();
 
         // 4. SL Recovery (Simultané)
-        // Ratio demandé : 1.2x le SL Directionnel
+        // Ratio demandé : 1.2x le Stop Loss
         let sl_recovery_pips = (stop_loss_pips * 1.2).ceil();
 
         // 5. Hard TP (Take Profit Fixe)
@@ -56,11 +63,11 @@ impl StraddleParameterService {
         let hard_tp_pips = (stop_loss_pips * 2.0).ceil();
 
         // 6. Timeout Dynamique
-        // Basé sur la demi-vie de la volatilité si disponible
-        // Sinon par défaut 3 minutes pour le scalping/news
-        let timeout_minutes = half_life_minutes
-            .map(|hl| hl.clamp(1, 15) as i32) // Min 1 min, Max 15 min
-            .unwrap_or(3);
+        // Priorité à la demi‑vie si disponible, sinon dérivation ATR/Noise
+        let timeout_minutes = match half_life_minutes {
+            Some(hl) => hl.clamp(1, 15) as i32,
+            None => Self::deriver_timeout(atr, noise_ratio),
+        };
 
         // 7. Risk/Reward (Théorique, basé sur volatilité attendue vs SL)
         // Ici on met juste un indicateur
@@ -82,5 +89,19 @@ impl StraddleParameterService {
             risk_reward_ratio,
             spread_safety_margin_pips: spread,
         }
+    }
+
+    /// Dérive un timeout à partir de l’ATR (volatilité) et du Noise Ratio
+    fn deriver_timeout(atr: f64, noise_ratio: f64) -> i32 {
+        if atr <= 0.0 {
+            return 5;
+        }
+
+        // Volatilité élevée => timeout plus court
+        let atr_factor = (10.0 / (atr * 10.0)).clamp(2.0, 12.0);
+        let noise_factor = (noise_ratio * 2.0).clamp(0.0, 6.0);
+        let timeout = (atr_factor + noise_factor).round() as i32;
+
+        timeout.clamp(2, 12)
     }
 }

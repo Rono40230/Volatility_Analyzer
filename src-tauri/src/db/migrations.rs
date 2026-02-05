@@ -155,3 +155,24 @@ pub fn ensure_calendar_imports_table(pool: &DbPool) -> Result<(), Box<dyn std::e
 
     Ok(())
 }
+
+/// Crée la table archives si elle n'existe pas
+pub fn ensure_archives_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
+    let mut conn = pool.get()?;
+
+    diesel::sql_query(
+        "CREATE TABLE IF NOT EXISTS archives (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            title TEXT NOT NULL,
+            archive_type TEXT NOT NULL,
+            period_start TEXT NOT NULL,
+            period_end TEXT NOT NULL,
+            comment TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            data_json TEXT NOT NULL
+        )",
+    )
+    .execute(&mut conn)?;
+
+    Ok(())
+}

@@ -111,10 +111,20 @@ function deletePair(pair: PairMetadataInfo) {
 
 async function confirmDelete() {
   try {
-    if (deleteType.value === 'calendar') await invoke('delete_calendar_from_db', { calendarId: deleteId.value })
-    else await invoke('delete_pair_from_db', { symbol: deleteSymbol.value, timeframe: deleteTimeframe.value })
+    if (deleteType.value === 'calendar') {
+      await invoke('delete_calendar_from_db', { calendarId: deleteId.value })
+    } else {
+      console.log(`Tentative suppression: Symbol=${deleteSymbol.value}, Timeframe=${deleteTimeframe.value}`);
+      await invoke('delete_pair_from_db', { symbol: deleteSymbol.value, timeframe: deleteTimeframe.value })
+    }
     await loadMetadata()
-  } catch (err) { /* Silent */ } finally { showDeleteConfirm.value = false }
+    store.triggerDataRefresh() // Force refresh UI
+  } catch (err) {
+    console.error("Erreur suppression:", err);
+    alert(`Erreur lors de la suppression : ${err}`);
+  } finally {
+    showDeleteConfirm.value = false
+  }
 }
 </script>
 

@@ -34,8 +34,7 @@ export async function generateBacktestReport(doc: jsPDF, dataList: ArchivedBackt
     doc.setTextColor(100)
     const offsetStr = formaterPointsAvecPips(res.symbol, cfg.offset_pips)
     const slStr = formaterPointsAvecPips(res.symbol, cfg.stop_loss_pips)
-    const tsStr = formaterPointsAvecPips(res.symbol, cfg.trailing_stop_pips)
-    doc.text(`Mode: ${data.mode} | Offset: ${offsetStr} | SL: ${slStr} | TS: ${tsStr} | Spread: ${cfg.spread_pips}`, 14, yPos)
+    doc.text(`Mode: Simultané | Offset: ${offsetStr} | SL: ${slStr} | Spread: ${cfg.spread_pips} | Slippage: ${cfg.slippage_pips}`, 14, yPos)
     doc.setTextColor(0)
     doc.setFontSize(10)
     yPos += 8

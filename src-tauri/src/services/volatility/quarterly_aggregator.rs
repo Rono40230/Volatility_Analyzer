@@ -42,6 +42,7 @@ impl QuarterlyAggregator {
                             volatility_mean: 0.0,
                             range_mean: 0.0,
                             body_range_mean: 0.0,
+                            p95_wick: 0.0,
                             shadow_ratio_mean: 0.0,
                             volume_imbalance_mean: 0.0,
                             noise_ratio_mean: 0.0,
@@ -70,6 +71,8 @@ impl QuarterlyAggregator {
                             instances.iter().map(|s| s.range_mean).sum::<f64>() / count;
                         let body_range_mean_avg =
                             instances.iter().map(|s| s.body_range_mean).sum::<f64>() / count;
+                        let p95_wick_avg =
+                            instances.iter().map(|s| s.p95_wick).sum::<f64>() / count;
                         let shadow_ratio_mean_avg =
                             instances.iter().map(|s| s.shadow_ratio_mean).sum::<f64>() / count;
                         let volume_imbalance_mean_avg = instances
@@ -127,13 +130,14 @@ impl QuarterlyAggregator {
                         let total_candle_count: usize =
                             instances.iter().map(|s| s.candle_count).sum();
 
-                        // Calcul des paramètres Straddle moyens (Harmonisation Bidi V2)
+                        // Calcul des paramètres Straddle moyens (Harmonisation Straddle simultané V2)
                         let straddle_params = StraddleParameterService::calculate_parameters(
                             atr_mean_avg,
                             noise_ratio_mean_avg,
                             pip_value,
                             symbol,
                             volatility_half_life_mean,
+                            Some(p95_wick_avg),
                         );
 
                         // Agrégation du profil de volatilité (moyenne minute par minute)
@@ -181,6 +185,7 @@ impl QuarterlyAggregator {
                             volatility_mean: volatility_mean_avg,
                             range_mean: range_mean_avg,
                             body_range_mean: body_range_mean_avg,
+                            p95_wick: p95_wick_avg,
                             shadow_ratio_mean: shadow_ratio_mean_avg,
                             volume_imbalance_mean: volume_imbalance_mean_avg,
                             noise_ratio_mean: noise_ratio_mean_avg,
@@ -209,6 +214,7 @@ impl QuarterlyAggregator {
                         volatility_mean: 0.0,
                         range_mean: 0.0,
                         body_range_mean: 0.0,
+                        p95_wick: 0.0,
                         shadow_ratio_mean: 0.0,
                         volume_imbalance_mean: 0.0,
                         noise_ratio_mean: 0.0,

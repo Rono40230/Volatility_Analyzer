@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { formaterPointsAvecPips, convertirPointsEnPips, obtenirPointsParPip } from '../../pipConverter'
+import { formaterPointsAvecPips, obtenirPointsParPip } from '../../pipConverter'
 
 function formatEntryTime(hour: number, quarter: number, delayMinutes: number = 0): string {
   const startMin = quarter * 15
@@ -12,19 +12,12 @@ function formatEntryTime(hour: number, quarter: number, delayMinutes: number = 0
   return `${String(finalHour).padStart(2, '0')}:${String(finalMin).padStart(2, '0')}`
 }
 
-interface JsPDFWithAutoTable extends jsPDF {
-  lastAutoTable: {
-    finalY: number
-  }
-}
-
 export async function generateBidiPeriodReport(doc: jsPDF, dataList: any[], startY: number = 20) {
   doc.setFontSize(16)
-  doc.text('Fiche Bidi : Paire/Période', 14, startY)
+  doc.text('Fiche Straddle Simultané : Paire/Période', 14, startY)
   doc.setFontSize(10)
   doc.text('Volatilité Brute - Session Trading (Source: Archives)', 14, startY + 6)
   
-  const rowsDirectional: any[] = []
   const rowsSimultaneous: any[] = []
 
   dataList.forEach(data => {
@@ -37,32 +30,12 @@ export async function generateBidiPeriodReport(doc: jsPDF, dataList: any[], star
     // Récupération des paramètres avec fallback (Priorité: Rust > Frontend Plan > Fallback)
     const params = slice?.stats?.straddle_parameters
     
-    // Offset
-    let offset = 0
-    if (params?.offset_pips) {
-      offset = params.offset_pips
-    } else if (data.offsetOptimal?.offset_points) {
-      offset = convertirPointsEnPips(symbol, data.offsetOptimal.offset_points)
-    } else if (plan?.offset) {
-      offset = plan.offset
-    }
-
-    // SL (Directionnel)
-    let sl = 0
-    if (params?.stop_loss_pips) {
-      sl = params.stop_loss_pips
-    } else if (plan?.slPips) {
-      sl = plan.slPips
-    } else if (plan?.sl) {
-      sl = plan.sl
-    }
-
     // SL Recovery (Simultané)
     let slRecovery = 0
     if (params?.sl_recovery_pips) {
       slRecovery = params.sl_recovery_pips
     } else {
-      slRecovery = sl * 1.5 // Fallback standard
+      slRecovery = 0
     }
 
     // Trailing Stop
@@ -94,18 +67,6 @@ export async function generateBidiPeriodReport(doc: jsPDF, dataList: any[], star
     }
 
     if (slice) {
-      // Directionnel
-      rowsDirectional.push([
-        symbol,
-        slice.startTime || 'N/A',
-        entryTime,
-        offset ? formaterPointsAvecPips(symbol, offset) : 'N/A',
-        sl ? formaterPointsAvecPips(symbol, sl) : 'N/A',
-        ts ? formaterPointsAvecPips(symbol, ts) : 'N/A',
-        duration ? `${duration}m` : 'N/A'
-      ])
-
-      // Simultané
       rowsSimultaneous.push([
         symbol,
         slice.startTime || 'N/A',
@@ -115,75 +76,26 @@ export async function generateBidiPeriodReport(doc: jsPDF, dataList: any[], star
         duration ? `${duration}m` : 'N/A'
       ])
     } else {
-      // Fallback
-      rowsDirectional.push([symbol, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
       rowsSimultaneous.push([symbol, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
     }
   })
 
-  // Table 1: Directionnel
   doc.setFontSize(12)
-  doc.setTextColor(41, 128, 185)
-  doc.text('Stratégie Directionnelle (Buy Stop / Sell Stop)', 14, startY + 15)
-  
+  doc.setTextColor(142, 68, 173)
+  doc.text('Stratégie Simultanée (Straddle)', 14, startY + 15)
+
   autoTable(doc, {
     startY: startY + 18,
-    head: [['Paire', 'Période', 'Entrée', 'Offset', 'SL', 'T.Stop', 'Durée']],
-    body: rowsDirectional,
+    head: [['Paire', 'Période', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
+    body: rowsSimultaneous,
     theme: 'grid',
-    headStyles: { fillColor: [41, 128, 185] },
+    headStyles: { fillColor: [142, 68, 173] },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: {
       0: { fontStyle: 'bold' },
       3: { halign: 'right' },
       4: { halign: 'right' },
-      5: { halign: 'right' },
-      6: { halign: 'center' }
+      5: { halign: 'center' }
     }
   })
-
-  // Table 2: Simultané
-  const finalY = (doc as unknown as JsPDFWithAutoTable).lastAutoTable.finalY + 15
-  
-  // Check if new page needed
-  if (finalY > 250) {
-    doc.addPage()
-    doc.setFontSize(12)
-    doc.setTextColor(142, 68, 173)
-    doc.text('Stratégie Simultanée (Straddle)', 14, 20)
-    
-    autoTable(doc, {
-      startY: 25,
-      head: [['Paire', 'Période', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
-      body: rowsSimultaneous,
-      theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'center' }
-      }
-    })
-  } else {
-    doc.setFontSize(12)
-    doc.setTextColor(142, 68, 173)
-    doc.text('Stratégie Simultanée (Straddle)', 14, finalY - 3)
-    
-    autoTable(doc, {
-      startY: finalY,
-      head: [['Paire', 'Période', 'Entrée', 'SL Rec.', 'T.Stop', 'Durée']],
-      body: rowsSimultaneous,
-      theme: 'grid',
-      headStyles: { fillColor: [142, 68, 173] },
-      styles: { fontSize: 9, cellPadding: 3 },
-      columnStyles: {
-        0: { fontStyle: 'bold' },
-        3: { halign: 'right' },
-        4: { halign: 'right' },
-        5: { halign: 'center' }
-      }
-    })
-  }
 }

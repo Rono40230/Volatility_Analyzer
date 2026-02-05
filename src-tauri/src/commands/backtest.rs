@@ -1,4 +1,4 @@
-use crate::services::backtest::{BacktestConfig, BacktestEngine, BacktestResult, StrategyMode};
+use crate::services::backtest::{BacktestConfig, BacktestEngine, BacktestResult};
 use crate::commands::retrospective_analysis::helpers::{setup_databases, load_events_by_type};
 use chrono::{NaiveDate, NaiveTime, Duration, Datelike, Utc};
 use crate::models::calendar_event::CalendarEvent;
@@ -8,7 +8,6 @@ pub async fn run_backtest(
     pair: String,
     event_type: String,
     config: BacktestConfig,
-    mode: StrategyMode,
     state: tauri::State<'_, crate::commands::calendar_commands::CalendarState>,
 ) -> Result<BacktestResult, String> {
     let (conn, loader) = setup_databases(&state).await?;
@@ -18,7 +17,7 @@ pub async fn run_backtest(
         return Err(format!("No events found for type: {}", event_type));
     }
 
-    BacktestEngine::run(&pair, &events, config, mode, &loader)
+    BacktestEngine::run(&pair, &events, config, &loader)
 }
 
 #[tauri::command]
@@ -28,7 +27,6 @@ pub async fn run_backtest_time(
     start_date: String,
     end_date: String,
     config: BacktestConfig,
-    mode: StrategyMode,
     state: tauri::State<'_, crate::commands::calendar_commands::CalendarState>,
 ) -> Result<BacktestResult, String> {
     let (_, loader) = setup_databases(&state).await?;
@@ -70,5 +68,5 @@ pub async fn run_backtest_time(
         return Err("No valid weekdays found in range".to_string());
     }
 
-    BacktestEngine::run(&pair, &events, config, mode, &loader)
+    BacktestEngine::run(&pair, &events, config, &loader)
 }

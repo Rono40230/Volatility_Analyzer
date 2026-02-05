@@ -91,7 +91,14 @@ pub async fn sync_forex_factory_week() -> Result<String, String> {
     tracing::info!("🔄 Starting Forex Factory sync...");
 
     let url = "https://nfs.faireconomy.media/ff_calendar_thisweek.csv";
-    let response = reqwest::get(url)
+    
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()
+        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+
+    let response = client.get(url)
+        .send()
         .await
         .map_err(|e| format!("Failed to download calendar: {}", e))?;
 
@@ -153,7 +160,7 @@ pub async fn sync_forex_factory_week() -> Result<String, String> {
     let calendar_name = format!("ForexFactory_Sync_{}", chrono::Utc::now().format("%Y-%m-%d_%H-%M-%S"));
     let filename = "ff_calendar_thisweek.csv";
 
-    save_calendar_import(&conn, &calendar_name, &filename, &events)?;
+    save_calendar_import(&conn, &calendar_name, filename, &events)?;
 
     tracing::info!(
         "✅ Forex Factory sync complete: {} events imported",

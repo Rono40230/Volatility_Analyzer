@@ -1,19 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum StrategyMode {
-    Directionnel, // Breakout classique (OCO)
-    Simultane,    // Recovery / Hedging
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestConfig {
     pub offset_pips: f64,
     pub stop_loss_pips: f64,
-    pub trailing_stop_pips: f64,
     pub timeout_minutes: i32,
     pub sl_recovery_pips: Option<f64>, // Uniquement pour le mode Simultané
     pub spread_pips: f64,              // Spread simulé (ex: 1.0 pip)
+    pub slippage_pips: f64,            // Slippage simulé (ex: 0.5 pip)
     pub point_value: f64,              // Valeur du point (ex: 0.00001)
 }
 
@@ -23,9 +17,9 @@ pub enum TradeOutcome {
     StopLoss,
     Timeout,
     NoEntry, // L'ordre n'a jamais été déclenché
-    Whipsaw, // Déclenché puis SL touché rapidement (Mode Directionnel)
-    RecoveryWin, // Perte initiale récupérée par le trade inverse (Mode Simultané)
-    DoubleLoss,  // Perte sur les deux jambes (Mode Simultané)
+    Whipsaw, // Déclenché puis SL touché rapidement
+    RecoveryWin, // Perte initiale récupérée par le trade inverse
+    DoubleLoss,  // Perte sur les deux jambes
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -56,7 +50,6 @@ pub struct BacktestResult {
     pub max_drawdown_pips: f64,
     pub profit_factor: f64,
     pub trades: Vec<TradeResult>,
-    pub strategy_mode: StrategyMode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]

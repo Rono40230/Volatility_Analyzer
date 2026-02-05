@@ -18,8 +18,8 @@ export function useMetaAnalysis() {
             pair: data.pair || 'Inconnu',
             volatilityIncrease: data.volatilityIncreasePercent || 0,
             noiseRatio: data.noiseRatioDuring || 0,
-            offset: data.offset || 0,
-            stopLoss: data.stopLoss || 0,
+            offset: data.offsetSimultaneous || 0,
+            stopLoss: data.stopLossRecoverySimultaneous || 0,
             timeout: data.timeout || 0,
             eventCount: data.eventCount || 0
           }

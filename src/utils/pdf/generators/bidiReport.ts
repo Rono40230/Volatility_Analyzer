@@ -5,9 +5,9 @@ import { formaterPointsAvecPips } from '../../pipConverter'
 
 export async function generateBidiReport(doc: jsPDF, dataList: ArchivedAnalysisData[], startY: number = 20) {
   doc.setFontSize(16)
-  doc.text('Fiche Paramètres Bidi', 14, startY)
+  doc.text('Fiche Paramètres Straddle Simultané', 14, startY)
   doc.setFontSize(10)
-  doc.text('Paramètres optimaux (Source: Trading Plan validé)', 14, startY + 6)
+  doc.text('Paramètres optimaux (Straddle Simultané)', 14, startY + 6)
   
   const rows: any[] = []
 

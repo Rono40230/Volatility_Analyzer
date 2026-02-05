@@ -1,4 +1,4 @@
-pub mod bidi_calculator;
+pub mod straddle_simultane_calculator;
 pub mod commands;
 pub mod helpers;
 pub mod impact_analyzer;

@@ -5,7 +5,6 @@ import { invoke } from '@tauri-apps/api/core'
 export interface BacktestConfig {
   offset_pips: number
   stop_loss_pips: number
-  trailing_stop_pips: number
   timeout_minutes: number
   sl_recovery_pips: number | null
   spread_pips: number
@@ -13,10 +12,6 @@ export interface BacktestConfig {
   point_value: number
 }
 
-export enum StrategyMode {
-  Directionnel = 'Directionnel',
-  Simultane = 'Simultane'
-}
 
 export enum BacktestType {
   Event = 'Event',
@@ -49,14 +44,12 @@ export interface BacktestResult {
   max_drawdown_pips: number
   profit_factor: number
   trades: TradeResult[]
-  strategy_mode: StrategyMode
 }
 
 export const useBacktestStore = defineStore('backtest', () => {
   const config = ref<BacktestConfig>({
     offset_pips: 5.0,
     stop_loss_pips: 10.0,
-    trailing_stop_pips: 15.0,
     timeout_minutes: 60,
     sl_recovery_pips: null,
     spread_pips: 1.0,
@@ -64,7 +57,6 @@ export const useBacktestStore = defineStore('backtest', () => {
     point_value: 0.0001 // Default for major pairs
   })
 
-  const mode = ref<StrategyMode>(StrategyMode.Directionnel)
   const result = ref<BacktestResult | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -94,8 +86,7 @@ export const useBacktestStore = defineStore('backtest', () => {
       result.value = await invoke('run_backtest', {
         pair,
         eventType,
-        config: config.value,
-        mode: mode.value
+        config: config.value
       })
     } catch (e) {
       error.value = String(e)
@@ -117,8 +108,7 @@ export const useBacktestStore = defineStore('backtest', () => {
         time,
         startDate,
         endDate,
-        config: config.value,
-        mode: mode.value
+        config: config.value
       })
     } catch (e) {
       error.value = String(e)
@@ -129,7 +119,6 @@ export const useBacktestStore = defineStore('backtest', () => {
 
   return {
     config,
-    mode,
     result,
     loading,
     error,

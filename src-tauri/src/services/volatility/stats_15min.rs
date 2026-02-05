@@ -7,6 +7,7 @@ use crate::services::{MetricsCalculator, StraddleParameterService, VolatilityDur
 use chrono::Timelike;
 use std::collections::HashMap;
 use tracing::debug;
+use std::cmp::Ordering;
 
 /// Calculateur de statistiques pour tranches de 15 minutes
 pub(super) struct Stats15MinCalculator<'a> {
@@ -58,6 +59,7 @@ impl<'a> Stats15MinCalculator<'a> {
                         volatility_mean: 0.0,
                         range_mean: 0.0,
                         body_range_mean: 0.0,
+                        p95_wick: 0.0,
                         shadow_ratio_mean: 0.0,
                         volume_imbalance_mean: 0.0,
                         noise_ratio_mean: 0.0,
@@ -104,6 +106,7 @@ impl<'a> Stats15MinCalculator<'a> {
                 volatility_mean: 0.0,
                 range_mean: 0.0,
                 body_range_mean: 0.0,
+                p95_wick: 0.0,
                 shadow_ratio_mean: 0.0,
                 volume_imbalance_mean: 0.0,
                 noise_ratio_mean: 0.0,
@@ -158,6 +161,7 @@ impl<'a> Stats15MinCalculator<'a> {
         let shadow_ratio_mean = mean(&shadow_ratios);
         let _tick_quality_mean = mean(&tick_qualities);
         let noise_ratio_mean = mean(&noise_ratios);
+        let p95_wick = calculer_p95_wick(&owned_candles, &asset_props);
 
         // Calculate breakout percentage first
         let breakout_count = tr_dist.is_breakout.iter().filter(|&&b| b).count();
@@ -192,9 +196,15 @@ impl<'a> Stats15MinCalculator<'a> {
                 }
             };
 
-        // Calcul des paramètres Straddle (Harmonisation Bidi V2)
-        let straddle_params =
-            StraddleParameterService::calculate_parameters(atr_mean, noise_ratio_mean, asset_props.pip_value, symbol, half_life);
+        // Calcul des paramètres Straddle (Harmonisation Straddle simultané V2)
+        let straddle_params = StraddleParameterService::calculate_parameters(
+            atr_mean,
+            noise_ratio_mean,
+            asset_props.pip_value,
+            symbol,
+            half_life,
+            Some(p95_wick),
+        );
 
         // Calcul du profil de volatilité minute par minute (0-14) pour le graphique
         let mut minute_ranges: Vec<Vec<f64>> = vec![Vec::new(); 15];
@@ -236,6 +246,7 @@ impl<'a> Stats15MinCalculator<'a> {
             volatility_mean,
             range_mean,
             body_range_mean,
+            p95_wick,
             shadow_ratio_mean,
             volume_imbalance_mean: direction_strength,
             noise_ratio_mean,
@@ -252,4 +263,30 @@ impl<'a> Stats15MinCalculator<'a> {
             optimal_entry_minute,
         })
     }
+}
+
+fn calculer_p95_wick(candles: &[Candle], asset_props: &AssetProperties) -> f64 {
+    let mut wicks: Vec<f64> = Vec::new();
+
+    for candle in candles {
+        let upper = candle.high - candle.close.max(candle.open);
+        let lower = candle.open.min(candle.close) - candle.low;
+        if upper > 0.0 {
+            wicks.push(upper);
+        }
+        if lower > 0.0 {
+            wicks.push(lower);
+        }
+    }
+
+    if wicks.is_empty() {
+        return 0.0;
+    }
+
+    wicks.sort_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal));
+    let index = ((wicks.len() as f64) * 0.95).ceil() as usize;
+    let safe_index = index.min(wicks.len().saturating_sub(1));
+    let raw_p95 = wicks.get(safe_index).copied().unwrap_or(0.0);
+
+    asset_props.normalize(raw_p95)
 }

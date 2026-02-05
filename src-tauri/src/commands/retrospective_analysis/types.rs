@@ -75,19 +75,13 @@ pub struct EventImpactResult {
     pub event_datetime: String,  // ISO 8601: heure moyenne de l'événement
     pub timezone_offset: String, // Ex: "UTC+0" ou "UTC-5"
 
-    // === PARAMÈTRES BIDI POUR STRADDLE (DIRECTIONNEL) ===
+    // === PARAMÈTRES STRADDLE (SIMULTANÉ) ===
     pub meilleur_moment: f64, // Offset optimal en minutes avant événement (T0 - meilleur_moment)
-    pub stop_loss: f64,       // Stop Loss en pips (basé sur ATR moyen)
-    pub trailing_stop: f64,   // Trailing Stop coefficient (ajusté selon noise)
     pub timeout: i32,         // Timeout recommandé en minutes (basé sur decay de volatilité)
-    pub offset: f64,          // Offset d'entrée en points (distance du prix)
-    
-    // === PARAMÈTRES BIDI POUR STRADDLE (SIMULTANÉ) ===
     pub stop_loss_simultaneous: f64,       // SL spécifique pour mode Simultané (souvent plus large)
     pub trailing_stop_simultaneous: f64,   // TS spécifique pour mode Simultané
     pub offset_simultaneous: f64,          // Offset spécifique pour mode Simultané
     pub stop_loss_recovery_simultaneous: f64, // SL Recovery spécifique pour mode Simultané
-    pub stop_loss_recovery: f64,           // SL Recovery (Directionnel)
 
     pub point_value: f64,     // Valeur d'un point pour normalisation (ex: 0.001 pour JPY)
 }
