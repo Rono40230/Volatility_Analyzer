@@ -1,5 +1,6 @@
 // tests/event_movement_quality_tests.rs - Tests pour EventMovementQuality
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::models::event_movement_quality::{EventMovementQuality, MovementRecommendation};
 

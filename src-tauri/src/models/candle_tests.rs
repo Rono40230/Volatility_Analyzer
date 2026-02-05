@@ -1,5 +1,6 @@
 // tests/candle_tests.rs - Tests pour Candle
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::models::candle::Candle;
     use chrono::Utc;

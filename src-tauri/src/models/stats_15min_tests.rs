@@ -1,5 +1,6 @@
 // tests/stats_15min_tests.rs - Tests pour Stats15Min
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::models::Stats15Min;
 

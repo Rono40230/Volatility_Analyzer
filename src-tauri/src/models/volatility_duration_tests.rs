@@ -1,5 +1,6 @@
 // tests/volatility_duration_tests.rs - Tests pour VolatilityDuration
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use crate::models::volatility_duration::VolatilityDuration;
 
