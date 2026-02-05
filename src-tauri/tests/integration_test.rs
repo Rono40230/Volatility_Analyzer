@@ -6,7 +6,7 @@ mod tests {
     /// Test basique pour vérifier que les modules se compilent ensemble
     #[test]
     fn test_modules_compile() {
-        // Ce test vérifie juste que tout compile ensemble
-        assert!(true);
+        // Ce test vérifie juste que tout compile ensemble (aucune assertion nécessaire)
+        // (l'existence du test suffit pour l'intégration)
     }
 }
