@@ -149,8 +149,7 @@ mod tests {
             id: None,
             symbol: "EURUSD".to_string(),
             datetime: DateTime::from_timestamp(1609459200 + (minutes_offset * 60), 0)
-                .expect("Invalid timestamp")
-                .into(),
+                .expect("Invalid timestamp"),
             open: price,
             high: price + range,
             low: price - range,
@@ -173,8 +172,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
         let result = optimizer
@@ -200,8 +198,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
         let analysis = optimizer
@@ -223,8 +220,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
         for minutes in &[1, 5, 15, 30, 45, 60] {
@@ -244,8 +240,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
         let result1 = optimizer
@@ -266,8 +261,7 @@ mod tests {
     fn test_entry_timing_optimizer_empty_candles() {
         let candles = Vec::new();
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let optimizer = EntryTimingOptimizer::new(&candles, event_time);
 
         let result = optimizer.find_optimal_timing(2.0, 3.0, 120);

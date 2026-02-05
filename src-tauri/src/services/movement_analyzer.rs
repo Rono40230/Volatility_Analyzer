@@ -230,8 +230,7 @@ mod tests {
             datetime: DateTime::<Utc>::from_timestamp_millis(
                 1609459200000 + (offset_minutes as i64 * 60000),
             )
-            .expect("timestamp must be valid")
-            .into(),
+            .expect("timestamp must be valid"),
             open: price,
             high: price + high_delta,
             low: price - low_delta,

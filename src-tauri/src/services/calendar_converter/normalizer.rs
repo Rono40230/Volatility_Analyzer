@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn test_cell_to_string_float() {
-        let cell = Data::Float(3.14);
+        let cell = Data::Float(std::f64::consts::PI);
         assert!(cell_to_string(&cell).contains("3.14"));
     }
 

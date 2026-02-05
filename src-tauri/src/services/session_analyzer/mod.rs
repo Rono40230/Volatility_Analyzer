@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_generate_recommendations_empty() {
         let recommendations = SessionAnalyzer::generer_recommandations(&[], 75.0);
-        assert!(recommendations.len() > 0); // Au moins la recommandation info
+        assert!(!recommendations.is_empty()); // Au moins la recommandation info
     }
 
     #[test]

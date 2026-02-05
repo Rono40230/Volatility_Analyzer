@@ -22,7 +22,7 @@ mod tests {
         };
 
         let score = stats.quality_score();
-        assert!(score >= 0.0 && score <= 100.0);
+        assert!((0.0..=100.0).contains(&score));
         assert!(score > 50.0);
     }
 

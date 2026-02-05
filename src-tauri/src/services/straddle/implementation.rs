@@ -2,10 +2,7 @@
 // Centralized implementations for Straddle simulation utilities.
 
 use crate::models::Candle;
-use crate::services::pair_data::symbol_properties::normalize_to_pips;
-use crate::models::AssetProperties;
 use crate::models::trading_costs::TradingCostProfile;
-use chrono::Utc;
 
 // --- TradeOutcome (copied from helpers) ---
 #[derive(Debug, Clone)]
@@ -78,6 +75,19 @@ pub fn calculate_dynamic_offset(wicks_history: &[Vec<f64>], current_candle: &Can
         recent_wicks.sort_by(|a,b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let idx = ((recent_wicks.len() as f64) * 0.95).ceil() as usize;
         if idx < recent_wicks.len() { recent_wicks[idx] } else { 0.0 }
+    }
+}
+
+/// Calcule le risque et la couleur basé sur la fréquence whipsaw
+pub fn calculate_risk_level(whipsaw_freq_pct: f64) -> (String, String) {
+    if whipsaw_freq_pct < 10.0 {
+        ("Faible".to_string(), "#22c55e".to_string())
+    } else if whipsaw_freq_pct < 20.0 {
+        ("Moyen".to_string(), "#eab308".to_string())
+    } else if whipsaw_freq_pct < 30.0 {
+        ("Élevé".to_string(), "#f97316".to_string())
+    } else {
+        ("Critique".to_string(), "#ef4444".to_string())
     }
 }
 
@@ -222,7 +232,6 @@ pub fn simulate_straddle(
 ) -> crate::services::straddle_types::StraddleSimulationResult {
     use crate::services::straddle_adjustments::AdjustedMetrics;
     use crate::services::straddle_types::{StraddleSimulationResult, WhipsawDetail};
-    use crate::models::Candle;
     use crate::services::pair_data::symbol_properties::normalize_to_pips;
     use crate::models::AssetProperties;
 
@@ -372,7 +381,7 @@ pub fn simulate_straddle(
     let win_rate_percentage = if total_trades > 0 { (wins as f64 / total_trades as f64) * 100.0 } else { 0.0 };
     let whipsaw_frequency_percentage = if total_trades > 0 { (whipsaws as f64 / total_trades as f64) * 100.0 } else { 0.0 };
 
-    let (risk_level, risk_color) = crate::services::straddle_simulator_helpers::calculate_risk_level(whipsaw_frequency_percentage);
+    let (risk_level, risk_color) = calculate_risk_level(whipsaw_frequency_percentage);
 
     let avg_offset_used = if total_trades > 0 { sum_offsets_used / total_trades as f64 } else { 0.0 };
 

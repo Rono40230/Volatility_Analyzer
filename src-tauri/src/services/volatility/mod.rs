@@ -14,7 +14,7 @@ mod utils;
 mod volatility_duration_analyzer;
 mod volatility_heuristics;
 mod whipsaw_detector;
-mod whipsaw_simulator;
+// whipsaw_simulator removed: use centralized services::straddle::simulate_straddle_trade
 
 // Ré-exporte l'analyseur principal
 pub use analyzer::VolatilityAnalyzer;

@@ -19,8 +19,7 @@ mod tests {
             id: None,
             symbol: "EURUSD".to_string(),
             datetime: DateTime::from_timestamp(1609459200 + (minutes_offset * 60), 0)
-                .expect("Invalid timestamp")
-                .into(),
+                .expect("Invalid timestamp"),
             open: base_price,
             high: base_price + 0.0010,
             low: base_price - 0.0010,
@@ -53,8 +52,7 @@ mod tests {
         ];
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
 
         let _analyzer = EventDurationAnalyzer::new(&candles, event_time);
         assert!(!candles.is_empty());
@@ -67,8 +65,7 @@ mod tests {
             .collect();
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
 
         let analyzer = EventDurationAnalyzer::new(&candles, event_time);
         let result = analyzer.analyze();
@@ -85,8 +82,7 @@ mod tests {
         ];
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
 
         let analyzer = EventDurationAnalyzer::new(&candles, event_time);
         let result = analyzer.analyze();
@@ -104,8 +100,7 @@ mod tests {
         ];
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
 
         let analyzer = EventDurationAnalyzer::new(&candles, event_time);
         let index_result = analyzer.trouver_index_evenement();
@@ -124,8 +119,7 @@ mod tests {
         ];
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
 
         let analyzer = EventDurationAnalyzer::new(&candles, event_time);
         let result = analyzer.calculer_atr_reference();

@@ -70,8 +70,7 @@ mod tests {
             id: None,
             symbol: "EURUSD".to_string(),
             datetime: DateTime::from_timestamp(1609459200 + (minutes_offset * 60), 0)
-                .expect("Invalid timestamp")
-                .into(),
+                .expect("Invalid timestamp"),
             open: price,
             high: price + range,
             low: price - range,
@@ -94,8 +93,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let analyzer = ContextualAtrAnalyzer::new(&candles, event_time);
 
         let result = analyzer.analyze(14).expect("Failed to analyze");
@@ -115,8 +113,7 @@ mod tests {
         }
 
         let event_time = DateTime::from_timestamp(1609459200 + 3000, 0)
-            .expect("Invalid timestamp")
-            .into();
+            .expect("Invalid timestamp");
         let analyzer = ContextualAtrAnalyzer::new(&candles, event_time);
 
         let result = analyzer.analyze(14).expect("Failed to analyze");

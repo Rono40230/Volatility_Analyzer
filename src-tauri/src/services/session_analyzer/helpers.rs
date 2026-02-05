@@ -150,6 +150,6 @@ mod tests {
     #[test]
     fn test_format_paris_hours_wraparound() {
         let formatted = format_paris_hours(22, 7, true);
-        assert!(formatted.len() > 0);
+        assert!(!formatted.is_empty());
     }
 }

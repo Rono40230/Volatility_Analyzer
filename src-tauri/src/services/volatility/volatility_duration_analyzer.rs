@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn test_insufficient_candles() {
-        let candles = vec![create_test_candle(1.0800, 1.0810, 1.0790)];
+        let candles = [create_test_candle(1.0800, 1.0810, 1.0790)];
         let candle_refs: Vec<&Candle> = candles.iter().collect();
         assert!(VolatilityDurationAnalyzer::analyser_depuis_bougies(14, 0, &candle_refs).is_err());
     }
