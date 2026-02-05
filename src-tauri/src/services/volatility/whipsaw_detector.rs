@@ -215,7 +215,6 @@ impl WhipsawRiskLevel {
 
 /// PHASE 7a-2: Whipsaw Root Cause Analysis
 /// Classifier whipsaws en "early" (avant peak) et "late" (après peak)
-
 #[cfg(test)]
 mod tests {
     use super::*;

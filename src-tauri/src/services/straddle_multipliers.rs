@@ -160,9 +160,7 @@ pub fn get_sl_multiplier(
 }
 
 /// Calculate final SL with time-of-day adjustment
-///
 /// # Arguments
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -123,8 +123,8 @@ mod tests {
         // Le 95e percentile devrait être la valeur à l'index 94 (0-indexed) après tri.
         // Si on a 105 candles, 95% de 105 = 99.75.
         // Restons sur 100 candles pour simplifier.
-        for i in 0..5 {
-            candles[i].high = 11.0;
+        for candle in candles.iter_mut().take(5) {
+            candle.high = 11.0;
         }
 
         let dist = TrueRangeDistribution::calculer(&candles).expect("Calcul distribution échoué");
