@@ -18,7 +18,8 @@ tauri-build = { version = "2", features = [] }
 tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
-tauri-plugin-sql = { version = "2", default-features = false, features = ["sqlite"] }
+## tauri-plugin-sql and sqlx removed: project uses Diesel/rusqlite instead
+## Removed to avoid transitive vulnerability (rsa via sqlx-mysql)
 
 # Calculs statistiques (PRIORITÉ 1 - Performance)
 polars = { version = "0.45", features = ["lazy", "temporal", "csv"] }
@@ -31,8 +32,7 @@ diesel = { version = "2.2", features = ["sqlite", "chrono", "r2d2"] }
 diesel_migrations = "2.2"
 rusqlite = { version = "0.32", features = [] }
 
-# Explicit sqlx pin to avoid pulling mysql feature set transitively
-sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio-rustls"] }
+## sqlx removed (not used). Use Diesel/rusqlite for SQLite access.
 
 # Validation des entrées
 validator = { version = "0.19", features = ["derive"] }
