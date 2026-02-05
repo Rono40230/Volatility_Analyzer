@@ -43,6 +43,7 @@ pub mod straddle_scoring;
 pub mod straddle_simulator;
 pub mod straddle_simulator_helpers;
 pub mod straddle_types;
+pub mod straddle;
 pub mod volatility;
 pub mod volatility_duration_calculator;
 pub mod win_rate_calculator;

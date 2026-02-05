@@ -1,6 +1,6 @@
 // services/volatility/whipsaw_detector.rs - Détection de fausses cassures (whipsaw)
 // CORRECTION PHASE 8: Simulation réaliste d'un Straddle
-use super::whipsaw_simulator::{simulate_straddle_trade, TradeResult};
+use crate::services::straddle::{simulate_straddle_trade, TradeResult};
 use crate::models::Candle;
 use tracing::{debug, info};
 

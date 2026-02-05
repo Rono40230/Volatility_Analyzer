@@ -67,7 +67,7 @@ pub async fn analyze_straddle_metrics(
         analyze_slice_metrics(&candle_index, &symbol, hour as u32, quarter as u32)?;
 
     // Simuler la stratégie Straddle sur les bougies historiques
-    use crate::services::straddle_simulator::simulate_straddle;
+    use crate::services::straddle::simulate_straddle;
     let simulation = simulate_straddle(&candles, &symbol, None);
 
     // Convertir les détails des whipsaws (si disponibles)
