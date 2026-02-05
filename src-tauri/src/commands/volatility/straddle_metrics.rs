@@ -2,7 +2,7 @@
 use super::straddle_metrics_types::*;
 use tauri::command;
 use crate::models::AssetProperties;
-use crate::services::straddle_simulator_helpers::get_asset_cost;
+use crate::services::straddle::get_asset_cost;
 
 /// Obtenir le nombre de points par pip selon le symbole
 /// Basé sur la norme MT5:

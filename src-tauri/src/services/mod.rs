@@ -40,8 +40,6 @@ pub mod straddle_adjustments;
 pub mod straddle_multipliers;
 pub mod straddle_parameter_service;
 pub mod straddle_scoring;
-pub mod straddle_simulator;
-pub mod straddle_simulator_helpers;
 pub mod straddle_types;
 pub mod straddle;
 pub mod volatility;

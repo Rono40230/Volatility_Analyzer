@@ -1,6 +1,6 @@
 // commands/volatility/straddle_analysis.rs - Commands pour calculs Straddle
 use crate::models::{Candle, AssetProperties};
-use crate::services::straddle_simulator_helpers::calculer_atr_moyen;
+use crate::services::straddle::calculer_atr_moyen;
 use crate::services::volatility::calculer_frequence_whipsaw as service_calculer_frequence_whipsaw;
 use crate::services::straddle::simulate_straddle;
 use crate::services::StraddleParameterService;
