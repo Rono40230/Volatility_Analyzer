@@ -119,136 +119,15 @@ pub fn simulate_trade_outcome(
     sl_distance: f64,
     max_duration: usize,
 ) -> Option<TradeOutcome> {
-    let end_idx = candles.len().min(start_idx + max_duration + 1);
-    let mut triggered_side: Option<&str> = None;
-    let mut buy_trigger_idx = 0;
-    let mut sell_trigger_idx = 0;
-
-    for (j, current) in candles.iter().enumerate().take(end_idx).skip(start_idx + 1) {
-
-        if triggered_side.is_none() {
-            // Pas encore déclenché
-            if current.high >= buy_stop && current.low <= sell_stop {
-                // Whipsaw immédiat (déclenchement des deux côtés dans la même bougie)
-                return Some(TradeOutcome {
-                    result: "WHIPSAW".to_string(),
-                    buy_trigger_idx: j,
-                    sell_trigger_idx: j,
-                });
-            } else if current.high >= buy_stop {
-                triggered_side = Some("BUY");
-                buy_trigger_idx = j;
-                
-                if current.low <= sell_stop {
-                    return Some(TradeOutcome {
-                        result: "WHIPSAW".to_string(),
-                        buy_trigger_idx: j,
-                        sell_trigger_idx: j,
-                    });
-                }
-                if current.low <= buy_stop - sl_distance {
-                    return Some(TradeOutcome {
-                        result: "LOSS".to_string(),
-                        buy_trigger_idx: j,
-                        sell_trigger_idx: 0,
-                    });
-                }
-                if current.high >= buy_stop + tp_distance {
-                    return Some(TradeOutcome {
-                        result: "WIN".to_string(),
-                        buy_trigger_idx: j,
-                        sell_trigger_idx: 0,
-                    });
-                }
-            } else if current.low <= sell_stop {
-                triggered_side = Some("SELL");
-                sell_trigger_idx = j;
-                
-                if current.high >= buy_stop {
-                    return Some(TradeOutcome {
-                        result: "WHIPSAW".to_string(),
-                        buy_trigger_idx: j,
-                        sell_trigger_idx: j,
-                    });
-                }
-                if current.high >= sell_stop + sl_distance {
-                    return Some(TradeOutcome {
-                        result: "LOSS".to_string(),
-                        buy_trigger_idx: 0,
-                        sell_trigger_idx: j,
-                    });
-                }
-                if current.low <= sell_stop - tp_distance {
-                    return Some(TradeOutcome {
-                        result: "WIN".to_string(),
-                        buy_trigger_idx: 0,
-                        sell_trigger_idx: j,
-                    });
-                }
-            }
-        } else {
-            // Déjà déclenché
-            match triggered_side {
-                Some("BUY") => {
-                    if current.low <= sell_stop {
-                        return Some(TradeOutcome {
-                            result: "WHIPSAW".to_string(),
-                            buy_trigger_idx,
-                            sell_trigger_idx: j,
-                        });
-                    }
-                    if current.low <= buy_stop - sl_distance {
-                        return Some(TradeOutcome {
-                            result: "LOSS".to_string(),
-                            buy_trigger_idx,
-                            sell_trigger_idx: 0,
-                        });
-                    }
-                    if current.high >= buy_stop + tp_distance {
-                        return Some(TradeOutcome {
-                            result: "WIN".to_string(),
-                            buy_trigger_idx,
-                            sell_trigger_idx: 0,
-                        });
-                    }
-                }
-                Some("SELL") => {
-                    if current.high >= buy_stop {
-                        return Some(TradeOutcome {
-                            result: "WHIPSAW".to_string(),
-                            buy_trigger_idx: j,
-                            sell_trigger_idx,
-                        });
-                    }
-                    if current.high >= sell_stop + sl_distance {
-                        return Some(TradeOutcome {
-                            result: "LOSS".to_string(),
-                            buy_trigger_idx: 0,
-                            sell_trigger_idx,
-                        });
-                    }
-                    if current.low <= sell_stop - tp_distance {
-                        return Some(TradeOutcome {
-                            result: "WIN".to_string(),
-                            buy_trigger_idx: 0,
-                            sell_trigger_idx,
-                        });
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-
-    if triggered_side.is_some() {
-        Some(TradeOutcome {
-            result: "TIMEOUT".to_string(),
-            buy_trigger_idx,
-            sell_trigger_idx,
-        })
-    } else {
-        None
-    }
+    crate::services::straddle::simulate_trade_outcome(
+        candles,
+        start_idx,
+        buy_stop,
+        sell_stop,
+        tp_distance,
+        sl_distance,
+        max_duration,
+    )
 }
 
 /// Calcule le risque et la couleur basé sur la fréquence whipsaw

@@ -119,7 +119,7 @@ pub fn simulate_straddle(
             }
         }
 
-        let outcome = simulate_trade_outcome(
+        let outcome = crate::services::straddle::simulate_trade_outcome(
             candles,
             i,
             buy_stop,
