@@ -47,8 +47,8 @@ import type { SliceAnalysis } from '../../utils/straddleAnalysis'
 import { obtenirPointsParPip } from '../../utils/pipConverter'
 
 interface EntryWindowAnalysis { optimal_offset: number; optimal_entry_minutes: number }
-interface WhipsawAnalysis { whipsaw_frequency_percentage: number; trailing_stop_adjusted: number; optimal_entry_minutes: number }
-interface OffsetOptimal { sl_adjusted_points: number; optimal_offset: number; hard_tp_points?: number }
+interface WhipsawAnalysis { whipsaw_frequency_percentage: number; trailing_stop_adjusted: number; timeout_adjusted_minutes?: number }
+interface OffsetOptimal { sl_adjusted_points: number; offset_points?: number; hard_tp_points?: number }
 // Use any for VolatilityDuration to match Record<string, unknown> expected by child component
 type VolatilityDuration = any 
 

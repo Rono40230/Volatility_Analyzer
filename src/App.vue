@@ -2,7 +2,6 @@
 import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useVolatilityStore } from './stores/volatility'
 import { useAnalysisStore } from './stores/analysisStore'
 import AnalysisPanel from './components/AnalysisPanel.vue'
@@ -17,7 +16,6 @@ import BacktestView from './views/BacktestView.vue'
 import PlanningView from './views/PlanningView.vue'
 import HomeView from './views/HomeView.vue'
 
-const appWindow = getCurrentWindow()
 const volatilityStore = useVolatilityStore()
 const analysisStore = useAnalysisStore()
 const { analysisResult, loading, error } = storeToRefs(volatilityStore)
@@ -35,19 +33,13 @@ watch(activeTab, (newTab) => {
 })
 
 onMounted(async () => {
-  console.log('[DIAG] App.vue onMounted START, activeTab =', activeTab.value)
   try {
-    console.log('[DIAG] Calling init_candle_index...')
     await invoke('init_candle_index', {})
-    console.log('[DIAG] init_candle_index OK')
-  } catch (err) {
-    console.log('[DIAG] init_candle_index failed (non-blocking):', err)
+  } catch (_err) {
+    // Non-bloquant
   }
-  console.log('[DIAG] Calling loadSymbols...')
   volatilityStore.loadSymbols()
-  console.log('[DIAG] Calling restoreHeatmapFromStorage...')
   analysisStore.restoreHeatmapFromStorage()
-  console.log('[DIAG] App.vue onMounted END')
 })
 
 // Gestion des modales globales
@@ -82,47 +74,49 @@ function handleQuarterAnalyze(hour: number, quarter: number) {
   quarterAnalysisQuarter.value = quarter
   isQuarterAnalysisOpen.value = true
 }
-
-// Window Actions
-function minimize() { appWindow.minimize() }
-function toggleMaximize() { appWindow.toggleMaximize() }
-function closeApp() { appWindow.close() }
 </script>
 
 <template>
   <div class="app-shell">
-    
-    <!-- === SYSTEME WINDOW (Drag + Controls) === -->
-    <!-- Masqué sur Linux : decorations: true utilise la titlebar native du WM -->
-    <!-- <div class="titlebar" data-tauri-drag-region @dblclick="toggleMaximize">
-      <div class="titlebar-spacer"></div>
-      <div class="window-controls">
-        <button @click="minimize" class="win-btn" title="Réduire">
-          <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
-        </button>
-        <button @click="toggleMaximize" class="win-btn" title="Agrandir">
-          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 L1,9 z" fill="none" stroke="currentColor"/></svg>
-        </button>
-        <button @click="closeApp" class="win-btn close-btn" title="Fermer">
-          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 M9,1 L1,9" stroke="currentColor"/></svg>
-        </button>
-      </div>
-    </div> -->
-
     <!-- === MAIN NAVIGATION HEADER === -->
-    <!-- Positionné en flux normal, mais doit être capable d'être cliqué si pas couvert totalement par Drag Region -->
-    <!-- Drag Region fait 32px height fixed top. Ce header fait 48px. -->
     <header class="app-header">
       <div class="header-left">
-        <button v-if="activeTab !== 'home'" @click="activeTab = 'home'" class="nav-home-btn" title="Retour Accueil">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-home"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <button
+          v-if="activeTab !== 'home'"
+          class="nav-home-btn"
+          title="Retour Accueil"
+          @click="activeTab = 'home'"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="feather feather-home"
+          >
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
           <span class="home-text">Accueil</span>
         </button>
-        <div v-else class="brand">
-          <img src="./assets/logo.png" alt="Logo" width="24" height="24" /> Volatility Analyzer
+        <div
+          v-else
+          class="brand"
+        >
+          <img
+            src="./assets/logo.png"
+            alt="Logo"
+            width="24"
+            height="24"
+          > Volatility Analyzer
         </div>
       </div>
-      
+
       <div class="header-center">
         <!-- Optional: Toolbar items can go here -->
       </div>
@@ -130,81 +124,134 @@ function closeApp() { appWindow.close() }
 
     <!-- === APP CONTENT AREA === -->
     <main class="app-viewport">
-      
       <!-- HOME VIEW -->
-      <HomeView v-show="activeTab === 'home'" @navigate="switchTab" @open-modal="handleOpenModal"/>
+      <HomeView
+        v-show="activeTab === 'home'"
+        @navigate="switchTab"
+        @open-modal="handleOpenModal"
+      />
 
       <!-- WORKSPACE VIEWS (v-show pour préserver le cache KeepAlive lors du passage par Home) -->
-      <div v-show="activeTab !== 'home'" class="workspace-container">
+      <div
+        v-show="activeTab !== 'home'"
+        class="workspace-container"
+      >
         <!-- Volatility Tab -->
         <template v-if="activeTab === 'volatility'">
-           <div class="volatility-layout">
-             <!-- Loading State -->
-             <div v-if="loading" class="state-msg">
-                <div class="spinner"></div>
-                <p>Analyse en cours...</p>
-             </div>
+          <div class="volatility-layout">
+            <!-- Loading State -->
+            <div
+              v-if="loading"
+              class="state-msg"
+            >
+              <div class="spinner" />
+              <p>Analyse en cours...</p>
+            </div>
 
-             <!-- Error State -->
-             <div v-if="error" class="error-msg">
-                <h3>❌ Erreur</h3>
-                <p>{{ error }}</p>
-             </div>
+            <!-- Error State -->
+            <div
+              v-if="error"
+              class="error-msg"
+            >
+              <h3>❌ Erreur</h3>
+              <p>{{ error }}</p>
+            </div>
 
-             <!-- Empty State -->
-             <div v-if="!loading && !analysisResult && !error" class="empty-state">
-                <div class="welcome-icon">💱</div>
-                <h3>Sélectionnez un symbole pour commencer</h3>
-                <select v-model="selectedSymbolLocal" :disabled="loading" class="symbol-select" @change="handleSymbolChange">
-                  <option value="">Choisir un symbole</option>
-                  <option v-for="symbol in volatilityStore.symbols" :key="symbol.symbol" :value="symbol.symbol">{{ symbol.symbol }}</option>
-                </select>
-             </div>
+            <!-- Empty State -->
+            <div
+              v-if="!loading && !analysisResult && !error"
+              class="empty-state"
+            >
+              <div class="welcome-icon">
+                💱
+              </div>
+              <h3>Sélectionnez un symbole pour commencer</h3>
+              <select
+                v-model="selectedSymbolLocal"
+                :disabled="loading"
+                class="symbol-select"
+                @change="handleSymbolChange"
+              >
+                <option value="">
+                  Choisir un symbole
+                </option>
+                <option
+                  v-for="symbol in volatilityStore.symbols"
+                  :key="symbol.symbol"
+                  :value="symbol.symbol"
+                >
+                  {{ symbol.symbol }}
+                </option>
+              </select>
+            </div>
 
-             <!-- Results -->
-             <template v-if="!loading && analysisResult">
-                <AnalysisPanel 
-                  :result="analysisResult" 
-                  :symbols="volatilityStore.symbols"
-                  @symbol-selected="handleSymbolSelected"
-                />
-                <HourlyTable 
-                  :stats="analysisResult.hourly_stats" 
-                  :best-quarter="analysisResult.best_quarter"
-                  :stats15min="analysisResult.stats_15min"
-                  :global-metrics="analysisResult.global_metrics"
-                  :point-value="analysisResult.point_value"
-                  :unit="analysisResult.unit"
-                  :symbol="analysisResult.symbol"
-                  @analyze-quarter="handleQuarterAnalyze"
-                />
-             </template>
-           </div>
+            <!-- Results -->
+            <template v-if="!loading && analysisResult">
+              <AnalysisPanel
+                :result="analysisResult"
+                :symbols="volatilityStore.symbols"
+                @symbol-selected="handleSymbolSelected"
+              />
+              <HourlyTable
+                :stats="analysisResult.hourly_stats"
+                :best-quarter="analysisResult.best_quarter"
+                :stats15min="analysisResult.stats_15min"
+                :global-metrics="analysisResult.global_metrics"
+                :point-value="analysisResult.point_value"
+                :unit="analysisResult.unit"
+                :symbol="analysisResult.symbol"
+                @analyze-quarter="handleQuarterAnalyze"
+              />
+            </template>
+          </div>
         </template>
 
         <!-- Other Tabs -->
-        <template v-if="activeTab === 'calendar'"><ImportHub /></template>
+        <template v-if="activeTab === 'calendar'">
+          <ImportHub />
+        </template>
 
         <!-- KeepAlive : préserve l'état des onglets lourds lors des switches -->
         <KeepAlive>
-          <EventCorrelationView v-if="activeTab === 'heatmap'" :view-mode="'heatmap'" key="heatmap" />
+          <EventCorrelationView
+            v-if="activeTab === 'heatmap'"
+            key="heatmap"
+            :view-mode="'heatmap'"
+          />
         </KeepAlive>
         <KeepAlive>
-          <EventCorrelationView v-if="activeTab === 'retrospective'" :view-mode="'retrospective'" key="retrospective" />
+          <EventCorrelationView
+            v-if="activeTab === 'retrospective'"
+            key="retrospective"
+            :view-mode="'retrospective'"
+          />
         </KeepAlive>
         <KeepAlive>
-          <BacktestView v-if="activeTab === 'backtest'" key="backtest" />
+          <BacktestView
+            v-if="activeTab === 'backtest'"
+            key="backtest"
+          />
         </KeepAlive>
 
-        <template v-if="activeTab === 'archives'"><ArchivesView /></template>
-        <template v-if="activeTab === 'planning'"><PlanningView /></template>
+        <template v-if="activeTab === 'archives'">
+          <ArchivesView />
+        </template>
+        <template v-if="activeTab === 'planning'">
+          <PlanningView />
+        </template>
       </div>
-
     </main>
 
     <!-- MODALS -->
-    <FormulasModal :is-open="showFormulasModal" @close="showFormulasModal = false" />
-    <ExportModal :is-open="showExportModal" :current-symbol="selectedSymbolLocal" @close="showExportModal = false" />
+    <FormulasModal
+      :is-open="showFormulasModal"
+      @close="showFormulasModal = false"
+    />
+    <ExportModal
+      :is-open="showExportModal"
+      :current-symbol="selectedSymbolLocal"
+      @close="showExportModal = false"
+    />
     <MetricsAnalysisModal
       :is-open="isQuarterAnalysisOpen"
       :analysis-result="analysisResult"
@@ -212,7 +259,6 @@ function closeApp() { appWindow.close() }
       :pre-selected-quarter="quarterAnalysisQuarter"
       @close="isQuarterAnalysisOpen = false"
     />
-    
   </div>
 </template>
 
@@ -256,63 +302,20 @@ select option {
   position: relative;
 }
 
-/* --- TITLE BAR SYSTEM (Custom, safe drag region) --- */
-
-.titlebar {
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  background: var(--panel-bg);
-  border-bottom: 1px solid var(--border-color);
-  user-select: none;
-}
-
-.titlebar-spacer { flex: 1; }
-
-.window-controls {
-  display: flex;
-  align-items: center;
-  padding-right: 4px;
-}
-.win-btn {
-  width: 46px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  color: #8b949e;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.win-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.close-btn:hover { background: #d32f2f; color: #fff; }
-
-/* 3. Header Navigation (In Flow) */
+/* --- Header Navigation --- */
 .app-header {
   height: 48px;
   display: flex;
   align-items: center;
   padding: 0 16px;
-  padding-top: 10px; /* Compensate for visually hidden top part if needed, though 32px drag covers top 32px */
   border-bottom: 1px solid var(--border-color);
   background: var(--panel-bg);
   flex-shrink: 0;
 }
-/* NOTE: Top 32px of viewport is covered by Drag Region (z-40).
-   The header is top-aligned in flex column.
-   So header top 32px is unclickable.
-   BUT header buttons must be clickable.
-   SOLUTION: Give header buttons z-index 41+ or move header down.
-   We'll use z-index relative on the buttons.
-*/
+
 .header-left {
   display: flex;
   align-items: center;
-  position: relative;
-  z-index: 45; /* Higher than Drag Region */
 }
 
 .nav-home-btn {

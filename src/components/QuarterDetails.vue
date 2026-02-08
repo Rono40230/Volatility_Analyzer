@@ -11,9 +11,15 @@
           <th>Direction Strength</th>
           <th>Noise Ratio</th>
           <th>Breakouts %</th>
-          <th title="Minutes volatilité > 80% pic">Peak (min)</th>
-          <th title="Minutes pour -50% volatilité">Half-Life (min)</th>
-          <th title="Durée optimale fermeture trade">Trade Exp (min)</th>
+          <th title="Minutes volatilité > 80% pic">
+            Peak (min)
+          </th>
+          <th title="Minutes pour -50% volatilité">
+            Half-Life (min)
+          </th>
+          <th title="Durée optimale fermeture trade">
+            Trade Exp (min)
+          </th>
           <th>Analyser</th>
         </tr>
       </thead>
@@ -25,11 +31,26 @@
           :class="{ 'top3-slice': isBestSlice(quarter.quarter) }"
         >
           <td class="time-cell">
-            <span v-if="isBestSlice(quarter.quarter)" class="top3-star">⭐</span>
+            <span
+              v-if="isBestSlice(quarter.quarter)"
+              class="top3-star"
+            >⭐</span>
             {{ formatQuarterLabel(hour, quarter.quarter) }}
           </td>
-          <td><UnitDisplay :value="quarter.atr_mean" :unit="unit" :symbol="symbol" /></td>
-          <td><UnitDisplay :value="quarter.max_true_range ?? 0" :unit="unit" :symbol="symbol" /></td>
+          <td>
+            <UnitDisplay
+              :value="quarter.atr_mean"
+              :unit="unit"
+              :symbol="symbol"
+            />
+          </td>
+          <td>
+            <UnitDisplay
+              :value="quarter.max_true_range ?? 0"
+              :unit="unit"
+              :symbol="symbol"
+            />
+          </td>
           <td>{{ (quarter.volatility_mean * 100).toFixed(2) }}%</td>
           <td>
             {{ Math.abs(quarter.body_range_mean).toFixed(2) }}%
@@ -38,10 +59,16 @@
           <td>{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
           <td>{{ quarter.noise_ratio_mean.toFixed(2) }}%</td>
           <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
-          <td class="duration-cell" :title="`Peak duration moyen: ${quarter.peak_duration_mean ?? 'N/A'} min`">
+          <td
+            class="duration-cell"
+            :title="`Peak duration moyen: ${quarter.peak_duration_mean ?? 'N/A'} min`"
+          >
             {{ quarter.peak_duration_mean !== undefined ? quarter.peak_duration_mean + ' min' : '—' }}
           </td>
-          <td class="duration-cell" :title="`Half-life moyen: ${quarter.volatility_half_life_mean ?? 'N/A'} min`">
+          <td
+            class="duration-cell"
+            :title="`Half-life moyen: ${quarter.volatility_half_life_mean ?? 'N/A'} min`"
+          >
             {{ quarter.volatility_half_life_mean !== undefined ? quarter.volatility_half_life_mean + ' min' : '—' }}
           </td>
           <td
@@ -50,7 +77,10 @@
             :title="`Fermer trade après ${quarter.recommended_trade_expiration_mean ?? 'N/A'} min`"
           >
             {{ quarter.recommended_trade_expiration_mean !== undefined ? quarter.recommended_trade_expiration_mean + ' min' : '—' }}
-            <span v-if="isTradeExpTooLong(quarter)" class="warning-icon">⚠️</span>
+            <span
+              v-if="isTradeExpTooLong(quarter)"
+              class="warning-icon"
+            >⚠️</span>
           </td>
           <td class="analyze-cell">
             <button

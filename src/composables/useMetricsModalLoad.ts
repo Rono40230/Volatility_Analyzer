@@ -3,59 +3,16 @@ import { watch, Ref } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 import { useMetricsAnalysisData } from './useMetricsAnalysisData'
-import { useStraddleAnalysis, type ConfidenceMetric, type OptimalOffset } from './useStraddleAnalysis'
-import type { RecurringEvent } from './useMetricsAnalysisData.helpers'
-
-interface MovementQuality {
-  hour: number
-  quarter: number
-  score: number
-  [key: string]: any
-}
-
-interface VolatilityDuration {
-  [key: string]: any
-}
-
-interface TradingPlan {
-  [key: string]: any
-}
-
-interface EntryWindowAnalysis {
-  optimal_offset: number
-  optimal_win_rate: number
-  [key: string]: any
-}
-
-interface WinRateMetric {
-  total_trades: number
-  wins: number
-  losses: number
-  whipsaws: number
-  win_rate_percentage: number
-  win_rate_adjusted: number
-}
-
-interface WhipsawMetric {
-  total_trades: number
-  whipsaw_count: number
-  whipsaw_frequency_percentage: number
-  risk_level: string
-  risk_color: string
-  sl_adjusted_points: number // Points MetaTrader 5
-  win_rate_adjusted: number
-  trailing_stop_adjusted: number
-  timeout_adjusted_minutes: number
-  whipsaw_details: any[]
-}
+import { useStraddleAnalysis, type ConfidenceMetric, type OptimalOffset, type WinRateMetric, type WhipsawMetric } from './useStraddleAnalysis'
+import type { RecurringEvent, MovementQuality, VolatilityDuration } from './useMetricsAnalysisData.helpers'
 
 export interface ArchivedAnalysisData {
   analysisResult: AnalysisResult
   sliceAnalyses: SliceAnalysis[]
   movementQualities: Record<string, MovementQuality>
-  volatilityDuration: VolatilityDuration
-  tradingPlan: TradingPlan
-  entryWindowAnalysis: EntryWindowAnalysis
+  volatilityDuration: VolatilityDuration | null
+  tradingPlan: Record<string, unknown>
+  entryWindowAnalysis: Record<string, unknown>
   offsetOptimal: OptimalOffset
   winRate: WinRateMetric
   whipsawAnalysis: WhipsawMetric

@@ -35,7 +35,7 @@
       <ScoreWhipsawBadges
         :score="adjustedScore"
         :whipsaw-frequency="props.whipsawAnalysis?.whipsaw_frequency_percentage || 0"
-        :confidence="confidence"
+        :confidence="confidence ?? undefined"
       />
     </div>
 
@@ -52,14 +52,13 @@ import ScoreWhipsawBadges from './ScoreWhipsawBadges.vue'
 import { computed } from 'vue'
 import {
   calculateAdjustedScore,
-  getMovementQualityKey,
   generateRecommendation
 } from './BestSliceCard.helpers'
 
 interface Slice {
   startTime: string
   straddleScore: number
-  win_rate_adjusted: number
+  win_rate_adjusted?: number
 }
 
 interface Analysis {
@@ -76,8 +75,8 @@ interface WhipsawAnalysis {
 }
 
 interface MovementQuality {
-  score: number
-  label: string
+  score?: number
+  label?: string
 }
 
 interface ConfidenceMetric { score: number; sample_size_warning: boolean }
@@ -85,10 +84,10 @@ interface ConfidenceMetric { score: number; sample_size_warning: boolean }
 const props = defineProps<{
   analysis: Analysis
   symbol?: string
-  volatilityDuration: VolatilityDuration
+  volatilityDuration?: VolatilityDuration | null
   movementQualities?: Record<string, MovementQuality>
-  whipsawAnalysis?: WhipsawAnalysis
-  confidence?: ConfidenceMetric
+  whipsawAnalysis?: WhipsawAnalysis | null
+  confidence?: ConfidenceMetric | null
 }>()
 
 const { getRankClass } = useMetricsCalculations()

@@ -3,8 +3,9 @@ import type { Stats15Min } from '../stores/volatilityTypes'
 import { calculateStraddleScore } from '../utils/straddleAnalysis'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 import { buildTradingPlanFromBackend } from '../utils/straddleCalculators.helpers'
+import type { VolatilityDuration, MovementQuality, RecurringEvent } from './metricsAnalysisTypes'
 export { obtenirProfilVolatiliteAssemble } from '../utils/volatilityProfile'
-export type { VolatilityDuration, MovementQuality, RecurringEvent } from './metricsAnalysisTypes'
+export type { VolatilityDuration, MovementQuality, RecurringEvent }
 
 export function formatSliceTime(hour: number, quarter: number): string {
   const startMin = quarter * 15

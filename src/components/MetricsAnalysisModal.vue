@@ -1,19 +1,45 @@
 <template>
-  <div v-if="isOpen" class="modal-overlay" @click.self="close">
+  <div
+    v-if="isOpen"
+    class="modal-overlay"
+    @click.self="close"
+  >
     <div class="modal-content">
-      <div class="modal-header"><div class="header-title">📊 Analyse des Métriques</div><button class="close-btn" @click="close">✕</button></div>
+      <div class="modal-header">
+        <div class="header-title">
+          📊 Analyse des Métriques
+        </div>
+        <button
+          class="close-btn"
+          @click="close"
+        >
+          ✕
+        </button>
+      </div>
       <div class="modal-section">
-        <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
-          <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis" :confidence="confidence">
-            <BidiParametersSection 
-              :slice-analyses="sliceAnalyses" 
-              :entry-window-analysis="entryWindowAnalysis" 
-              :analysis="analysis" 
+        <div
+          v-if="sliceAnalyses && sliceAnalyses.length > 0"
+          class="slices-container"
+        >
+          <BestSliceCard
+            v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)"
+            :key="`slice-${analysis.rank}`"
+            :analysis="analysis"
+            :symbol="analysisData?.symbol"
+            :volatility-duration="volatilityDuration"
+            :movement-qualities="movementQualities"
+            :whipsaw-analysis="whipsawAnalysis"
+            :confidence="confidence"
+          >
+            <BidiParametersSection
+              :slice-analyses="sliceAnalyses"
+              :entry-window-analysis="entryWindowAnalysis"
+              :analysis="analysis"
               :analysis-data="analysisData"
-              :volatility-duration="volatilityDuration" 
+              :volatility-duration="volatilityDuration"
               :trading-plan="tradingPlan"
-              :whipsaw-analysis="whipsawAnalysis" 
-              :offset-optimal="offsetOptimal" 
+              :whipsaw-analysis="whipsawAnalysis"
+              :offset-optimal="offsetOptimal"
               :confidence="confidence"
               :spread="spreadCost"
               :symbol="analysisData?.symbol || 'EURUSD'"
@@ -22,23 +48,54 @@
             />
           </BestSliceCard>
         </div>
-        <div v-if="!sliceAnalyses || sliceAnalyses.length === 0" class="loading-state">
-          <div class="spinner">⏳</div>
-          <p>Analyse en cours</p>
+        <div
+          v-if="!sliceAnalyses || sliceAnalyses.length === 0"
+          class="loading-state"
+        >
+          <div class="spinner">
+            ⏳
+          </div>
+          <p>
+            Analyse en cours
+          </p>
         </div>
       </div>
-      <div class="modal-footer"><button v-if="!isArchiveMode" class="btn-archive" @click="openArchiveModal">💾 Archiver</button><button class="btn-primary" @click="close">Fermer l'analyse</button></div>
+      <div class="modal-footer">
+        <button
+          v-if="!isArchiveMode"
+          class="btn-archive"
+          @click="openArchiveModal"
+        >
+          💾 Archiver
+        </button>
+        <button
+          class="btn-primary"
+          @click="close"
+        >
+          Fermer l'analyse
+        </button>
+      </div>
     </div>
   </div>
-  <ArchiveModal :show="showArchiveModal" archive-type="Volatilité brute Paire/Période" :period-start="archivePeriodStart" :period-end="archivePeriodEnd" :symbol="analysisData?.symbol" :timeframe="'M1'" :data-json="archiveDataJson" :default-title="archiveDefaultTitle" @close="showArchiveModal = false" @saved="handleArchiveSaved" />
+  <ArchiveModal
+    :show="showArchiveModal"
+    archive-type="Volatilité brute Paire/Période"
+    :period-start="archivePeriodStart"
+    :period-end="archivePeriodEnd"
+    :symbol="analysisData?.symbol"
+    :timeframe="'M1'"
+    :data-json="archiveDataJson"
+    :default-title="archiveDefaultTitle"
+    @close="showArchiveModal = false"
+    @saved="handleArchiveSaved"
+  />
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults, toRef } from 'vue'
+import { ref, toRef } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import { useMetricsModalLoad, type ArchivedAnalysisData } from '../composables/useMetricsModalLoad'
 import ArchiveModal from './ArchiveModal.vue'
-import { useStraddleAnalysis } from '../composables/useStraddleAnalysis'
 import BestSliceCard from './metrics/BestSliceCard.vue'
 import BidiParametersSection from './metrics/BidiParametersSection.vue'
 
@@ -46,16 +103,12 @@ interface Props {
   isOpen: boolean
   analysisResult: AnalysisResult | null
   isArchiveMode?: boolean
-  selectedSymbol?: string
-  preSelectedHour?: number
   preSelectedQuarter?: number
   archivedData?: ArchivedAnalysisData
 }
 
 const props = withDefaults(defineProps<Props>(), {
   isArchiveMode: false,
-  selectedSymbol: '',
-  preSelectedHour: undefined,
   preSelectedQuarter: undefined
 })
 const emit = defineEmits<{ close: [] }>()

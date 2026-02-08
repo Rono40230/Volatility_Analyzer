@@ -63,15 +63,8 @@
 - [x] Le SL à 14h30 devrait être environ **2× plus grand** que celui de 03h00 (ratio 1.5/0.7 ≈ 2.14) ✅
 - [x] Le SL à 10h00 UTC (calme) devrait être plus petit que celui de 12h00 UTC (critique) ✅
 
-### T7. ⭐ Badge Monte Carlo (Intervalle de Confiance)
-- [ ] Ouvrir l'analyse d'un créneau 15min (cliquer sur une cellule heatmap)
-- [ ] Attendre 2-3 secondes que le calcul Monte Carlo se termine
-- [ ] Un badge 🎲 doit apparaître avec :
-  - Win rate moyen (ex: "52%")
-  - Intervalle de confiance [low - high] (ex: "[45-59]")
-  - P(profit) en pourcentage
-- [ ] Si l'IC est > 20 points de pourcentage → un ⚠️ doit s'afficher
-- [ ] Sur un créneau avec très peu de données (< 5 candles) → pas de crash
+### T7. ~~⭐ Badge Monte Carlo (Intervalle de Confiance)~~ — SUPPRIMÉ
+- [x] ~~Monte Carlo supprimé du code (backend + frontend) — fonctionnalité retirée par décision utilisateur~~
 
 ---
 
@@ -83,27 +76,27 @@
 - [ ] L'unité doit être cohérente entre la heatmap, la modale d'analyse et le backtest
 
 ### T9. Noise Ratio réaliste
-- [ ] Aucun Noise Ratio ne doit être négatif
-- [ ] Un Noise Ratio > 3.0 est suspect mais possible (vérifier le visuel)
-- [ ] Les créneaux calmes (nuit) devraient avoir un Noise Ratio plus élevé que les créneaux actifs
+- [x] Aucun Noise Ratio ne doit être négatif
+- [x] Un Noise Ratio > 3.0 est suspect mais possible (vérifier le visuel)
+- [x] Les créneaux calmes (nuit) devraient avoir un Noise Ratio plus élevé que les créneaux actifs
 
 ### T10. Graduation de couleurs dans la heatmap (6 niveaux)
-- [ ] La heatmap affiche bien un dégradé de couleurs (pas juste 2-3 couleurs)
-- [ ] Les meilleures cellules sont clairement distinguées des pires
+- [x] La heatmap affiche bien un dégradé de couleurs (pas juste 2-3 couleurs)
+- [x] Les meilleures cellules sont clairement distinguées des pires
 
 ### T11. Compteur de candles (sample_count) visible
-- [ ] Chaque cellule de la heatmap devrait indiquer le nombre de candles analysées
-- [ ] Les cellules avec peu de données (< 10 candles) sont visuellement identifiables
+- [x] Chaque cellule de la heatmap devrait indiquer le nombre de candles analysées
+- [x] Les cellules avec peu de données (< 10 candles) sont visuellement identifiables
 
 ### T12. Guard NaN sur l'affichage des unités
-- [ ] Aller dans une analyse de créneau
-- [ ] Vérifier que les valeurs numériques sont bien formatées (pas de `NaN pips`)
-- [ ] S'il n'y a pas de données, un message vide propre s'affiche
+- [x] Aller dans une analyse de créneau
+- [x] Vérifier que les valeurs numériques sont bien formatées (pas de `NaN pips`)
+- [x] S'il n'y a pas de données, un message vide propre s'affiche
 
 ### T13. Détails Quarter (QuarterDetails)
-- [ ] Cliquer sur un créneau 15min dans la heatmap
-- [ ] Vérifier que le panneau de détail s'ouvre correctement
-- [ ] Les métriques affichées sont lisibles et cohérentes
+- [x] Cliquer sur un créneau 15min dans la heatmap
+- [x] Vérifier que le panneau de détail s'ouvre correctement
+- [x] Les métriques affichées sont lisibles et cohérentes
 
 ---
 
@@ -162,13 +155,13 @@
 | 🟠 P2 | T4 | KeepAlive onglets ⭐ | ✅ | |
 | 🟠 P2 | T5 | Params Auto backtest ⭐ | ⬜ | |
 | 🟠 P2 | T6 | SL temporel ⭐ | ✅ | |
-| 🟠 P2 | T7 | Badge Monte Carlo ⭐ | ⬜ | |
+| 🟠 P2 | T7 | ~~Badge Monte Carlo~~ | 🗑️ | Supprimé |
 | 🟡 P3 | T8 | Unités correctes | ⬜ | |
-| 🟡 P3 | T9 | Noise Ratio réaliste | ⬜ | |
-| 🟡 P3 | T10 | Graduation couleurs | ⬜ | |
-| 🟡 P3 | T11 | Sample count visible | ⬜ | |
-| 🟡 P3 | T12 | Guard NaN affichage | ⬜ | |
-| 🟡 P3 | T13 | Détails Quarter | ⬜ | |
+| 🟡 P3 | T9 | Noise Ratio réaliste | ✅ | |
+| 🟡 P3 | T10 | Graduation couleurs | ✅ | |
+| 🟡 P3 | T11 | Sample count visible | ✅ | |
+| 🟡 P3 | T12 | Guard NaN affichage | ✅ | |
+| 🟡 P3 | T13 | Détails Quarter | ✅ | |
 | 🟢 P4 | T14 | Import paire | ⬜ | |
 | 🟢 P4 | T15 | Import calendrier | ⬜ | |
 | 🟢 P4 | T16 | Sélecteur symboles | ⬜ | |
