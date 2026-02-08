@@ -3,7 +3,7 @@
     <h3>💱 Paires de Trading</h3>
     <div v-if="pairsMetadata.length > 0" class="info-box">
       <div>Paires: {{ pairsMetadata.length }}</div>
-      <div>Bougies: {{ pairsMetadata.reduce((s, p) => s + p.candle_count, 0).toLocaleString() }}</div>
+      <div>Bougies: {{ pairsMetadata.reduce((s, p) => s + (p.candle_count || 0), 0).toLocaleString() }}</div>
     </div>
     <div v-else class="info-box warning">Aucune paire importée.</div>
     <div v-if="pairsMetadata.length > 0" class="table-container">
@@ -14,7 +14,7 @@
         <tbody>
           <tr v-for="pair in pairsMetadata" :key="`${pair.symbol}-${pair.timeframe}`">
             <td><strong>{{ pair.symbol }}</strong></td>
-            <td>{{ pair.candle_count.toLocaleString() }}</td>
+            <td>{{ (pair.candle_count || 0).toLocaleString() }}</td>
             <td>{{ formatPeriod(pair) }}</td>
             <td><button class="btn-delete" @click="$emit('delete', pair)">🗑️ Supprimer</button></td>
           </tr>

@@ -151,6 +151,10 @@ pub fn process_single_file(
     tx.commit()
         .map_err(|e| format!("Transaction commit error: {}", e))?;
 
+    // REINDEX après import pour éviter la corruption d'index (rusqlite/Diesel dual-access)
+    conn.execute_batch("REINDEX;")
+        .map_err(|e| format!("REINDEX error: {}", e))?;
+
     // Conservation du fichier source (Modification demandée : ne pas supprimer)
     info!("✅ Fichier source conservé: {}", source_path);
     // fs::remove_file(source_path).map_err(...) // Suppression désactivée

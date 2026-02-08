@@ -47,7 +47,6 @@ onMounted(async () => {
 const showFormulasModal = ref(false)
 const showExportModal = ref(false)
 const isQuarterAnalysisOpen = ref(false)
-const quarterAnalysisHour = ref<number | undefined>(undefined)
 const quarterAnalysisQuarter = ref<number | undefined>(undefined)
 
 async function handleSymbolSelected(symbol: string) {
@@ -71,7 +70,6 @@ function handleOpenModal(modal: 'formulas' | 'export') {
 }
 
 function handleQuarterAnalyze(hour: number, quarter: number) {
-  quarterAnalysisHour.value = hour
   quarterAnalysisQuarter.value = quarter
   isQuarterAnalysisOpen.value = true
 }
@@ -337,7 +335,6 @@ function closeWindow() { appWindow.close() }
     <MetricsAnalysisModal
       :is-open="isQuarterAnalysisOpen"
       :analysis-result="analysisResult"
-      :pre-selected-hour="quarterAnalysisHour"
       :pre-selected-quarter="quarterAnalysisQuarter"
       @close="isQuarterAnalysisOpen = false"
     />

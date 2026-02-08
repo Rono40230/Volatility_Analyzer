@@ -104,9 +104,9 @@
 ## 🟢 PRIORITÉ 4 — Imports & Régression
 
 ### T14. Import de paire fonctionne
-- [ ] Importer (ou ré-importer) un fichier CSV pour une paire
-- [ ] Vérifier que le compteur de candles correspond
-- [ ] L'import ne doit pas créer de doublons
+- [x] Importer (ou ré-importer) un fichier CSV pour une paire
+- [x] Vérifier que le compteur de candles correspond
+- [x] L'import ne doit pas créer de doublons (UPSERT ON CONFLICT)
 
 ### T15. Import calendrier fonctionne
 - [ ] Importer un fichier calendrier économique
@@ -163,7 +163,7 @@
 | 🟡 P3 | T11 | Sample count visible | ✅ | |
 | 🟡 P3 | T12 | Guard NaN affichage | ✅ | |
 | 🟡 P3 | T13 | Détails Quarter | ✅ | |
-| 🟢 P4 | T14 | Import paire | ⬜ | |
+| 🟢 P4 | T14 | Import paire | ✅ | UPSERT anti-doublons OK |
 | 🟢 P4 | T15 | Import calendrier | ⬜ | |
 | 🟢 P4 | T16 | Sélecteur symboles | ⬜ | |
 | 🟢 P4 | T17 | Régression backtest | ⬜ | |
