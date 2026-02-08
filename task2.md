@@ -131,18 +131,18 @@
 ## 🔵 PRIORITÉ 5 — Stress & Performance (optionnel)
 
 ### T19. Performance heatmap avec beaucoup de données
-- [ ] Charger une heatmap sur une paire avec > 1 an de données
-- [ ] Le chargement ne devrait pas prendre plus de ~10 secondes
-- [ ] Le scroll reste fluide
+- [x] Charger une heatmap sur une paire avec > 1 an de données ✅
+- [x] Le chargement ne devrait pas prendre plus de ~10 secondes ✅
+- [x] Le scroll reste fluide ✅
 
 ### T20. Changement rapide d'onglets
-- [ ] Cliquer rapidement entre Heatmap → Backtest → Rétrospective → Heatmap (5x)
-- [ ] Pas de crash, pas d'écran blanc, pas de données mélangées
+- [x] Cliquer rapidement entre Heatmap → Backtest → Rétrospective → Heatmap (5x) ✅
+- [x] Pas de crash, pas d'écran blanc, pas de données mélangées ✅
 
 ### T21. Backtest avec beaucoup d'événements
-- [ ] Lancer un backtest sur un événement fréquent (ex: CPI) avec 2+ ans de données
-- [ ] Le backtest doit se terminer sans timeout
-- [ ] Les résultats affichent un nombre raisonnable de trades
+- [x] Lancer un backtest sur un événement fréquent (ex: CPI) avec 2+ ans de données ✅
+- [x] Le backtest doit se terminer sans timeout ✅
+- [x] Les résultats affichent un nombre raisonnable de trades ✅
 
 ---
 
@@ -168,11 +168,11 @@
 | 🟢 P4 | T16 | Sélecteur symboles | ✅ | |
 | 🟢 P4 | T17 | Régression backtest | ✅ | |
 | 🟢 P4 | T18 | Spread dynamique | ✅ | |
-| 🔵 P5 | T19 | Performance heatmap | ⬜ | |
-| 🔵 P5 | T20 | Switch rapide onglets | ⬜ | |
-| 🔵 P5 | T21 | Backtest gros volume | ⬜ | |
+| 🔵 P5 | T19 | Performance heatmap | ✅ | |
+| 🔵 P5 | T20 | Switch rapide onglets | ✅ | |
+| 🔵 P5 | T21 | Backtest gros volume | ✅ | |
 
-**Score final** : ___/21 tests passés
+**Score final** : 20/21 tests passés (T5 Params Auto = ⬜ deferred)
 
 > 🔴 P1 = Si ça échoue, l'app est cassée → à corriger en urgence
 > 🟠 P2 = Nouvelles features de cette session → les plus importants à valider
