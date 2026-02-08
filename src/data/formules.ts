@@ -89,8 +89,17 @@ export const categories: Categorie[] = [
     id: 'backtest',
     titre: 'Backtest & Performance',
     emoji: '🧪',
-    description: 'Métriques de performance issues des simulations',
-    formules: ['win_rate', 'profit_factor', 'max_drawdown', 'average_pips']
+    description: 'Métriques de performance issues des simulations et de l\'analyse avancée',
+    formules: [
+      'win_rate', 'profit_factor', 'max_drawdown', 'average_pips',
+      'mfe', 'mae', 'mfe_mae_ratio',
+      'tp_potential_rate', 'tp_miss_rate',
+      'be_hit_rate', 'trailing_exit_rate',
+      'no_entry_rate', 'consecutive_losses',
+      'quick_win_rate', 'quick_loss_rate',
+      'cost_ratio', 'profitable_months_ratio',
+      'recommended_sl_p75', 'recommended_tpr'
+    ]
   },
   {
     id: 'conversion',
@@ -324,19 +333,19 @@ export const formules: Record<string, Formule> = {
     id: 'hard_tp',
     titre: 'Hard Take Profit (TP)',
     categorieId: 'straddle',
-    definition: 'Objectif de profit fixe pour sécuriser les gains rapides.',
-    explication_litterale: 'C\'est notre cible de "Home Run". Si le marché explose, on prend nos profits automatiquement. Le calcul est ajusté pour le mode simultané afin de conserver une espérance mathématique positive.',
-    formule: 'TP = Max(SL × 2.0, SL Recovery × 1.5)',
-    inputs: ['Stop Loss', 'SL Recovery'],
+    definition: 'Objectif de profit fixe pour sécuriser les gains rapides. En analyse, calculé comme SL × 2.0. En backtest, configurable via le ratio TP(R).',
+    explication_litterale: 'C\'est notre cible de "Home Run". Si le marché explose, on prend nos profits automatiquement. En mode analyse : TP = SL × 2.0. En mode backtest : TP = SL × TP(R), où TP(R) est le ratio risque/récompense choisi par l\'utilisateur.',
+    formule: 'Analyse : TP = SL × 2.0\nBacktest : TP = SL_pips × TP_RR',
+    inputs: ['Stop Loss (pips)', 'TP(R) ratio (backtest)'],
     output: {
       type: 'float',
       range: '0.0 - ∞',
-      unite: 'points'
+      unite: 'pips'
     },
-    exemple: 'SL=25 → TP=50 | SL Rec=40 → TP=60',
+    exemple: 'SL=25, TP(R)=3 → TP cible = 75 pips',
     notes: [
-      'Ratio 1:1.5 (Simultané) = Minimum vital',
-      'Sécurité contre les retournements violents'
+      'En analyse : ratio fixe 2.0 (mode simultané)',
+      'En backtest : ratio configurable TP(R)'
     ]
   },
 
@@ -429,20 +438,20 @@ export const formules: Record<string, Formule> = {
     id: 'trailing_stop',
     titre: 'Trailing Stop (Suivi)',
     categorieId: 'straddle',
-    definition: 'Stop suiveur adaptatif. Sécurise les gains en remontant le SL à mesure que le prix avance.',
-    explication_litterale: 'Le Trailing Stop suit le prix comme une ombre. Si le marché est calme (Noise < 1.5), il suit de près (1.0x ATR) pour verrouiller vite les gains. Si le marché est nerveux (Noise > 3.0), il laisse plus de marge (2.0x ATR) pour ne pas sortir trop tôt sur une correction mineure.',
-    formule: 'Noise > 3.0 → TS = ATR × 2.0\nNoise > 2.0 → TS = ATR × 1.5\nNoise > 1.5 → TS = ATR × 1.2\nElse → TS = ATR × 1.0',
-    inputs: ['ATR', 'Noise Ratio'],
+    definition: 'Stop suiveur dynamique basé sur l\'ATR. En analyse, adapté au Noise Ratio. En backtest, configuré par le coefficient ATR utilisateur.',
+    explication_litterale: 'Le Trailing Stop suit le prix comme une ombre. En mode analyse, il s\'adapte au bruit du marché (Noise). En backtest, il utilise ATR × coefficient (configurable). Il ne s\'active qu\'après que le breakeven soit atteint. Le highest/lowest est tracké et le trail se recalcule toutes les N bougies.',
+    formule: 'Analyse : TS = ATR × f(Noise)\nBacktest : TS = ATR_courant × coefficient\n\nTrail_long = highest - TS\nTrail_short = lowest + TS\n\nActivation : après Breakeven (BE)',
+    inputs: ['ATR courant', 'Coefficient trailing (backtest)', 'Noise Ratio (analyse)', 'Prix highest/lowest'],
     output: {
       type: 'float',
-      range: '1.0 - 2.0',
-      unite: 'x ATR'
+      range: '0.0 - ∞',
+      unite: 'pips (distance)'
     },
-    exemple: 'ATR=20, Noise=1.2 → TS = 20 × 1.0 = 20 points\nATR=20, Noise=2.5 → TS = 20 × 1.5 = 30 points',
+    exemple: 'ATR=20, Coef=1.5 → TS distance = 30 pips\nEntry=100, Highest=120, TS=30 → Trail à 90',
     notes: [
-      'Adaptatif selon le bruit',
-      'Plus le bruit est fort, plus le TS est large',
-      'Permet de laisser courir les gains sur les gros mouvements'
+      'S\'active seulement après breakeven (BE)',
+      'Recalculé dynamiquement avec l\'ATR courant',
+      'Issue TrailingStop distincte de TakeProfit dans les résultats'
     ]
   },
 
@@ -450,20 +459,20 @@ export const formules: Record<string, Formule> = {
     id: 'timeout',
     titre: 'Timeout (Durée position)',
     categorieId: 'straddle',
-    definition: 'Durée maximale pour tenir la position. Inversement proportionnel à la volatilité (ATR).',
-    explication_litterale: 'Si la volatilité est très forte (ATR élevé), le mouvement s\'épuise vite, donc on sort tôt (18 min). Si la volatilité est faible, le mouvement prend du temps, donc on reste plus longtemps (32 min).',
-    formule: 'Timeout = 32 - (ATR_norm × 14)\nClamped: [18, 32] min',
-    inputs: ['ATR Normalisé'],
+    definition: 'Durée maximale pour tenir la position. En analyse, inversement proportionnel à l\'ATR. En backtest, configurable par l\'utilisateur (délai max en minutes).',
+    explication_litterale: 'En analyse : si la volatilité est forte, le mouvement s\'épuise vite → timeout court. En backtest : le timeout est un paramètre fixe (ex: 30 min). Si aucun TP ni SL n\'est touché avant le timeout, la position est fermée au prix courant.',
+    formule: 'Analyse : Timeout = 32 - (ATR_norm × 14), clamp [18, 32]\nBacktest : Timeout = paramètre utilisateur (minutes)\n\nSi timeout atteint → fermeture au marché → outcome = Timeout',
+    inputs: ['ATR Normalisé (analyse)', 'Délai max en minutes (backtest)'],
     output: {
       type: 'integer',
-      range: '18 - 32',
+      range: '10 - 60',
       unite: 'minutes'
     },
-    exemple: 'ATR élevé (1.0) → 32 - 14 = 18 min\nATR faible (0.0) → 32 - 0 = 32 min',
+    exemple: 'Backtest : Délai max = 30 min → si position ouverte 30 min sans TP/SL → fermeture\nAnalyse : ATR élevé → 18 min, ATR faible → 32 min',
     notes: [
-      'Optimisé pour capturer l\'impulsion principale',
-      'Évite le "time decay" et le retournement',
-      'Min 18 min, Max 32 min'
+      'En backtest, le timeout produit l\'outcome "Timeout"',
+      'P90 de la durée des trades gagnants sert de base pour la recommandation optimale',
+      'Paramètre recommandé : arrondi aux 5 min'
     ]
   },
 
@@ -820,19 +829,20 @@ export const formules: Record<string, Formule> = {
     id: 'win_rate',
     titre: 'Win Rate (Taux de réussite)',
     categorieId: 'backtest',
-    definition: 'Pourcentage de trades gagnants par rapport au nombre total de trades exécutés.',
-    explication_litterale: 'Cette formule calcule simplement combien de fois la stratégie a gagné de l\'argent. Si on a fait 100 trades et gagné 60 fois, le Win Rate est de 60%. C\'est l\'indicateur de base de la fiabilité.',
-    formule: 'Win Rate = (Winning Trades / Total Trades) × 100',
-    inputs: ['Winning Trades', 'Total Trades'],
+    definition: 'Pourcentage de trades gagnants par rapport au nombre total de trades exécutés. Inclut les issues TakeProfit ET TrailingStop comme gagnantes.',
+    explication_litterale: 'Cette formule calcule combien de fois la stratégie a gagné. Un trade est "gagnant" s\'il se termine en TakeProfit ou en TrailingStop avec un gain positif. Les trades Timeout peuvent être gagnants ou perdants selon le PnL final.',
+    formule: 'Win Rate = (Winning Trades / Total Trades) × 100\n\nWinning = outcome ∈ {TakeProfit, TrailingStop} ou pips_net > 0',
+    inputs: ['Winning Trades (TP + Trailing + Timeout positifs)', 'Total Trades exécutés'],
     output: {
       type: 'float',
       range: '0 - 100',
       unite: '%'
     },
-    exemple: '60 gagnants / 100 total = 60%',
+    exemple: '60 gagnants / 100 total = 60% (inclut 45 TP + 15 TrailingStop)',
     notes: [
-      '> 50% est généralement requis pour être profitable (sauf si Risk:Reward très élevé)',
-      'Inclut uniquement les trades simultanés'
+      '> 50% est généralement requis pour être profitable',
+      'Inclut TakeProfit + TrailingStop comme issues gagnantes',
+      'Timeout peut être gagnant ou perdant selon le PnL final'
     ]
   },
 
@@ -915,6 +925,327 @@ export const formules: Record<string, Formule> = {
       'Critique pour le Scalping et News Trading',
       'Si > 30%, éviter de trader',
       'Le spread s\'élargit souvent pendant les news'
+    ]
+  },
+
+  // === NOUVELLES MÉTRIQUES D'ANALYSE AVANCÉE ===
+  mfe: {
+    id: 'mfe',
+    titre: 'MFE (Max Favorable Excursion)',
+    categorieId: 'backtest',
+    definition: 'Excursion maximale favorable : le plus grand gain latent atteint avant la clôture du trade.',
+    explication_litterale: 'Le MFE mesure "jusqu\'où le trade est allé en ma faveur" avant de se fermer. Si j\'achète à 100 et que le prix monte à 120 puis redescend à 110 où je ferme, mon MFE est 20. C\'est le potentiel réel du trade. Un MFE élevé par rapport au gain final signifie qu\'on "laisse de l\'argent sur la table".',
+    formule: 'Long: MFE = highest_price - entry_price\nShort: MFE = entry_price - lowest_price\n\nMFE moyen = Σ(MFE) / n',
+    inputs: ['Entry price', 'Highest/Lowest pendant le trade', 'Point value'],
+    output: {
+      type: 'float',
+      range: '0.0 - ∞',
+      unite: 'pips'
+    },
+    exemple: 'Entry=1.1000, Highest=1.1050 → MFE = 50 pips\nMoyenne sur 100 trades = 35 pips',
+    notes: [
+      'Toujours ≥ 0 (par définition)',
+      'Sert à évaluer si le TP est bien calibré',
+      'Si MFE moyen >> gain moyen → TP trop serré ou trailing trop agressif'
+    ]
+  },
+
+  mae: {
+    id: 'mae',
+    titre: 'MAE (Max Adverse Excursion)',
+    categorieId: 'backtest',
+    definition: 'Excursion maximale adverse : la plus grande perte latente subie avant la clôture du trade.',
+    explication_litterale: 'Le MAE mesure "jusqu\'où le trade est allé contre moi" avant de se fermer. Si j\'achète à 100 et que le prix descend à 85 puis remonte à 105 où je ferme, mon MAE est 15. C\'est le risque réel subi. Un MAE élevé indique une exposition au risque importante.',
+    formule: 'Long: MAE = entry_price - lowest_price\nShort: MAE = highest_price - entry_price\n\nMAE moyen = Σ(MAE) / n',
+    inputs: ['Entry price', 'Highest/Lowest pendant le trade', 'Point value'],
+    output: {
+      type: 'float',
+      range: '0.0 - ∞',
+      unite: 'pips'
+    },
+    exemple: 'Entry=1.1000, Lowest=1.0960 → MAE = 40 pips\nMoyenne sur 100 trades = 25 pips',
+    notes: [
+      'Toujours ≥ 0 (par définition)',
+      'Sert de base pour calibrer le SL optimal (P75 MAE)',
+      'Si MAE moyen > SL → beaucoup de stops touchés "juste avant" le rebond'
+    ]
+  },
+
+  mfe_mae_ratio: {
+    id: 'mfe_mae_ratio',
+    titre: 'Ratio MFE/MAE',
+    categorieId: 'backtest',
+    definition: 'Rapport entre le potentiel moyen (MFE) et le risque moyen (MAE). Mesure l\'efficacité de la stratégie.',
+    explication_litterale: 'Ce ratio dit si on gagne plus qu\'on ne risque. Si MFE/MAE = 2.0, les trades vont 2× plus loin en faveur qu\'en défaveur. C\'est un indicateur de qualité pure : plus le ratio est élevé, meilleure est la stratégie.',
+    formule: 'Ratio = MFE moyen / MAE moyen',
+    inputs: ['MFE moyen (pips)', 'MAE moyen (pips)'],
+    output: {
+      type: 'float',
+      range: '0.0 - ∞',
+      unite: 'ratio'
+    },
+    exemple: 'MFE moyen=35 pips, MAE moyen=20 pips → Ratio = 1.75',
+    notes: [
+      '≥ 1.5 = Excellent (vert)',
+      '1.0 - 1.5 = Correct (orange)',
+      '< 1.0 = Les trades vont plus en défaveur qu\'en faveur (rouge)'
+    ]
+  },
+
+  tp_potential_rate: {
+    id: 'tp_potential_rate',
+    titre: 'TP Potentiel Atteint',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades dont le MFE a atteint ou dépassé le TP cible, indépendamment de l\'issue réelle.',
+    explication_litterale: 'Cette formule répond à : "Combien de trades auraient pu atteindre le Take Profit ?" On regarde si le MFE (meilleur moment du trade) dépasse la cible TP. Si 60% des trades y arrivent mais seulement 30% finissent en TP réel, ça montre un problème de trailing ou de timing.',
+    formule: 'TP_cible = SL × TP(R)\nTP_potential% = (trades où MFE ≥ TP_cible) / total × 100',
+    inputs: ['MFE par trade', 'SL (pips)', 'TP(R) ratio'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: 'SL=20, TP(R)=3 → cible=60 pips\n45 trades sur 100 ont MFE ≥ 60 → 45%',
+    notes: [
+      '≥ 50% = Excellent potentiel (vert)',
+      '30-50% = Potentiel correct (orange)',
+      '< 30% = Cible trop ambitieuse (rouge)',
+      'Si très haut mais TP rate bas → trailing ferme trop tôt'
+    ]
+  },
+
+  tp_miss_rate: {
+    id: 'tp_miss_rate',
+    titre: 'TP Manqué',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades qui auraient pu atteindre le TP (MFE ≥ cible) mais n\'ont pas été clôturés en TakeProfit.',
+    explication_litterale: 'C\'est la mesure de "l\'argent laissé sur la table". Si un trade monte jusqu\'au TP puis redescend et se ferme en trailing ou timeout, c\'est un TP manqué. Un taux élevé indique que le trailing stop est trop agressif ou que le TP n\'est pas atteint à cause du spread/timing.',
+    formule: 'TP_miss% = (trades où MFE ≥ TP_cible ET outcome ≠ TakeProfit) / total × 100',
+    inputs: ['MFE par trade', 'TP cible', 'Outcome par trade'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '45 trades MFE ≥ TP, mais seulement 30 en TP → 15 manqués = 15%',
+    notes: [
+      '< 30% = Acceptable (vert)',
+      '30-50% = Trailing trop serré (orange)',
+      '> 50% = Problème de configuration (rouge)'
+    ]
+  },
+
+  be_hit_rate: {
+    id: 'be_hit_rate',
+    titre: 'Breakeven (BE) Atteint',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades où le Breakeven a été activé (détecté via les logs de simulation).',
+    explication_litterale: 'Le Breakeven se déclenche quand le prix a bougé suffisamment en faveur. Une fois le BE atteint, le trailing stop s\'active. Un taux élevé signifie que beaucoup de trades atteignent un état "protégé" (pas de perte possible).',
+    formule: 'BE% = (trades avec log "BE Long" ou "BE Short") / total × 100',
+    inputs: ['Logs de simulation par trade', 'Total trades exécutés'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '65 trades sur 100 déclenchent le BE → 65%',
+    notes: [
+      '≥ 50% = Bon, la majorité des trades atteignent la sécurité (vert)',
+      '30-50% = Moyen (orange)',
+      '< 30% = Le prix ne va pas assez loin pour activer le BE (rouge)'
+    ]
+  },
+
+  trailing_exit_rate: {
+    id: 'trailing_exit_rate',
+    titre: 'Sorties Trailing Stop',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades clôturés par le trailing stop (outcome = TrailingStop).',
+    explication_litterale: 'Mesure la fréquence à laquelle le trailing stop ferme les positions. Si trop fréquent (>40%), le trailing est trop serré et coupe les gains. Si trop rare (<15%), le trailing n\'a presque pas d\'effet et peut être resserré.',
+    formule: 'Trailing% = (trades avec log "TS Long" ou "TS Short") / total × 100',
+    inputs: ['Logs de simulation', 'Total trades exécutés'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '25 sorties trailing / 100 trades → 25%',
+    notes: [
+      '> 40% = Trailing trop serré, relâcher le coefficient',
+      '15-40% = Bon équilibre',
+      '< 15% = Trailing peu actif, envisager de resserrer',
+      'Utilisé pour recommander le coefficient optimal'
+    ]
+  },
+
+  no_entry_rate: {
+    id: 'no_entry_rate',
+    titre: 'Taux de Non-Déclenchement',
+    categorieId: 'backtest',
+    definition: 'Pourcentage d\'événements où aucun trade n\'a été déclenché (pas de mouvement suffisant pour activer le straddle).',
+    explication_litterale: 'Certains événements ne provoquent pas assez de mouvement pour déclencher les ordres Buy Stop / Sell Stop. Ça signifie que la volatilité n\'a pas été suffisante. Un taux élevé de non-entrée peut indiquer un offset trop élevé ou des données M1 manquantes autour de T0.',
+    formule: 'NoEntry% = no_entries / (total_trades + no_entries) × 100',
+    inputs: ['No entries (events sans trade)', 'Total trades', 'Total events'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '15 non-entry / 100 events → 15%',
+    notes: [
+      '< 10% = Normal en straddle immédiat',
+      '10-50% = Vérifier les données ou l\'offset',
+      '> 60% = Problème de données ou offset trop large'
+    ]
+  },
+
+  consecutive_losses: {
+    id: 'consecutive_losses',
+    titre: 'Pertes Consécutives Max',
+    categorieId: 'backtest',
+    definition: 'Plus longue série de trades perdants consécutifs. Mesure le "pire scénario psychologique".',
+    explication_litterale: 'Combien de trades d\'affilée peut-on perdre au maximum ? C\'est crucial pour le money management : si on a eu 8 pertes d\'affilée, il faut s\'assurer que le capital survit à cette série. Plus cette valeur est élevée, plus il faut un money management conservateur.',
+    formule: 'MaxStreak = max sequence de trades où pips_net < 0',
+    inputs: ['Liste ordonnée des trades', 'PnL par trade'],
+    output: {
+      type: 'integer',
+      range: '0 - ∞',
+      unite: 'trades'
+    },
+    exemple: 'Séquence: +10, -5, -3, -8, -2, +15 → streak = 4 pertes consécutives',
+    notes: [
+      '≤ 3 = Acceptable',
+      '4-6 = Attention au sizing',
+      '> 6 = Revoir la stratégie ou filtrer les événements'
+    ]
+  },
+
+  quick_win_rate: {
+    id: 'quick_win_rate',
+    titre: 'Wins Rapides (≤ 1 min)',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades gagnants clôturés en 1 minute ou moins, parmi tous les gagnants.',
+    explication_litterale: 'Mesure les "victoires éclair". Un TP touché en moins d\'une minute indique un mouvement très violent et directionnel. Un taux élevé est positif car le capital est exposé très peu de temps.',
+    formule: 'QuickWin% = (gagnants avec durée ≤ 1 min) / total gagnants × 100',
+    inputs: ['Durée par trade gagnant'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '12 wins rapides / 60 gagnants → 20%',
+    notes: [
+      '≥ 40% = Mouvements très impulsifs (vert)',
+      '20-40% = Normal (orange)',
+      '< 20% = Mouvements graduels (neutre)'
+    ]
+  },
+
+  quick_loss_rate: {
+    id: 'quick_loss_rate',
+    titre: 'Loss Rapides (≤ 1 min)',
+    categorieId: 'backtest',
+    definition: 'Pourcentage de trades perdants clôturés en 1 minute ou moins, parmi tous les perdants.',
+    explication_litterale: 'Mesure les "pertes instantanées". Un SL touché en moins d\'une minute indique un mouvement violent contre nous (souvent un whipsaw). Un taux élevé est préoccupant car le stop n\'a pas eu le temps de protéger.',
+    formule: 'QuickLoss% = (perdants avec durée ≤ 1 min) / total perdants × 100',
+    inputs: ['Durée par trade perdant'],
+    output: {
+      type: 'float',
+      range: '0 - 100',
+      unite: '%'
+    },
+    exemple: '8 losses rapides / 40 perdants → 20%',
+    notes: [
+      '< 10% = Pertes graduelles (vert)',
+      '10-25% = Attention aux spikes (orange)',
+      '> 25% = Trop de whipsaws instantanés (rouge)'
+    ]
+  },
+
+  cost_ratio: {
+    id: 'cost_ratio',
+    titre: 'Poids des Frais',
+    categorieId: 'backtest',
+    definition: 'Pourcentage du PnL total absorbé par les frais estimés (spread + slippage).',
+    explication_litterale: 'Les frais (spread à l\'ouverture et fermeture, plus le slippage) grignotent les profits. Cette formule montre combien ils "coûtent" par rapport au résultat total. Si les frais représentent 30% du PnL, la stratégie est très sensible au spread.',
+    formule: 'Coût/trade = (spread × 2) + (slippage × 2)\nCoût total = coût/trade × nombre trades\nRatio = coût_total / |PnL_total| × 100',
+    inputs: ['Spread (pips)', 'Slippage (pips)', 'Nombre de trades', 'PnL total (pips)'],
+    output: {
+      type: 'float',
+      range: '0 - ∞',
+      unite: '%'
+    },
+    exemple: 'Spread=1.5, Slip=0.5, 100 trades → Coût=400 pips\nPnL=+1200 pips → Ratio = 33%',
+    notes: [
+      '< 10% = Frais négligeables (vert)',
+      '10-25% = Impact modéré (orange)',
+      '> 25% = Stratégie très sensible au spread (rouge)',
+      'Le ×2 car spread/slippage s\'appliquent à l\'ouverture ET fermeture'
+    ]
+  },
+
+  profitable_months_ratio: {
+    id: 'profitable_months_ratio',
+    titre: 'Mois Profitables',
+    categorieId: 'backtest',
+    definition: 'Ratio de mois avec un PnL net positif par rapport au total de mois. Mesure la stabilité temporelle.',
+    explication_litterale: 'Avoir un bon Profit Factor ne suffit pas si tous les gains viennent d\'un seul mois. Cette métrique montre la régularité : si 8 mois sur 12 sont positifs, la stratégie est stable. Si seulement 3/12, elle dépend de quelques events chanceux.',
+    formule: 'Stats par mois : PnL_mensuel = Σ(pips par trade du mois)\nRatio = mois_positifs / total_mois × 100',
+    inputs: ['PnL par trade', 'Date de chaque trade'],
+    output: {
+      type: 'string',
+      range: '0/0 - n/n',
+      unite: 'mois positifs / total mois'
+    },
+    exemple: '8 mois positifs / 12 → 67% de stabilité',
+    notes: [
+      '≥ 60% = Stratégie stable (vert)',
+      '40-60% = Instable (orange)',
+      '< 40% = Dépendant de quelques événements (rouge)',
+      'Chaque mois inclut aussi le Profit Factor et le PnL net'
+    ]
+  },
+
+  recommended_sl_p75: {
+    id: 'recommended_sl_p75',
+    titre: 'SL Optimal (P75 MAE)',
+    categorieId: 'backtest',
+    definition: 'Stop Loss recommandé basé sur le 75ème percentile de la distribution MAE. Couvre 75% des excursions adverses.',
+    explication_litterale: 'Au lieu de deviner le SL, on le calcule statistiquement. On prend tous les MAE (pire moment de chaque trade), on les trie, et on prend le P75 (75% des trades ont un MAE inférieur). Ce SL protège contre la majorité des excursions sans être trop large.',
+    formule: 'MAE_values = [MAE₁, MAE₂, ..., MAEₙ]\nP75 = percentile(MAE_values, 75)\nSL_optimal = max(ceil(P75), 1)',
+    inputs: ['Liste MAE de tous les trades exécutés'],
+    output: {
+      type: 'float',
+      range: '1 - ∞',
+      unite: 'pips'
+    },
+    exemple: 'MAE distribution: [5, 8, 12, 15, 18, 22, 30, 45]\nP75 = 22 → SL recommandé = 22 pips',
+    notes: [
+      'P75 = compromis couverture/distance',
+      'P50 serait trop serré (50% des trades toucheraient le SL)',
+      'P90 serait trop large (capital exposé inutilement)',
+      'Minimum 1 pip (sécurité)'
+    ]
+  },
+
+  recommended_tpr: {
+    id: 'recommended_tpr',
+    titre: 'TP(R) Optimal',
+    categorieId: 'backtest',
+    definition: 'Ratio TP/SL recommandé basé sur la MFE médiane divisée par le SL optimal.',
+    explication_litterale: 'On calcule le TP idéal en regardant la médiane des MFE (potentiel réel). On divise par le SL optimal (P75 MAE) pour obtenir un ratio R:R. Si la MFE médiane est 3× le SL, on peut viser un TP(R) de 3. Si elle est seulement 1.5×, on vise TP(R) = 1.5.',
+    formule: 'MFE_median = median(MFE_values)\nRaw_TPR = MFE_median / SL_optimal\nTP(R) = max(round(Raw_TPR × 2) / 2, 1)',
+    inputs: ['Liste MFE de tous les trades', 'SL optimal (P75 MAE)'],
+    output: {
+      type: 'float',
+      range: '1.0 - ∞',
+      unite: 'ratio (arrondi au 0.5)'
+    },
+    exemple: 'MFE médiane = 45 pips, SL optimal = 20 pips\nRaw = 2.25 → arrondi = 2.5R',
+    notes: [
+      'Médiane (pas moyenne) pour éviter l\'influence des outliers',
+      'Arrondi au 0.5 supérieur pour garder des valeurs pratiques',
+      'Minimum 1.0R (sinon le risk:reward est trop défavorable)'
     ]
   }
 }

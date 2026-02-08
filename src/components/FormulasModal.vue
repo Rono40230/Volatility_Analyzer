@@ -12,10 +12,30 @@
       <div class="formulas-body">
         <nav class="formulas-sidebar">
           <div class="formulas-search">
-            <input v-model="searchQuery" type="text" placeholder="Chercher une formule..." />
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              placeholder="Chercher une formule..." 
+            />
           </div>
 
-          <div class="formulas-categories">
+          <!-- Résultats de recherche (remplace les catégories) -->
+          <div v-if="isSearching" class="formulas-search-results">
+            <div class="search-results-header">{{ formulasTriees.length }} résultat{{ formulasTriees.length > 1 ? 's' : '' }}</div>
+            <div v-if="formulasTriees.length === 0" class="search-results-empty">Aucune formule trouvée</div>
+            <button
+              v-for="f in formulasTriees"
+              :key="f.id"
+              :class="['search-result-item', { active: selectedFormuleId === f.id }]"
+              @click="pickFormule(f.id)"
+            >
+              <span class="search-result-emoji">{{ getCategoryEmoji(f.categorieId) }}</span>
+              <span class="search-result-label">{{ f.titre }}</span>
+            </button>
+          </div>
+
+          <!-- Catégories (masquées pendant la recherche) -->
+          <div v-else class="formulas-categories">
             <button
               :class="['formulas-category-btn', { active: selectedCategory === 'all' }]"
               @click="selectCategory('all')"
@@ -73,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
 import '../styles/formulas-modal.css'
@@ -82,6 +102,7 @@ import ConversionTable from './ConversionTable.vue'
 import SpreadCostTable from './SpreadCostTable.vue'
 import { useFormulasLogic } from '../composables/useFormulasLogic'
 import type { Formule } from '../data/formules'
+import { categories as allCategories } from '../data/formules'
 
 interface Props {
   isOpen: boolean
@@ -104,10 +125,22 @@ const {
   categories
 } = useFormulasLogic()
 
+const showDropdown = ref(false)
 const messageExport = ref('')
 const exportEnCours = ref(false)
 
+const isSearching = computed(() => searchQuery.value.length > 0)
+
 const close = () => emit('close')
+
+function pickFormule(id: string) {
+  selectedFormuleId.value = id
+}
+
+function getCategoryEmoji(catId: string): string {
+  const cat = allCategories.find(c => c.id === catId)
+  return cat?.emoji || '📄'
+}
 
 const exporterPDF = async () => {
   if (exportEnCours.value) return

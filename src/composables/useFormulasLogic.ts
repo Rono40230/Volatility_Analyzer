@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { categories, formules, type Formule } from '../data/formules'
 
 export function useFormulasLogic() {
@@ -31,14 +31,24 @@ export function useFormulasLogic() {
 
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase()
-      formulesList = formulesList.filter(
+      // Quand on recherche, chercher dans TOUTES les formules, pas seulement la catégorie
+      const source = allFormules.value
+      return source.filter(
         f =>
           f.titre.toLowerCase().includes(query) ||
-          f.definition.toLowerCase().includes(query)
+          f.definition.toLowerCase().includes(query) ||
+          f.formule.toLowerCase().includes(query)
       )
     }
 
     return formulesList
+  })
+
+  // Quand le filtre change, sélectionner automatiquement la première formule visible
+  watch(formulasTriees, (list) => {
+    if (list.length > 0 && !list.find(f => f.id === selectedFormuleId.value)) {
+      selectedFormuleId.value = list[0].id
+    }
   })
 
   const formuleSélectionnée = computed(() => {
