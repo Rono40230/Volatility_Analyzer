@@ -1,7 +1,6 @@
 <template>
   <div
     class="tooltip-wrapper"
-    :data-direction="direction || 'bottom'"
   >
     <div 
       class="tooltip-trigger"
@@ -10,33 +9,40 @@
     >
       <slot />
     </div>
-    <transition name="tooltip-fade">
-      <div
-        v-if="showTooltip"
-        class="tooltip-popup"
-      >
-        <div class="tooltip-content">
-          <div class="tooltip-header">
-            <span class="tooltip-title">{{ title }}</span>
-            <button
-              class="close-btn"
-              @click="showTooltip = false"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="tooltip-body">
-            <slot name="definition" />
-            <slot name="interpretation" />
-            <slot name="usage" />
-            <slot name="color-scale" />
-            <slot name="scoring" />
-            <slot name="realUseCases" />
+    <Teleport to="body">
+      <transition name="tooltip-fade">
+        <div
+          v-if="showTooltip"
+          class="tooltip-overlay"
+          @click="showTooltip = false"
+        >
+          <div
+            class="tooltip-popup"
+            @click.stop
+          >
+            <div class="tooltip-content">
+              <div class="tooltip-header">
+                <span class="tooltip-title">{{ title }}</span>
+                <button
+                  class="close-btn"
+                  @click="showTooltip = false"
+                >
+                  ✕
+                </button>
+              </div>
+              <div class="tooltip-body">
+                <slot name="definition" />
+                <slot name="interpretation" />
+                <slot name="usage" />
+                <slot name="color-scale" />
+                <slot name="scoring" />
+                <slot name="realUseCases" />
+              </div>
+            </div>
           </div>
         </div>
-        <div class="tooltip-arrow" />
-      </div>
-    </transition>
+      </transition>
+    </Teleport>
   </div>
 </template>
 
@@ -45,7 +51,6 @@ import { ref } from 'vue'
 
 defineProps<{
   title: string
-  direction?: 'bottom' | 'top'
 }>()
 
 const showTooltip = ref(false)
@@ -61,54 +66,29 @@ const showTooltip = ref(false)
   cursor: help;
 }
 
+.tooltip-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .tooltip-popup {
-  position: absolute;
   background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
   border: 1px solid #667eea;
   border-radius: 8px;
   padding: 0;
-  z-index: 1000;
-  min-width: 600px;
-  max-width: 900px;
+  min-width: 500px;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(102, 126, 234, 0.3);
-  backdrop-filter: blur(10px);
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Position vers le bas (défaut) */
-.tooltip-popup {
-  top: 110%;
-}
-
-/* Position vers le haut */
-.tooltip-wrapper[data-direction="top"] .tooltip-popup {
-  bottom: 110%;
-  top: auto;
-}
-
-.tooltip-arrow {
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-left: 8px solid transparent;
-  border-right: 8px solid transparent;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-/* Flèche vers le bas */
-.tooltip-arrow {
-  top: -8px;
-  border-bottom: 8px solid #1a202c;
-}
-
-/* Flèche vers le haut */
-.tooltip-wrapper[data-direction="top"] .tooltip-arrow {
-  bottom: -8px;
-  top: auto;
-  border-bottom: none;
-  border-top: 8px solid #1a202c;
 }
 
 .tooltip-content {
@@ -194,23 +174,13 @@ const showTooltip = ref(false)
 .tooltip-fade-enter-from,
 .tooltip-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(10px);
 }
 
 /* Mobile responsiveness */
 @media (max-width: 640px) {
   .tooltip-popup {
-    position: fixed;
-    bottom: auto;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
     min-width: 90vw;
     max-width: 90vw;
-  }
-
-  .tooltip-arrow {
-    display: none;
   }
 }
 </style>

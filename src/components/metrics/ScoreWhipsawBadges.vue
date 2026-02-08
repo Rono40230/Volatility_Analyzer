@@ -4,7 +4,6 @@
     <!-- Score Bloc -->
     <MetricTooltip
       title="Score"
-      direction="bottom"
       style="max-width: 250px;"
     >
       <div style="flex: 0 0 auto; padding: 12px 16px; background: rgba(45, 90, 123, 0.15); border: 1px solid #2d5a7b; border-radius: 6px; font-size: 12px; min-width: 140px;">
@@ -37,7 +36,6 @@
     <!-- Fréquence Whipsaw -->
     <MetricTooltip
       title="Fréquence Whipsaw"
-      direction="bottom"
     >
       <div style="flex: 0 0 auto; padding: 12px 16px; background: rgba(45, 90, 123, 0.15); border: 1px solid #2d5a7b; border-radius: 6px; font-size: 12px; min-width: 160px;">
         <div style="color: #64a5d8; margin-bottom: 6px; font-weight: bold;">
@@ -71,7 +69,6 @@
     <MetricTooltip
       v-if="confidence"
       title="Confiance"
-      direction="bottom"
     >
       <div style="flex: 0 0 auto; padding: 12px 16px; background: rgba(45, 90, 123, 0.15); border: 1px solid #2d5a7b; border-radius: 6px; font-size: 12px; min-width: 140px;">
         <div style="color: #64a5d8; margin-bottom: 6px; font-weight: bold;">

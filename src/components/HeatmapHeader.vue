@@ -13,7 +13,7 @@
     </div>
 
     <div class="heatmap-info">
-      <MetricTooltip title="Score de Volatilité" direction="bottom">
+      <MetricTooltip title="Score de Volatilité">
         <span class="info-trigger">ℹ️ Points = Score de Volatilité (0-100)</span>
         <template #definition>
           <p>Indice composite évaluant la <strong>puissance de l'impact</strong> d'un événement économique sur une paire spécifique.</p>

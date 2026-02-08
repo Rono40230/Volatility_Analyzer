@@ -78,6 +78,7 @@ impl EventSimulator {
         let mut exit_time_final = event_time;
         let entry_time_final: Option<chrono::DateTime<chrono::Utc>> = Some(t0_candle.datetime);
         let mut timeout_triggered = false;
+        let mut tp_actually_hit = false;
         let mut long_trailing = false;
         let mut short_trailing = false;
         let mut last_trail_update_long: Option<chrono::DateTime<chrono::Utc>> = None;
@@ -133,6 +134,61 @@ impl EventSimulator {
                 }
             }
 
+            // === TP CHECK AVANT trailing (le trailing ne peut pas court-circuiter le TP) ===
+            if let Some(long) = &mut long_pos {
+                if !long_closed && candle.high >= long_tp {
+                    if candle.low <= long.stop_loss {
+                        // SL + TP même bougie → SL prioritaire (conservateur)
+                        let exit = long.stop_loss - slippage;
+                        long_pips = (exit - long.entry_price) / config.point_value;
+                        long_closed = true;
+                        logs.push(format!(
+                            "💥 SL Long (même bougie que TP): Close @ {:.5}, P/L: {:.1}",
+                            long.stop_loss, long_pips
+                        ));
+                        exit_time_final = candle.datetime;
+                    } else {
+                        let exit = long_tp - slippage;
+                        long_pips = (exit - long.entry_price) / config.point_value;
+                        long_closed = true;
+                        tp_actually_hit = true;
+                        logs.push(format!(
+                            "✅ TP Long: Close @ {:.5}, P/L: {:.1}",
+                            exit, long_pips
+                        ));
+                        exit_time_final = candle.datetime;
+                    }
+                }
+            }
+
+            if let Some(short) = &mut short_pos {
+                if !short_closed && candle.low <= short_tp {
+                    let ask_high = candle.high + spread;
+                    if ask_high >= short.stop_loss {
+                        // SL + TP même bougie → SL prioritaire (conservateur)
+                        let exit = short.stop_loss + slippage;
+                        short_pips = (short.entry_price - exit) / config.point_value;
+                        short_closed = true;
+                        logs.push(format!(
+                            "💥 SL Short (même bougie que TP): Close @ {:.5}, P/L: {:.1}",
+                            short.stop_loss, short_pips
+                        ));
+                        exit_time_final = candle.datetime;
+                    } else {
+                        let exit = short_tp + slippage;
+                        short_pips = (short.entry_price - exit) / config.point_value;
+                        short_closed = true;
+                        tp_actually_hit = true;
+                        logs.push(format!(
+                            "✅ TP Short: Close @ {:.5}, P/L: {:.1}",
+                            exit, short_pips
+                        ));
+                        exit_time_final = candle.datetime;
+                    }
+                }
+            }
+
+            // === BE check + trailing (seulement si TP pas encore atteint) ===
             if !long_trailing && !long_closed && candle.high >= be_long {
                 long_trailing = true;
                 if let Some(long) = &mut long_pos {
@@ -164,70 +220,31 @@ impl EventSimulator {
                 }
             }
 
+            // === SL check APRÈS trailing (TP déjà géré au-dessus) ===
             if let Some(long) = &mut long_pos {
-                if !long_closed {
-                    // Vérifier SL en priorité (approche conservatrice)
-                    // Sur une bougie où TP ET SL sont touchés, on prend le SL (worst case)
-                    let sl_hit = candle.low <= long.stop_loss;
-                    let tp_hit = candle.high >= long_tp;
-
-                    if sl_hit && tp_hit {
-                        // Les deux niveaux touchés sur la même bougie → SL prioritaire (conservateur)
-                        let exit = long.stop_loss - slippage;
-                        long_pips = (exit - long.entry_price) / config.point_value;
-                        long_closed = true;
+                if !long_closed && candle.low <= long.stop_loss {
+                    let exit = long.stop_loss - slippage;
+                    long_pips = (exit - long.entry_price) / config.point_value;
+                    long_closed = true;
+                    if long_trailing {
                         logs.push(format!(
-                            "💥 SL Long (même bougie que TP): Close @ {:.5}, P/L: {:.1}",
+                            "🧭 TS Long: Close @ {:.5}, P/L: {:.1}",
                             long.stop_loss, long_pips
                         ));
-                        exit_time_final = candle.datetime;
-                    } else if sl_hit {
-                        let exit = long.stop_loss - slippage;
-                        long_pips = (exit - long.entry_price) / config.point_value;
-                        long_closed = true;
-                        if long_trailing {
-                            logs.push(format!(
-                                "🧭 TS Long: Close @ {:.5}, P/L: {:.1}",
-                                long.stop_loss, long_pips
-                            ));
-                        } else {
-                            logs.push(format!(
-                                "💥 SL Long: Close @ {:.5}, P/L: {:.1}",
-                                long.stop_loss, long_pips
-                            ));
-                        }
-                        exit_time_final = candle.datetime;
-                    } else if tp_hit {
-                        let exit = long_tp - slippage;
-                        long_pips = (exit - long.entry_price) / config.point_value;
-                        long_closed = true;
+                    } else {
                         logs.push(format!(
-                            "✅ TP Long: Close @ {:.5}, P/L: {:.1}",
-                            exit, long_pips
+                            "💥 SL Long: Close @ {:.5}, P/L: {:.1}",
+                            long.stop_loss, long_pips
                         ));
-                        exit_time_final = candle.datetime;
                     }
+                    exit_time_final = candle.datetime;
                 }
             }
 
             if let Some(short) = &mut short_pos {
                 if !short_closed {
-                    // Vérifier SL en priorité (approche conservatrice)
                     let ask_high = candle.high + spread;
-                    let sl_hit = ask_high >= short.stop_loss;
-                    let tp_hit = candle.low <= short_tp;
-
-                    if sl_hit && tp_hit {
-                        // Les deux niveaux touchés sur la même bougie → SL prioritaire (conservateur)
-                        let exit = short.stop_loss + slippage;
-                        short_pips = (short.entry_price - exit) / config.point_value;
-                        short_closed = true;
-                        logs.push(format!(
-                            "💥 SL Short (même bougie que TP): Close @ {:.5}, P/L: {:.1}",
-                            short.stop_loss, short_pips
-                        ));
-                        exit_time_final = candle.datetime;
-                    } else if sl_hit {
+                    if ask_high >= short.stop_loss {
                         let exit = short.stop_loss + slippage;
                         short_pips = (short.entry_price - exit) / config.point_value;
                         short_closed = true;
@@ -242,15 +259,6 @@ impl EventSimulator {
                                 short.stop_loss, short_pips
                             ));
                         }
-                        exit_time_final = candle.datetime;
-                    } else if tp_hit {
-                        let exit = short_tp + slippage;
-                        short_pips = (short.entry_price - exit) / config.point_value;
-                        short_closed = true;
-                        logs.push(format!(
-                            "✅ TP Short: Close @ {:.5}, P/L: {:.1}",
-                            exit, short_pips
-                        ));
                         exit_time_final = candle.datetime;
                     }
                 }
@@ -269,6 +277,7 @@ impl EventSimulator {
             long_pips,
             short_pips,
             timeout_triggered,
+            tp_hit: tp_actually_hit,
             point_value: config.point_value,
             logs,
         })

@@ -55,6 +55,19 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
   })
 
   onMounted(async () => {
+    // Charger les dates du calendrier actif
+    try {
+      const activeCalId = localStorage.getItem('activeCalendarId')
+      if (activeCalId) {
+        const calendars = await invoke<{ id: number; start_date?: string; end_date?: string }[]>('get_calendars_metadata')
+        const active = calendars?.find(c => c.id === parseInt(activeCalId, 10))
+        if (active?.start_date) startDate.value = active.start_date.substring(0, 10)
+        if (active?.end_date) endDate.value = active.end_date.substring(0, 10)
+      }
+    } catch (_e) {
+      // Fallback: garder les valeurs par défaut
+    }
+
     // Charger les types d'événements disponibles
     try {
       const response = await invoke<{ types: { name: string, count: number }[] }>('get_event_types')

@@ -72,7 +72,7 @@ impl BacktestEngine {
             total_pips += t.pips_net;
 
             if t.pips_net > 0.0 {
-                winning += 1;
+                winning += 1; // TakeProfit ET TrailingStop comptent comme gagnants
                 gross_profit += t.pips_net;
             } else {
                 losing += 1;

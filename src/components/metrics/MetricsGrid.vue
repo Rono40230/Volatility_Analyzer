@@ -6,7 +6,7 @@
         <tr>
           <th class="label-column"></th>
           <th v-for="metric in displayedMetrics" :key="metric.label" class="metric-header">
-            <MetricTooltip :title="metric.label" direction="bottom">
+            <MetricTooltip :title="metric.label">
               <span class="metric-title">
                 {{ metric.label }}
               </span>

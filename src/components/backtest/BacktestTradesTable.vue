@@ -32,6 +32,7 @@ function formatDate(iso: string) {
 function getOutcomeClass(outcome: string) {
   switch (outcome) {
     case 'TakeProfit': return 'outcome-win'
+    case 'TrailingStop': return 'outcome-win'
     case 'StopLoss': return 'outcome-loss'
     case 'Timeout': return 'outcome-neutral'
     case 'NoEntry': return 'outcome-neutral'
@@ -52,13 +53,15 @@ function getSequenceIcons(trade: TradeResult): string {
   if (logs.includes('TS Short')) icons += 'S:🧭 '
   
   if (trade.outcome === 'TakeProfit' && !icons.includes('⏰')) {
-    // Si gagnant sans timeout explicite, on suppose un TP/TS
-    // Mais en simultané, c'est souvent un mix. 
-    // On affiche juste ce qu'on sait. Si vide, on met un check
+    // TP(R) réellement atteint
+  }
+  if (trade.outcome === 'TrailingStop' && !icons.includes('⏰')) {
+    // Sortie trailing profitable (TP non atteint)
   }
 
   if (icons === '') {
      if (trade.outcome === 'TakeProfit') return '🎯'
+     if (trade.outcome === 'TrailingStop') return '🧭'
      if (trade.outcome === 'StopLoss') return '🛑'
      if (trade.outcome === 'Timeout') return '⏰'
      if (trade.outcome === 'NoEntry') return '—'

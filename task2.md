@@ -109,22 +109,22 @@
 - [x] L'import ne doit pas créer de doublons (UPSERT ON CONFLICT)
 
 ### T15. Import calendrier fonctionne
-- [ ] Importer un fichier calendrier économique
-- [ ] Vérifier que les événements apparaissent dans le dropdown backtest
+- [x] Importer un fichier calendrier économique
+- [x] Vérifier que les événements apparaissent dans le dropdown backtest
 
 ### T16. Sélecteur de symboles cohérent
-- [ ] Le sélecteur de paire apparaît dans : Volatilité, Backtest, Heatmap
-- [ ] La liste des paires disponibles est la même partout
+- [x] Le sélecteur de paire apparaît dans : Volatilité, Backtest, Heatmap
+- [x] La liste des paires disponibles est la même partout
 
 ### T17. Pas de régression backtest après nettoyage
-- [ ] Lancer un backtest (Event ou Time)
-- [ ] Les outcomes s'affichent correctement : TakeProfit, StopLoss, Timeout, NoEntry, Whipsaw
-- [ ] Il ne doit PAS y avoir de "RecoveryWin" ou "DoubleLoss" (supprimés)
+- [x] Lancer un backtest (Event ou Time)
+- [x] Les outcomes s'affichent correctement : TakeProfit, StopLoss, Timeout, NoEntry, Whipsaw
+- [x] Il ne doit PAS y avoir de "RecoveryWin" ou "DoubleLoss" (supprimés)
 
 ### T18. Spread dynamique (validation indirecte)
-- [ ] Si tu as des screenshots/exports d'avant les changements : comparer les paramètres Straddle
-- [ ] Les coûts devraient être légèrement plus élevés qu'avant (spread ×3 au lieu de ×1 pendant les news)
-- [ ] Le score global peut être un peu moins bon (= plus réaliste)
+- [x] Si tu as des screenshots/exports d'avant les changements : comparer les paramètres Straddle
+- [x] Les coûts devraient être légèrement plus élevés qu'avant (spread ×3 au lieu de ×1 pendant les news)
+- [x] Le score global peut être un peu moins bon (= plus réaliste)
 
 ---
 
@@ -164,10 +164,10 @@
 | 🟡 P3 | T12 | Guard NaN affichage | ✅ | |
 | 🟡 P3 | T13 | Détails Quarter | ✅ | |
 | 🟢 P4 | T14 | Import paire | ✅ | UPSERT anti-doublons OK |
-| 🟢 P4 | T15 | Import calendrier | ⬜ | |
-| 🟢 P4 | T16 | Sélecteur symboles | ⬜ | |
-| 🟢 P4 | T17 | Régression backtest | ⬜ | |
-| 🟢 P4 | T18 | Spread dynamique | ⬜ | |
+| 🟢 P4 | T15 | Import calendrier | ✅ | |
+| 🟢 P4 | T16 | Sélecteur symboles | ✅ | |
+| 🟢 P4 | T17 | Régression backtest | ✅ | |
+| 🟢 P4 | T18 | Spread dynamique | ✅ | |
 | 🔵 P5 | T19 | Performance heatmap | ⬜ | |
 | 🔵 P5 | T20 | Switch rapide onglets | ⬜ | |
 | 🔵 P5 | T21 | Backtest gros volume | ⬜ | |

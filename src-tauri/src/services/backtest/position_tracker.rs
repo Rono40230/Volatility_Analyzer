@@ -115,6 +115,7 @@ pub struct TradeResultParams {
     pub long_pips: f64,
     pub short_pips: f64,
     pub timeout_triggered: bool,
+    pub tp_hit: bool,  // Un vrai TP(R) a été atteint
     pub point_value: f64,
     pub logs: Vec<String>,
 }
@@ -126,8 +127,10 @@ pub fn build_trade_result(params: TradeResultParams) -> TradeResult {
         TradeOutcome::NoEntry
     } else if params.timeout_triggered {
         TradeOutcome::Timeout
-    } else if total_pips > 0.0 {
+    } else if params.tp_hit {
         TradeOutcome::TakeProfit
+    } else if total_pips > 0.0 {
+        TradeOutcome::TrailingStop
     } else {
         TradeOutcome::StopLoss
     };

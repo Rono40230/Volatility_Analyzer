@@ -31,6 +31,9 @@ const avgPlClass = computed(() => {
 const ddClass = computed(() => {
   return 'metric-poor' 
 })
+
+const tpCount = computed(() => props.result.trades.filter(t => t.outcome === 'TakeProfit').length)
+const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-poor')
 </script>
 
 <template>
@@ -136,6 +139,31 @@ const ddClass = computed(() => {
         <div class="tooltip-section">
           <div class="tooltip-section-title">📖 Définition</div>
           <div class="tooltip-section-text">La plus grande baisse cumulée du capital (du plus haut sommet au plus bas creux).</div>
+        </div>
+      </template>
+    </MetricTooltip>
+
+    <MetricTooltip title="Nb TP atteint">
+      <div class="metric-card">
+        <h4>Nb TP atteint</h4>
+        <div :class="['metric-value', tpClass]">
+          {{ tpCount }}
+        </div>
+      </div>
+      <template #definition>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📖 Définition</div>
+          <div class="tooltip-section-text">Nombre de trades ayant atteint le Take Profit sur la période backtestée.</div>
+        </div>
+      </template>
+      <template #usage>
+        <div class="tooltip-section">
+          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="tooltip-section-text">
+            Mesure la capacité du setup à atteindre la cible de profit.<br><br>
+            <strong>Ratio TP/Total élevé</strong> : Le mouvement directionnel est suffisant pour atteindre le TP.<br>
+            <strong>Ratio faible</strong> : Le TP est peut-être trop ambitieux, ou la volatilité insuffisante.
+          </div>
         </div>
       </template>
     </MetricTooltip>

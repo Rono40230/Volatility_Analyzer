@@ -16,11 +16,12 @@ pub struct BacktestConfig {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TradeOutcome {
-    TakeProfit,
+    TakeProfit,    // Le niveau TP(R) a vraiment été atteint
+    TrailingStop,  // Sortie trailing profitable (TP non atteint)
     StopLoss,
     Timeout,
-    NoEntry, // L'ordre n'a jamais été déclenché
-    Whipsaw, // Déclenché puis SL touché rapidement
+    NoEntry,       // L'ordre n'a jamais été déclenché
+    Whipsaw,       // Déclenché puis SL touché rapidement
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -81,8 +81,14 @@ const disabledReason = computed(() => {
           <label>Fin</label>
           <input type="date" v-model="endDate" class="date-input" />
         </div>
-        <!-- Spacer -->
-        <div class="param col-span-1"></div>
+        <div class="param col-span-1">
+          <label>Écart (pips)</label>
+          <input type="number" v-model.number="config.spread_pips" step="0.1" />
+        </div>
+        <div class="param col-span-1">
+          <label>Glissement (pips)</label>
+          <input type="number" v-model.number="config.slippage_pips" step="0.1" />
+        </div>
       </template>
 
       <div class="param col-span-6"></div>
