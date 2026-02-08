@@ -71,9 +71,10 @@
 ## 🟡 PRIORITÉ 3 — Cohérence visuelle & données
 
 ### T8. Unité affichée correcte (Pips vs Points vs $)
-- [ ] EURUSD → doit afficher "pips" partout
-- [ ] XAUUSD (si dispo) → doit afficher "$" ou "points"
-- [ ] L'unité doit être cohérente entre la heatmap, la modale d'analyse et le backtest
+- [x] EURUSD → doit afficher "pips" partout
+- [x] XAUUSD (si dispo) → doit afficher "$" ou "points"
+- [x] L'unité doit être cohérente entre la heatmap, la modale d'analyse et le backtest
+- [x] XAGUSD corrigé: 1000 → 10 pts/pip (vérifié MT5)
 
 ### T9. Noise Ratio réaliste
 - [x] Aucun Noise Ratio ne doit être négatif
@@ -156,7 +157,7 @@
 | 🟠 P2 | T5 | Params Auto backtest ⭐ | ⬜ | |
 | 🟠 P2 | T6 | SL temporel ⭐ | ✅ | |
 | 🟠 P2 | T7 | ~~Badge Monte Carlo~~ | 🗑️ | Supprimé |
-| 🟡 P3 | T8 | Unités correctes | ⬜ | |
+| 🟡 P3 | T8 | Unités correctes | ✅ | XAGUSD fix 1000→10 |
 | 🟡 P3 | T9 | Noise Ratio réaliste | ✅ | |
 | 🟡 P3 | T10 | Graduation couleurs | ✅ | |
 | 🟡 P3 | T11 | Sample count visible | ✅ | |

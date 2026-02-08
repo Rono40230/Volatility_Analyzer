@@ -12,10 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "⚡ Volatility Analyzer",
+        "title": "Volatility Analyzer",
         "width": 1400,
         "height": 900,
-        "decorations": true
+        "decorations": false
       }
     ],
     "security": {

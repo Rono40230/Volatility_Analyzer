@@ -2,6 +2,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useVolatilityStore } from './stores/volatility'
 import { useAnalysisStore } from './stores/analysisStore'
 import AnalysisPanel from './components/AnalysisPanel.vue'
@@ -74,12 +75,21 @@ function handleQuarterAnalyze(hour: number, quarter: number) {
   quarterAnalysisQuarter.value = quarter
   isQuarterAnalysisOpen.value = true
 }
+
+// Contrôles de fenêtre (titlebar custom)
+const appWindow = getCurrentWindow()
+function minimizeWindow() { appWindow.minimize() }
+function toggleMaximize() { appWindow.toggleMaximize() }
+function closeWindow() { appWindow.close() }
 </script>
 
 <template>
   <div class="app-shell">
-    <!-- === MAIN NAVIGATION HEADER === -->
-    <header class="app-header">
+    <!-- === TITLEBAR / NAVIGATION HEADER === -->
+    <header
+      class="app-header"
+      data-tauri-drag-region
+    >
       <div class="header-left">
         <button
           v-if="activeTab !== 'home'"
@@ -104,21 +114,93 @@ function handleQuarterAnalyze(hour: number, quarter: number) {
           </svg>
           <span class="home-text">Accueil</span>
         </button>
-        <div
-          v-else
-          class="brand"
-        >
+        <div class="brand">
           <img
             src="./assets/logo.png"
             alt="Logo"
-            width="24"
-            height="24"
-          > Volatility Analyzer
+            width="20"
+            height="20"
+          >
+          <span>Volatility Analyzer</span>
         </div>
       </div>
 
       <div class="header-center">
         <!-- Optional: Toolbar items can go here -->
+      </div>
+
+      <div class="window-controls">
+        <button
+          class="win-btn"
+          title="Minimiser"
+          @click="minimizeWindow"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+          >
+            <rect
+              x="1"
+              y="5.5"
+              width="10"
+              height="1"
+              fill="currentColor"
+            />
+          </svg>
+        </button>
+        <button
+          class="win-btn"
+          title="Maximiser"
+          @click="toggleMaximize"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+          >
+            <rect
+              x="1.5"
+              y="1.5"
+              width="9"
+              height="9"
+              rx="1"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+          </svg>
+        </button>
+        <button
+          class="win-btn win-close"
+          title="Fermer"
+          @click="closeWindow"
+        >
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+          >
+            <line
+              x1="2"
+              y1="2"
+              x2="10"
+              y2="10"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            />
+            <line
+              x1="10"
+              y1="2"
+              x2="2"
+              y2="10"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
       </div>
     </header>
 
@@ -304,13 +386,16 @@ select option {
 
 /* --- Header Navigation --- */
 .app-header {
-  height: 48px;
+  height: 40px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  justify-content: space-between;
+  padding: 0 8px 0 16px;
   border-bottom: 1px solid var(--border-color);
-  background: var(--panel-bg);
+  background: var(--app-bg);
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .header-left {
@@ -332,7 +417,31 @@ select option {
   transition: all 0.2s;
 }
 .nav-home-btn:hover { background: rgba(255,255,255,0.1); border-color: #8b949e; }
-.brand { font-weight: 700; color: #e6edf3; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.brand { font-weight: 600; color: var(--text-secondary); font-size: 0.85rem; display: flex; align-items: center; gap: 6px; pointer-events: none; }
+.brand span { opacity: 0.8; }
+
+/* Window Controls */
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}
+.win-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
+}
+.win-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.win-close:hover { background: #e81123; color: #fff; }
 
 /* --- VIEWPORT --- */
 .app-viewport {
