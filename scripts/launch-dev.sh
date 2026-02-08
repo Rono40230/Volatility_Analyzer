@@ -36,9 +36,9 @@ for f in src/main.ts src/App.vue src/stores/volatility.ts src/stores/analysisSto
 done
 echo "✅ Cache pré-chauffé"
 
-echo "🖥️  Lancement de Tauri (mode X11 pour éviter crash Wayland)..."
+echo "🖥️  Lancement de Tauri (Wayland natif + DMABUF désactivé)..."
 cd src-tauri
-GDK_BACKEND=x11 WEBKIT_DISABLE_COMPOSITING_MODE=1 cargo run &
+GDK_BACKEND=wayland WEBKIT_DISABLE_DMABUF_RENDERER=1 cargo run &
 TAURI_PID=$!
 
 echo ""

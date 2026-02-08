@@ -13,6 +13,16 @@ use std::sync::Mutex;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // === FIX CRITIQUE: Wayland + WebKitGTK ===
+    // Sur Fedora Wayland, XWayland (GDK_BACKEND=x11) provoque un freeze complet
+    // de la fenêtre ("Failed to create GBM buffer"). On force Wayland natif
+    // + désactivation du DMA-BUF renderer qui crashe sur certains GPU.
+    #[cfg(target_os = "linux")]
+    {
+        std::env::set_var("GDK_BACKEND", "wayland");
+        std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+    }
+
     // Initialise le logger pour tracing avec niveau DEBUG
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
