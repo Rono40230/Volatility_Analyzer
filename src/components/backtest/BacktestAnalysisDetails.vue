@@ -3,48 +3,48 @@
     <div class="analysis-section">
       <h3>Execution & Declenchement</h3>
       <div class="detail-row">
-        <span class="label">Trades executes</span>
+        <span class="label">Trades exécutés</span>
         <span class="value">{{ advanced.execution.executedCount }}</span>
       </div>
       <div class="detail-row">
-        <span class="label">Duree moyenne</span>
+        <span class="label">Durée moyenne</span>
         <span class="value">{{ advanced.execution.avgDuration }} min</span>
       </div>
       <div class="detail-row">
-        <span class="label">Duree mediane</span>
+        <span class="label">Durée médiane</span>
         <span class="value">{{ advanced.execution.medianDuration }} min</span>
       </div>
       <div class="detail-row">
-        <span class="label">Wins rapides (<= 1 min)</span>
-        <span class="value">{{ advanced.execution.quickWinRate }}%</span>
+        <span class="label">Wins rapides (≤ 1 min)</span>
+        <span class="value" :class="rateColor(n(advanced.execution.quickWinRate), 20, 40)">{{ advanced.execution.quickWinRate }}%</span>
       </div>
       <div class="detail-row">
-        <span class="label">Loss rapides (<= 1 min)</span>
-        <span class="value">{{ advanced.execution.quickLossRate }}%</span>
+        <span class="label">Loss rapides (≤ 1 min)</span>
+        <span class="value" :class="rateColorInv(n(advanced.execution.quickLossRate), 10, 25)">{{ advanced.execution.quickLossRate }}%</span>
       </div>
       <div class="detail-row">
         <span class="label">TakeProfit</span>
-        <span class="value">{{ advanced.execution.tpRate }}%</span>
+        <span class="value" :class="rateColor(n(advanced.execution.tpRate), 20, 40)">{{ advanced.execution.tpRate }}%</span>
       </div>
       <div class="detail-row">
         <span class="label">Timeout</span>
-        <span class="value">{{ advanced.execution.timeoutRate }}%</span>
+        <span class="value" :class="rateColorInv(n(advanced.execution.timeoutRate), 15, 30)">{{ advanced.execution.timeoutRate }}%</span>
       </div>
     </div>
 
     <div class="analysis-section">
-      <h3>MFE / MAE Avance</h3>
+      <h3>MFE / MAE Avancé</h3>
       <div class="detail-row">
         <span class="label">MFE moyen</span>
-        <span class="value">{{ advanced.mfeMae.avgMfe }} pips</span>
+        <span class="value val-good">{{ advanced.mfeMae.avgMfe }} pips</span>
       </div>
       <div class="detail-row">
         <span class="label">MAE moyen</span>
-        <span class="value">{{ advanced.mfeMae.avgMae }} pips</span>
+        <span class="value val-bad">{{ advanced.mfeMae.avgMae }} pips</span>
       </div>
       <div class="detail-row">
         <span class="label">Ratio MFE/MAE</span>
-        <span class="value">{{ advanced.mfeMae.mfeMaeRatio }}</span>
+        <span class="value" :class="rateColor(n(advanced.mfeMae.mfeMaeRatio), 1.0, 1.5)">{{ advanced.mfeMae.mfeMaeRatio }}</span>
       </div>
       <div class="detail-row">
         <span class="label">TP cible</span>
@@ -52,11 +52,11 @@
       </div>
       <div class="detail-row">
         <span class="label">TP potentiel atteint</span>
-        <span class="value">{{ advanced.mfeMae.tpPotentialRate }}%</span>
+        <span class="value" :class="rateColor(n(advanced.mfeMae.tpPotentialRate), 30, 50)">{{ advanced.mfeMae.tpPotentialRate }}%</span>
       </div>
       <div class="detail-row">
-        <span class="label">TP manque</span>
-        <span class="value">{{ advanced.mfeMae.tpMissRate }}%</span>
+        <span class="label">TP manqué</span>
+        <span class="value" :class="rateColorInv(n(advanced.mfeMae.tpMissRate), 30, 50)">{{ advanced.mfeMae.tpMissRate }}%</span>
       </div>
     </div>
 
@@ -64,27 +64,27 @@
       <h3>BE & Trailing</h3>
       <div class="detail-row">
         <span class="label">BE atteint</span>
-        <span class="value">{{ advanced.trailing.beHitRate }}%</span>
+        <span class="value" :class="rateColor(n(advanced.trailing.beHitRate), 30, 50)">{{ advanced.trailing.beHitRate }}%</span>
       </div>
       <div class="detail-row">
         <span class="label">Sorties Trailing</span>
-        <span class="value">{{ advanced.trailing.trailingExitRate }}%</span>
+        <span class="value" :class="rateColor(n(advanced.trailing.trailingExitRate), 15, 30)">{{ advanced.trailing.trailingExitRate }}%</span>
       </div>
     </div>
 
     <div class="analysis-section">
-      <h3>Stabilite temporelle</h3>
+      <h3>Stabilité temporelle</h3>
       <div class="detail-row">
         <span class="label">Meilleur mois</span>
-        <span class="value">{{ advanced.stability.bestMonth }}</span>
+        <span class="value val-good">{{ advanced.stability.bestMonth }}</span>
       </div>
       <div class="detail-row">
         <span class="label">Pire mois</span>
-        <span class="value">{{ advanced.stability.worstMonth }}</span>
+        <span class="value val-bad">{{ advanced.stability.worstMonth }}</span>
       </div>
       <div class="detail-row">
         <span class="label">Mois profitables</span>
-        <span class="value">{{ advanced.stability.profitableMonths }}/{{ advanced.stability.totalMonths }}</span>
+        <span class="value" :class="rateColor(monthRatio, 40, 60)">{{ advanced.stability.profitableMonths }}/{{ advanced.stability.totalMonths }}</span>
       </div>
       <div class="detail-row">
         <span class="label">Meilleur jour</span>
@@ -97,24 +97,26 @@
     </div>
 
     <div class="analysis-section">
-      <h3>Frais & Sensibilite</h3>
+      <h3>Frais & Sensibilité</h3>
       <div class="detail-row">
-        <span class="label">Cout estime / trade</span>
+        <span class="label">Coût estimé / trade</span>
         <span class="value">{{ advanced.fees.costPerTrade }} pips</span>
       </div>
       <div class="detail-row">
-        <span class="label">Cout estime total</span>
+        <span class="label">Coût estimé total</span>
         <span class="value">{{ advanced.fees.costTotal }} pips</span>
       </div>
       <div class="detail-row">
         <span class="label">Poids des frais</span>
-        <span class="value">{{ advanced.fees.costRatio }}%</span>
+        <span class="value" :class="rateColorInv(n(advanced.fees.costRatio), 10, 25)">{{ advanced.fees.costRatio }}%</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const props = defineProps<{
   advanced: {
     execution: {
@@ -153,6 +155,31 @@ const props = defineProps<{
     }
   }
 }>()
+
+/** Parse string to number */
+function n(val: string | number): number {
+  return typeof val === 'number' ? val : parseFloat(val) || 0
+}
+
+/** Higher = better. Green if >= good, orange if >= warn, red below. */
+function rateColor(val: number, warn: number, good: number): string {
+  if (val >= good) return 'val-good'
+  if (val >= warn) return 'val-warn'
+  return 'val-bad'
+}
+
+/** Higher = worse (inverted). Green if < warn, orange if < bad, red above. */
+function rateColorInv(val: number, warn: number, bad: number): string {
+  if (val < warn) return 'val-good'
+  if (val < bad) return 'val-warn'
+  return 'val-bad'
+}
+
+const monthRatio = computed(() => {
+  const total = props.advanced.stability.totalMonths
+  if (total === 0) return 0
+  return (props.advanced.stability.profitableMonths / total) * 100
+})
 </script>
 
 <style scoped>
@@ -200,4 +227,9 @@ const props = defineProps<{
   font-size: 0.9rem;
   text-align: right;
 }
+
+/* Semantic color classes */
+.val-good { color: #48bb78; }
+.val-warn { color: #ed8936; }
+.val-bad { color: #f56565; }
 </style>

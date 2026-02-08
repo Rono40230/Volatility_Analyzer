@@ -257,6 +257,87 @@ export function useBacktestAnalysis(result: BacktestResult, config: BacktestConf
     return ((parseFloat(costTotal.value) / total) * 100).toFixed(1)
   })
 
+  // --- Paramètres Recommandés ---
+  const percentile = (values: number[], p: number) => {
+    if (values.length === 0) return 0
+    const sorted = [...values].sort((a, b) => a - b)
+    const idx = Math.ceil(sorted.length * p / 100) - 1
+    return sorted[Math.max(0, idx)]
+  }
+
+  const recommendedParams = computed(() => {
+    const trades = executedTrades.value
+    if (trades.length < 5) return null
+
+    const mfeValues = trades.map(t => t.max_favorable_excursion)
+    const maeValues = trades.map(t => t.max_adverse_excursion)
+    const durations = trades.filter(t => t.pips_net > 0).map(t => t.duration_minutes)
+    const allDurations = trades.map(t => t.duration_minutes)
+
+    // R (SL) : P75 de la MAE = couvre 75% des excursions adverses
+    const maeP75 = percentile(maeValues, 75)
+    const optimalSL = Math.max(Math.ceil(maeP75), 1)
+
+    // TP(R) : basé sur MFE médiane / SL optimal
+    const mfeMedian = median(mfeValues)
+    const rawTPR = mfeMedian / Math.max(optimalSL, 1)
+    const optimalTPR = Math.max(Math.round(rawTPR * 2) / 2, 1) // arrondi au 0.5
+
+    // Stop suiveur (ATR x) : si le trailing exit rate est bon (>30%), garder serré
+    // sinon relâcher
+    const trailingRate = parseFloat(trailingExitRate.value)
+    const tpR = parseFloat(tpRate.value)
+    let optimalTrailing = 1.5
+    if (trailingRate > 40 && tpR < 10) {
+      optimalTrailing = 2.0 // trailing ferme trop tôt, relâcher
+    } else if (trailingRate < 15 && tpR > 30) {
+      optimalTrailing = 1.0 // trailing très peu actif, resserrer
+    }
+
+    // Période ATR : basée sur durée médiane des trades (en bougies M1)
+    const medDuration = median(allDurations)
+    let optimalATRPeriod = 14
+    if (medDuration < 5) optimalATRPeriod = 7
+    else if (medDuration < 15) optimalATRPeriod = 10
+    else if (medDuration < 30) optimalATRPeriod = 14
+    else optimalATRPeriod = 20
+
+    // Délai max : P90 de la durée des trades gagnants (ou tous si pas assez de gagnants)
+    const durationSource = durations.length >= 5 ? durations : allDurations
+    const durP90 = percentile(durationSource, 90)
+    const optimalTimeout = Math.max(Math.ceil(durP90 / 5) * 5, 10) // arrondi aux 5 min
+
+    // Explications
+    const slExplanation = `P75 MAE = ${maeP75.toFixed(1)} pips. Couvre 75% des excursions adverses sans sortir trop tôt.`
+    const tpExplanation = `MFE médiane = ${mfeMedian.toFixed(1)} pips. Ratio MFE/SL = ${rawTPR.toFixed(1)}R.`
+    const trailingExplanation = trailingRate > 40 
+      ? `${trailingRate.toFixed(0)}% des sorties au trailing (trop fréquent) → relâcher.`
+      : trailingRate < 15 
+        ? `${trailingRate.toFixed(0)}% des sorties au trailing (rare) → resserrer.`
+        : `${trailingRate.toFixed(0)}% des sorties au trailing (équilibré).`
+    const atrExplanation = `Durée médiane = ${medDuration.toFixed(0)} min → période adaptée.`
+    const timeoutExplanation = `P90 durée gagnants = ${durP90} min. Au-delà, le mouvement est épuisé.`
+
+    return {
+      sl: optimalSL,
+      slExplanation,
+      tpRR: optimalTPR,
+      tpExplanation,
+      trailing: optimalTrailing,
+      trailingExplanation,
+      atrPeriod: optimalATRPeriod,
+      atrExplanation,
+      timeout: optimalTimeout,
+      timeoutExplanation,
+      // Comparaison avec actuel
+      currentSL: config.stop_loss_pips,
+      currentTPR: config.tp_rr,
+      currentTrailing: config.trailing_atr_coef,
+      currentATR: config.atr_period,
+      currentTimeout: config.timeout_minutes
+    }
+  })
+
   const advanced = computed(() => ({
     execution: {
       avgDuration: avgDuration.value,
@@ -291,7 +372,8 @@ export function useBacktestAnalysis(result: BacktestResult, config: BacktestConf
       costPerTrade: costPerTrade.value,
       costTotal: costTotal.value,
       costRatio: costRatio.value
-    }
+    },
+    recommended: recommendedParams.value
   }))
 
   return {
@@ -311,6 +393,7 @@ export function useBacktestAnalysis(result: BacktestResult, config: BacktestConf
     riskAdvice,
     exitAdvice,
     finalRecommendation,
-    advanced
+    advanced,
+    recommendedParams
   }
 }

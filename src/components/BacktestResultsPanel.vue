@@ -79,6 +79,14 @@ function openArchiveModal() {
 
 // --- Analysis Logic ---
 const showAnalysisModal = ref(false)
+
+function applyRecommendedParams(params: { sl: number; tpRR: number; trailing: number; atrPeriod: number; timeout: number }) {
+  storeConfig.value.stop_loss_pips = params.sl
+  storeConfig.value.tp_rr = params.tpRR
+  storeConfig.value.trailing_atr_coef = params.trailing
+  storeConfig.value.atr_period = params.atrPeriod
+  storeConfig.value.timeout_minutes = params.timeout
+}
 </script>
 
 <template>
@@ -138,6 +146,7 @@ const showAnalysisModal = ref(false)
       :result="result"
       :config="config"
       @close="showAnalysisModal = false"
+      @apply-params="applyRecommendedParams"
     />
   </div>
 </template>

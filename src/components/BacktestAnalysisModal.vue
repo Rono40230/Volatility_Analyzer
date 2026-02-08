@@ -7,63 +7,122 @@
       </div>
       
       <div class="modal-body">
-        <!-- 1. Verdict Rentabilité -->
-        <div class="analysis-section verdict" :class="verdictClass">
-          <div class="section-icon">{{ verdictIcon }}</div>
-          <div class="section-content">
-            <h3>Verdict : {{ verdictTitle }}</h3>
-            <p>{{ verdictText }}</p>
+        <!-- Layout principal : Analyse (2 cols) | Params (sidebar) -->
+        <div class="analysis-columns">
+          <!-- 1. Verdict Rentabilité -->
+          <div class="analysis-section verdict" :class="verdictClass">
+            <div class="section-icon">{{ verdictIcon }}</div>
+            <div class="section-content">
+              <h3>Verdict : {{ verdictTitle }}</h3>
+              <p>{{ verdictText }}</p>
+            </div>
+          </div>
+
+          <!-- 2. Activité & Déclenchement -->
+          <div class="analysis-section">
+            <h3>📡 Activité & Déclenchement</h3>
+            <p>
+              Sur <strong>{{ totalEvents }}</strong> événements, 
+              <strong :class="noEntryClass">{{ noEntryCount }}</strong> n'ont pas déclenché ({{ noEntryPercent }}%).
+            </p>
+            <p class="advice">{{ activityAdvice }}</p>
+          </div>
+
+          <!-- 3. Risque & Drawdown -->
+          <div class="analysis-section">
+            <h3>🛡️ Risque & Drawdown</h3>
+            <p>
+              Drawdown Max : <strong class="text-danger">{{ maxDrawdown }} pips</strong>.
+              <span v-if="consecutiveLosses > 2">
+                Attention, vous avez subi une série de <strong>{{ consecutiveLosses }} pertes consécutives</strong>.
+              </span>
+            </p>
+            <p class="advice">{{ riskAdvice }}</p>
+          </div>
+
+          <!-- 4. Qualité des Sorties (MFE/MAE) -->
+          <div class="analysis-section">
+            <h3>🎯 Qualité des Sorties</h3>
+            <div class="metrics-row">
+              <div class="metric">
+                <span class="label">MFE Moyen (Potentiel)</span>
+                <span class="value text-success">{{ avgMfe }} pips</span>
+              </div>
+              <div class="metric">
+                <span class="label">MAE Moyen (Risque)</span>
+                <span class="value text-danger">{{ avgMae }} pips</span>
+              </div>
+            </div>
+            <p class="advice">{{ exitAdvice }}</p>
+          </div>
+
+          <!-- 5. Analyse Avancee -->
+          <div class="analysis-section full-width">
+            <h3>📌 Analyse Avancee</h3>
+            <BacktestAnalysisDetails :advanced="advanced" />
           </div>
         </div>
 
-        <!-- 2. Activité & Déclenchement -->
-        <div class="analysis-section">
-          <h3>📡 Activité & Déclenchement</h3>
-          <p>
-            Sur <strong>{{ totalEvents }}</strong> événements, 
-            <strong :class="noEntryClass">{{ noEntryCount }}</strong> n'ont pas déclenché ({{ noEntryPercent }}%).
-          </p>
-          <p class="advice">{{ activityAdvice }}</p>
-        </div>
-
-        <!-- 3. Risque & Drawdown -->
-        <div class="analysis-section">
-          <h3>🛡️ Risque & Drawdown</h3>
-          <p>
-            Drawdown Max : <strong class="text-danger">{{ maxDrawdown }} pips</strong>.
-            <span v-if="consecutiveLosses > 2">
-              Attention, vous avez subi une série de <strong>{{ consecutiveLosses }} pertes consécutives</strong>.
-            </span>
-          </p>
-          <p class="advice">{{ riskAdvice }}</p>
-        </div>
-
-        <!-- 4. Qualité des Sorties (MFE/MAE) -->
-        <div class="analysis-section">
-          <h3>🎯 Qualité des Sorties</h3>
-          <div class="metrics-row">
-            <div class="metric">
-              <span class="label">MFE Moyen (Potentiel)</span>
-              <span class="value text-success">{{ avgMfe }} pips</span>
+        <!-- Sidebar : Paramètres Recommandés -->
+        <div v-if="recommendedParams" class="params-sidebar">
+          <h3>⚙️ Paramètres Optimaux</h3>
+          <p class="section-intro">Basés sur {{ result.total_trades }} trades</p>
+          
+          <div class="param-list">
+            <div class="param-card">
+              <div class="param-header">
+                <span class="param-label">R (SL)</span>
+                <span class="param-arrow" :class="recommendedParams.sl !== recommendedParams.currentSL ? 'changed' : ''">
+                  {{ recommendedParams.currentSL }} → <strong>{{ recommendedParams.sl }}</strong> pips
+                </span>
+              </div>
+              <div class="param-explain">{{ recommendedParams.slExplanation }}</div>
             </div>
-            <div class="metric">
-              <span class="label">MAE Moyen (Risque)</span>
-              <span class="value text-danger">{{ avgMae }} pips</span>
+
+            <div class="param-card">
+              <div class="param-header">
+                <span class="param-label">TP (R)</span>
+                <span class="param-arrow" :class="recommendedParams.tpRR !== recommendedParams.currentTPR ? 'changed' : ''">
+                  {{ recommendedParams.currentTPR }} → <strong>{{ recommendedParams.tpRR }}</strong>
+                </span>
+              </div>
+              <div class="param-explain">{{ recommendedParams.tpExplanation }}</div>
+            </div>
+
+            <div class="param-card">
+              <div class="param-header">
+                <span class="param-label">Stop suiveur</span>
+                <span class="param-arrow" :class="recommendedParams.trailing !== recommendedParams.currentTrailing ? 'changed' : ''">
+                  {{ recommendedParams.currentTrailing }} → <strong>{{ recommendedParams.trailing }}</strong> ATR
+                </span>
+              </div>
+              <div class="param-explain">{{ recommendedParams.trailingExplanation }}</div>
+            </div>
+
+            <div class="param-card">
+              <div class="param-header">
+                <span class="param-label">Période ATR</span>
+                <span class="param-arrow" :class="recommendedParams.atrPeriod !== recommendedParams.currentATR ? 'changed' : ''">
+                  {{ recommendedParams.currentATR }} → <strong>{{ recommendedParams.atrPeriod }}</strong>
+                </span>
+              </div>
+              <div class="param-explain">{{ recommendedParams.atrExplanation }}</div>
+            </div>
+
+            <div class="param-card">
+              <div class="param-header">
+                <span class="param-label">Délai max</span>
+                <span class="param-arrow" :class="recommendedParams.timeout !== recommendedParams.currentTimeout ? 'changed' : ''">
+                  {{ recommendedParams.currentTimeout }} → <strong>{{ recommendedParams.timeout }}</strong> min
+                </span>
+              </div>
+              <div class="param-explain">{{ recommendedParams.timeoutExplanation }}</div>
             </div>
           </div>
-          <p class="advice">{{ exitAdvice }}</p>
-        </div>
 
-        <!-- 5. Analyse Avancee -->
-        <div class="analysis-section">
-          <h3>📌 Analyse Avancee</h3>
-          <BacktestAnalysisDetails :advanced="advanced" />
-        </div>
-
-        <!-- 6. Recommandation Finale -->
-        <div class="analysis-section recommendation">
-          <h3>💡 Piste d'optimisation</h3>
-          <p>{{ finalRecommendation }}</p>
+          <button class="btn-apply" @click="applyRecommended">
+            ✅ Appliquer
+          </button>
         </div>
       </div>
 
@@ -88,6 +147,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'apply-params', params: { sl: number; tpRR: number; trailing: number; atrPeriod: number; timeout: number }): void
 }>()
 
 const close = () => emit('close')
@@ -108,9 +168,21 @@ const {
   activityAdvice,
   riskAdvice,
   exitAdvice,
-  finalRecommendation,
-  advanced
+  advanced,
+  recommendedParams
 } = useBacktestAnalysis(props.result, props.config)
+
+function applyRecommended() {
+  if (!recommendedParams.value) return
+  emit('apply-params', {
+    sl: recommendedParams.value.sl,
+    tpRR: recommendedParams.value.tpRR,
+    trailing: recommendedParams.value.trailing,
+    atrPeriod: recommendedParams.value.atrPeriod,
+    timeout: recommendedParams.value.timeout
+  })
+  close()
+}
 
 </script>
 
@@ -127,13 +199,14 @@ const {
 
 .modal-content.analysis-modal {
   background: #1a202c;
-  width: 600px;
-  max-width: 90vw;
-  border-radius: 12px;
-  border: 1px solid #2d3748;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  border: none;
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
 }
 
 .modal-header {
@@ -148,16 +221,29 @@ const {
 .close-btn { background: none; border: none; color: #a0aec0; font-size: 1.5rem; cursor: pointer; }
 
 .modal-body {
-  padding: 24px;
+  padding: 16px 20px;
+  overflow: hidden;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+.analysis-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-content: start;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+}
+
+.analysis-columns .full-width {
+  grid-column: 1 / -1;
 }
 
 .analysis-section {
   background: #2d3748;
-  padding: 16px;
+  padding: 12px;
   border-radius: 8px;
 }
 
@@ -215,11 +301,6 @@ const {
 .text-danger { color: #f56565; }
 .text-warning { color: #ed8936; }
 
-.recommendation {
-  background: linear-gradient(135deg, rgba(66, 153, 225, 0.1), rgba(102, 126, 234, 0.1));
-  border: 1px solid #4299e1;
-}
-
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #2d3748;
@@ -237,4 +318,83 @@ const {
   font-weight: 600;
 }
 .btn-primary:hover { background: #3182ce; }
+
+.params-sidebar {
+  background: linear-gradient(135deg, rgba(72, 187, 120, 0.08), rgba(56, 161, 105, 0.12));
+  border: 1px solid #38a169;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.params-sidebar h3 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  color: #48bb78;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.section-intro {
+  color: #a0aec0;
+  font-size: 0.8rem;
+  margin: 0 0 12px 0;
+}
+.param-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.param-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 12px 16px;
+  border-left: 3px solid #4a5568;
+}
+.param-card:has(.changed) {
+  border-left-color: #ed8936;
+}
+.param-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.param-label {
+  font-weight: 600;
+  color: #e2e8f0;
+  font-size: 0.95rem;
+}
+.param-arrow {
+  font-size: 0.9rem;
+  color: #a0aec0;
+}
+.param-arrow.changed {
+  color: #ed8936;
+}
+.param-arrow strong {
+  color: #48bb78;
+  font-size: 1.05rem;
+}
+.param-explain {
+  color: #718096;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+.btn-apply {
+  margin-top: auto;
+  padding-top: 12px;
+  width: 100%;
+  background: #38a169;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+.btn-apply:hover { background: #2f855a; }
 </style>

@@ -5,15 +5,11 @@ use crate::models::AssetProperties;
 
 /// Retourne la valeur d'un point (Tick Size) pour un symbole donné
 /// C'est la plus petite variation de prix possible (ou l'unité de base pour les calculs)
+/// Pour le backtest, on veut le pip_value directement (pas le point MT5)
+/// car l'utilisateur saisit ses paramètres en pips.
 pub fn get_point_value(symbol: &str) -> f64 {
     let props = AssetProperties::from_symbol(symbol);
-    
-    // Pour le Forex, le "point" MT5 est 1/10 de pip
-    if props.unit == "pips" {
-        return props.pip_value / 10.0;
-    }
-    
-    // Pour les indices/crypto, point = pip = 1.0
+    // Retourner pip_value directement : l'utilisateur pense en pips, pas en points MT5
     props.pip_value
 }
 
