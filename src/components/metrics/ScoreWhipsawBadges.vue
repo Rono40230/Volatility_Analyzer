@@ -100,6 +100,7 @@
         </div>
       </template>
     </MetricTooltip>
+
   </div>
 </template>
 

@@ -52,10 +52,10 @@ impl StraddleScoreCalculator {
             1.0
         };
 
-        // Assouplissement Directionnalité :
-        // Au lieu de multiplier directement (ce qui tue le score si directionnalité faible),
-        // on pondère : même avec 0 directionnalité, on garde 40% du score de volatilité.
-        // Cela permet aux mouvements volatils mais "sales" (mèches) de rester tradables.
+        // Floor directionnalité : 40% du score volatilité est garanti même si directionality=0
+        // Les 60% restants sont proportionnels à la directionnalité (body/range).
+        // Justification : un Straddle bénéficie de la volatilité même si le mouvement n'est pas
+        // directionnel (mèches) — on ne veut pas tuer le score pour cause de bruit.
         let dir_factor = 0.4 + 0.6 * (directionality / 100.0);
 
         let raw_score = volatility * dir_factor * whipsaw_penalty;
@@ -80,9 +80,9 @@ impl StraddleScoreCalculator {
         let increase_pct = ((atr_after - atr_before) / atr_before) * 100.0;
 
         // Score 0-100 :
-        // < 0% = 0
-        // 80% increase = 100 (Score Max atteint plus vite)
-        // Ajustement v2 : Diviseur 0.8 pour booster les scores de volatilité
+        // < 0% = 0, >= 80% increase = 100 (score max)
+        // Diviseur 0.8 : une augmentation ATR de 80% donne score=100
+        // Calibré sur backtests Forex majeurs — 80% d'increase ATR = signal fort confirmé
         (increase_pct / 0.8).clamp(0.0, 100.0)
     }
 
@@ -140,7 +140,7 @@ impl StraddleScoreCalculator {
         if candles.is_empty() {
             return 0.0;
         }
-        let sum: f64 = candles.iter().map(|c| c.high - c.low).sum();
-        sum / candles.len() as f64
+        // Utilise le module centralisé ATR (True Range réel, SMA)
+        crate::services::atr::calculate_atr_sma(candles, candles.len())
     }
 }

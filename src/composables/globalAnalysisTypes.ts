@@ -28,7 +28,7 @@ export interface PairStraddleRateGlobal {
   pair: string
   straddle_score: number
   directional_move_rate: number
-  whipsaw_rate: number
+  non_event_rate: number
   avg_volatility: number
   total_events: number
   top_events: string[]

@@ -77,6 +77,7 @@ export interface HeatmapData {
   pairs: string[]
   event_types: Array<{ name: string; count: number; has_data?: boolean }>
   data: Record<string, Record<string, number>>
+  counts?: Record<string, Record<string, number>>
 }
 
 export interface HeatmapLoadedFor {

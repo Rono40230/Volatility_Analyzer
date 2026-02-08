@@ -4,7 +4,9 @@
   <div v-if="heatmapData && !loadingHeatmap" class="heatmap-container">
     <HeatmapHeader 
       :current-filter="minVolatilityThreshold"
+      :max-events="maxEventsToDisplay"
       @filter-click="minVolatilityThreshold = $event"
+      @limit-change="handleLimitChange"
       @reload="handleReloadHeatmap"
       @archive="emit('archive-heatmap')"
     />
@@ -14,6 +16,7 @@
       :sorted-event-types="filteredEventTypes" 
       :min-volatility="minVolatilityThreshold" 
       :get-heatmap-value="getHeatmapValue" 
+      :get-heatmap-count="getHeatmapCount"
       :get-heatmap-class="getHeatmapClass" 
       :get-formatted-event-name="getFormattedEventName" 
       @analyze-cell="(eventName, pair) => emit('analyze-cell', eventName, pair)"
@@ -38,7 +41,7 @@ const emit = defineEmits<{
   'analyze-cell': [eventName: string, pair: string]
 }>()
 
-const { loadingHeatmap, heatmapData, minVolatilityThreshold, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
+const { loadingHeatmap, heatmapData, minVolatilityThreshold, maxEventsToDisplay, sortedEventTypes, loadHeatmapData, forceReloadHeatmap, getHeatmapValue, getHeatmapCount, getHeatmapClass, getFormattedEventName } = useEventCorrelationHeatmap(props.isArchiveMode, props.archiveData)
 
 const selectedEventType = ref('')
 
@@ -79,12 +82,18 @@ async function handleReloadHeatmap() {
   }
 }
 
+function handleLimitChange(value: number) {
+  if (value <= 0) {
+    const confirmed = window.confirm('Afficher tous les evenements peut ralentir ou figer la vue. Continuer ?')
+    if (!confirmed) return
+  }
+  maxEventsToDisplay.value = value
+}
+
 onMounted(() => {
   if (props.isArchiveMode) {
     heatmapData.value = props.archiveData || null
   } else {
-    // Si heatmapData est déjà cachée (restaurée du localStorage), affiche-la
-    // Sinon, charge-la depuis les paires disponibles
     if (!heatmapData.value && props.availablePairs && props.availablePairs.length > 0) {
       loadHeatmapData(props.availablePairs, props.calendarId)
     }

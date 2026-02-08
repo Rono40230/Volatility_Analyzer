@@ -10,6 +10,7 @@ mod calculations {
     use crate::models::{Candle, VolatilityError, AssetProperties};
 
     /// Calcule l'ATR (Average True Range) sur une série de candles
+    /// Délègue au module centralisé `services::atr`
     pub fn calculer_atr(candles: &[Candle]) -> Result<f64, VolatilityError> {
         if candles.len() < 2 {
             return Err(VolatilityError::InsufficientData(
@@ -17,22 +18,7 @@ mod calculations {
             ));
         }
 
-        let mut true_ranges = Vec::new();
-
-        for i in 1..candles.len() {
-            let high = candles[i].high;
-            let low = candles[i].low;
-            let prev_close = candles[i - 1].close;
-
-            let tr = (high - low)
-                .max((high - prev_close).abs())
-                .max((low - prev_close).abs());
-
-            true_ranges.push(tr);
-        }
-
-        let atr = true_ranges.iter().sum::<f64>() / true_ranges.len() as f64;
-        Ok(atr)
+        Ok(crate::services::atr::calculate_atr_sma(candles, candles.len()))
     }
 
     /// Analyse les mouvements post-événement
@@ -77,6 +63,9 @@ mod calculations {
             if range > asset_props.normalize(directional_threshold) {
                 directional_count += 1;
 
+                // Direction du mouvement actuel (close dernier - close premier)
+                let current_direction = window[window.len() - 1].close - window[0].close;
+
                 if i + reversal_window_size < post_event_candles.len() {
                     let next_window_start = i + reversal_window_size;
                     let next_window_end =
@@ -94,7 +83,16 @@ mod calculations {
                             .fold(f64::INFINITY, f64::min);
                         let next_range = asset_props.normalize(next_max_high - next_min_low);
 
-                        if next_range > asset_props.normalize(directional_threshold) {
+                        // Whipsaw = mouvement significatif dans la direction OPPOSÉE
+                        // (pas juste deux gros mouvements consécutifs dans la même direction)
+                        let next_direction = next_window[next_window.len() - 1].close
+                            - next_window[0].close;
+                        let direction_changed = (current_direction > 0.0 && next_direction < 0.0)
+                            || (current_direction < 0.0 && next_direction > 0.0);
+
+                        if next_range > asset_props.normalize(directional_threshold)
+                            && direction_changed
+                        {
                             whipsaw_count += 1;
                         }
                     }

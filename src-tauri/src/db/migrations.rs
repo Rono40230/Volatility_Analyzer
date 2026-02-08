@@ -1,8 +1,18 @@
-// db/migrations.rs - Migrations et création des tables
+// db/migrations.rs - Création et migration des tables (source unique de vérité)
+//
+// STRATÉGIE DE MIGRATION :
+// - Les tables sont créées via `CREATE TABLE IF NOT EXISTS` (idempotent).
+// - Les colonnes ajoutées après la version initiale utilisent `ALTER TABLE ADD COLUMN`
+//   avec `let _ =` car la colonne peut déjà exister sur les bases à jour.
+// - Le dossier `migrations/` contient les fichiers Diesel CLI historiques mais
+//   ils ne sont PAS exécutés au runtime. Seul ce fichier fait foi.
+// - Chaque `ensure_*` est appelée au démarrage dans lib.rs.
+//
 use crate::db::DbPool;
 use diesel::prelude::*;
 
-/// Crée la table calendar_events si elle n'existe pas
+/// Crée la table calendar_events si elle n'existe pas.
+/// Schéma complet incluant calendar_import_id et peak_delay_json.
 pub fn ensure_calendar_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = pool.get()?;
 
@@ -16,6 +26,8 @@ pub fn ensure_calendar_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Er
             actual REAL,
             forecast REAL,
             previous REAL,
+            calendar_import_id INTEGER REFERENCES calendar_imports(id) ON DELETE CASCADE,
+            peak_delay_json TEXT,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
     )
@@ -30,6 +42,18 @@ pub fn ensure_calendar_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Er
         "CREATE INDEX IF NOT EXISTS idx_calendar_events_time ON calendar_events(event_time)",
     )
     .execute(&mut conn)?;
+
+    // Colonnes ajoutées après v1 — nécessaire pour les bases existantes
+    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN calendar_import_id INTEGER REFERENCES calendar_imports(id) ON DELETE CASCADE")
+        .execute(&mut conn);
+    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN actual REAL")
+        .execute(&mut conn);
+    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN forecast REAL")
+        .execute(&mut conn);
+    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN previous REAL")
+        .execute(&mut conn);
+    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN peak_delay_json TEXT")
+        .execute(&mut conn);
 
     Ok(())
 }
@@ -140,18 +164,6 @@ pub fn ensure_calendar_imports_table(pool: &DbPool) -> Result<(), Box<dyn std::e
         "CREATE INDEX IF NOT EXISTS idx_calendar_imports_is_active ON calendar_imports(is_active)",
     )
     .execute(&mut conn)?;
-
-    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN calendar_import_id INTEGER")
-        .execute(&mut conn);
-
-    // Migration pour ajouter les colonnes actual, forecast, previous si elles manquent
-    // (Nécessaire pour les bases existantes créées avant l'ajout de ces champs)
-    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN actual REAL")
-        .execute(&mut conn);
-    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN forecast REAL")
-        .execute(&mut conn);
-    let _ = diesel::sql_query("ALTER TABLE calendar_events ADD COLUMN previous REAL")
-        .execute(&mut conn);
 
     Ok(())
 }

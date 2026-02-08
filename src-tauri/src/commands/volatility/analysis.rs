@@ -1,5 +1,5 @@
 use crate::commands::calendar_commands::CalendarState;
-use crate::models::AnalysisResult;
+use crate::models::{AnalysisResult, VolatilityError};
 use crate::services::{CsvLoader, VolatilityAnalyzer};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -99,62 +99,75 @@ pub async fn analyze_symbol(
         symbol, calendar_id
     );
 
-    let mut candles = Vec::new();
-    let pool_opt = pair_state
-        .pool
-        .lock()
-        .map_err(|_| CommandError::from("Failed to acquire database pool lock".to_string()))?;
-    if let Some(pool) = pool_opt.as_ref() {
-        let db_loader = crate::services::DatabaseLoader::new(pool.clone());
-        let start = DateTime::<Utc>::from_timestamp(0, 0).ok_or(CommandError::from(
-            "Invalid Unix timestamp 0 for date range".to_string(),
-        ))?;
-        let end = Utc::now();
-        match db_loader.load_candles_by_pair(&symbol, "M1", start, end) {
-            Ok(loaded) => {
-                candles = loaded;
-                info!(
-                    "Loaded {} candles for {} from DatabaseLoader",
-                    candles.len(),
-                    symbol
-                );
-            }
-            Err(e) => {
-                info!(
-                    "DatabaseLoader failed for {}: {}, falling back to CsvLoader",
-                    symbol, e
-                );
-            }
-        }
-    }
-    drop(pool_opt);
+    // Extraire les pools (rapide) avant spawn_blocking
+    let pair_pool = {
+        let pool_opt = pair_state
+            .pool
+            .lock()
+            .map_err(|_| CommandError::from("Failed to acquire database pool lock".to_string()))?;
+        pool_opt.clone()
+    };
 
-    if candles.is_empty() {
-        let loader = CsvLoader::new();
-        candles = loader.load_candles(&symbol).map_err(|e| {
-            error!(
-                "Failed to load candles for {} from both DB and CSV: {}",
-                symbol, e
-            );
-            CommandError::from(e)
-        })?;
-        info!(
-            "Loaded {} candles for {} from CsvLoader",
-            candles.len(),
-            symbol
-        );
-    }
-
-    info!("Total candles loaded for {}: {}", symbol, candles.len());
-
-    let pool = calendar_state
+    let cal_pool = calendar_state
         .pool
         .lock()
         .map_err(|e| format!("Failed to lock calendar pool: {}", e))?
         .clone();
 
-    let analyzer = VolatilityAnalyzer::new(candles);
-    let result = analyzer.analyze(&symbol, pool).map_err(|e| {
+    // spawn_blocking : tout le travail lourd (chargement DB + analyse)
+    let symbol_clone = symbol.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<AnalysisResult, VolatilityError> {
+        let mut candles = Vec::new();
+
+        if let Some(pool) = pair_pool.as_ref() {
+            let db_loader = crate::services::DatabaseLoader::new(pool.clone());
+            let start = DateTime::<Utc>::from_timestamp(0, 0)
+                .ok_or_else(|| VolatilityError::InsufficientData(
+                    "Invalid Unix timestamp 0 for date range".to_string(),
+                ))?;
+            let end = Utc::now();
+            match db_loader.load_candles_by_pair(&symbol_clone, "M1", start, end) {
+                Ok(loaded) => {
+                    info!(
+                        "Loaded {} candles for {} from DatabaseLoader",
+                        loaded.len(),
+                        symbol_clone
+                    );
+                    candles = loaded;
+                }
+                Err(e) => {
+                    info!(
+                        "DatabaseLoader failed for {}: {}, falling back to CsvLoader",
+                        symbol_clone, e
+                    );
+                }
+            }
+        }
+
+        if candles.is_empty() {
+            let loader = CsvLoader::new();
+            candles = loader.load_candles(&symbol_clone).map_err(|e| {
+                error!(
+                    "Failed to load candles for {} from both DB and CSV: {}",
+                    symbol_clone, e
+                );
+                e
+            })?;
+            info!(
+                "Loaded {} candles for {} from CsvLoader",
+                candles.len(),
+                symbol_clone
+            );
+        }
+
+        info!("Total candles loaded for {}: {}", symbol_clone, candles.len());
+
+        let analyzer = VolatilityAnalyzer::new(candles);
+        analyzer.analyze(&symbol_clone, cal_pool)
+    })
+    .await
+    .map_err(|e| CommandError::from(format!("Task join error: {}", e)))?
+    .map_err(|e| {
         error!("Failed to analyze {}: {}", symbol, e);
         CommandError::from(e)
     })?;

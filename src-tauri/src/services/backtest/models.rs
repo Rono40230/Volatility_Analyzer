@@ -2,8 +2,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BacktestConfig {
-    pub offset_pips: f64,
     pub stop_loss_pips: f64,
+    pub tp_rr: f64,
+    pub trailing_atr_coef: f64,
+    pub atr_period: i32,
+    pub trailing_refresh_seconds: i32,
     pub timeout_minutes: i32,
     pub sl_recovery_pips: Option<f64>, // Uniquement pour le mode Simultané
     pub spread_pips: f64,              // Spread simulé (ex: 1.0 pip)
@@ -18,8 +21,6 @@ pub enum TradeOutcome {
     Timeout,
     NoEntry, // L'ordre n'a jamais été déclenché
     Whipsaw, // Déclenché puis SL touché rapidement
-    RecoveryWin, // Perte initiale récupérée par le trade inverse
-    DoubleLoss,  // Perte sur les deux jambes
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

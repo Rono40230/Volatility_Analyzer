@@ -6,7 +6,35 @@
         <tr>
           <th class="label-column"></th>
           <th v-for="metric in displayedMetrics" :key="metric.label" class="metric-header">
-            {{ metric.label }}
+            <MetricTooltip :title="metric.label" direction="bottom">
+              <span class="metric-title">
+                {{ metric.label }}
+              </span>
+              <template #definition>
+                <div class="tooltip-section">
+                  <div class="tooltip-section-title">📖 Definition de la Metrique</div>
+                  <div class="tooltip-section-text">{{ metric.definition || 'Indicateur de volatilite et de qualite du mouvement.' }}</div>
+                </div>
+              </template>
+              <template #usage>
+                <div class="tooltip-section">
+                  <div class="tooltip-section-title">📊 Interpretation du Score</div>
+                  <div class="tooltip-section-text">{{ metric.usage || 'Donne la lecture pratique de la metrique.' }}</div>
+                </div>
+              </template>
+              <template #scoring>
+                <div class="tooltip-section">
+                  <div class="tooltip-section-title">🎨 Echelle de Couleurs</div>
+                  <div class="tooltip-section-text tooltip-multiline">{{ metric.scoring || 'Echelle non specifiee.' }}</div>
+                </div>
+              </template>
+              <template #realUseCases>
+                <div class="tooltip-section">
+                  <div class="tooltip-section-title">🎯 Cas d'Usage Reel</div>
+                  <div class="tooltip-section-text tooltip-multiline">{{ metric.realUseCases || 'Exemples d\'application selon le contexte.' }}</div>
+                </div>
+              </template>
+            </MetricTooltip>
           </th>
         </tr>
       </thead>
@@ -63,6 +91,7 @@
 import { computed } from 'vue'
 import type { SliceAnalysis } from '../../utils/straddleAnalysis'
 import UnitDisplay from '../UnitDisplay.vue'
+import MetricTooltip from '../MetricTooltip.vue'
 import {
   buildMetricsConfig,
   formatNumber,
@@ -106,6 +135,7 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
   width: 100%;
   border-collapse: collapse;
   font-size: 0.8em; /* Reduced font size */
+  table-layout: fixed;
 }
 
 .metrics-table th {
@@ -116,6 +146,19 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
   text-align: center;
   border: 1px solid #30363d;
   font-size: 0.85em;
+}
+
+.metric-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: help;
+  border-bottom: 1px dotted rgba(148, 163, 184, 0.7);
+  padding-bottom: 1px;
+}
+
+.tooltip-multiline {
+  white-space: pre-wrap;
 }
 
 .metrics-table th.label-column {
@@ -234,5 +277,25 @@ const displayedMetrics = computed(() => buildMetricsConfig(props.analysis, props
 .status-badge.poor {
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
+}
+
+@media (max-width: 900px) {
+  .metrics-section {
+    padding: 10px;
+  }
+
+  .metrics-table {
+    font-size: 0.75em;
+  }
+
+  .metrics-table th,
+  .metrics-table td {
+    padding: 4px 3px;
+  }
+
+  .metrics-table th.label-column,
+  .row-label {
+    min-width: 120px;
+  }
 }
 </style>

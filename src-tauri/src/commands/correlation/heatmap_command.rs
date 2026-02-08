@@ -90,10 +90,13 @@ pub async fn get_correlation_heatmap(
             pairs,
             event_types: vec![],
             data: std::collections::HashMap::new(),
+            counts: std::collections::HashMap::new(),
         });
     }
 
     let mut data: std::collections::HashMap<String, std::collections::HashMap<String, f64>> =
+        std::collections::HashMap::new();
+    let mut counts: std::collections::HashMap<String, std::collections::HashMap<String, i32>> =
         std::collections::HashMap::new();
 
     let mut index_state = state
@@ -142,6 +145,10 @@ pub async fn get_correlation_heatmap(
             data.entry(event_type.name.clone())
                 .or_default()
                 .insert(pair.clone(), avg_vol_rounded);
+
+            counts.entry(event_type.name.clone())
+                .or_default()
+                .insert(pair.clone(), vol_result.sample_count);
         }
     }
 
@@ -152,5 +159,6 @@ pub async fn get_correlation_heatmap(
         pairs,
         event_types,
         data,
+        counts,
     })
 }

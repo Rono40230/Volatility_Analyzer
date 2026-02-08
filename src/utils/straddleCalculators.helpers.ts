@@ -2,14 +2,30 @@
 // Contient les logiques de scoring et calcul détaillés
 
 import type { Stats15Min } from '../stores/volatility'
+import type { TradingPlan } from './straddleTypes'
 
 /**
- * Estime le prix basé sur la moyenne ATR
+ * Estime le prix basé sur la moyenne ATR et le symbole optionnel.
+ * Utilisé uniquement par calculateStraddleScore() pour la normalisation en %.
+ * Le backend fournit `point_value` pour les calculs précis (straddle_parameters).
  */
-export function estimatePrice(slice: Stats15Min): number {
-  if (slice.atr_mean > 1000) return 100000 // Crypto
-  if (slice.atr_mean > 10) return 10000    // Indices
-  return 1.0                                // Forex
+export function estimatePrice(slice: Stats15Min, symbol?: string): number {
+  // Par symbole si disponible (le plus fiable)
+  if (symbol) {
+    if (symbol.includes('JPY')) return 150.0
+    if (symbol.includes('XAU') || symbol.includes('GOLD')) return 2000.0
+    if (symbol.includes('BTC')) return 60000.0
+    if (symbol.includes('NAS') || symbol.includes('US100') || symbol.includes('NDX')) return 18000.0
+    if (symbol.includes('US30') || symbol.includes('DJI')) return 38000.0
+    if (symbol.includes('SP') || symbol.includes('US500')) return 5000.0
+    if (symbol.includes('DAX') || symbol.includes('DE40')) return 18000.0
+  }
+  // Heuristique ATR (fallback sans symbole)
+  if (slice.atr_mean > 1000) return 60000 // Crypto (BTC)
+  if (slice.atr_mean > 100) return 18000  // Indices majeurs
+  if (slice.atr_mean > 10) return 2000    // Or / Indices petits
+  if (slice.atr_mean > 1) return 150.0    // Paires JPY
+  return 1.10                              // Forex majors (EUR/USD, GBP/USD...)
 }
 
 /**
@@ -32,40 +48,59 @@ export function calculateVolatilityMetrics(slice: Stats15Min, estimatedPrice: nu
 }
 
 /**
- * Détermine le coefficient de Stop Loss adaptatif
+ * Construit un TradingPlan à partir des straddle_parameters du backend.
+ * Source unique de vérité = Rust StraddleParameterService.
+ * Fallback sur des valeurs neutres si le backend n'a pas calculé de paramètres.
  */
-export function calculateSlCoefficient(atrPercent: number): number {
-  if (atrPercent < 1.0) return 0.8    // Volatilité très faible
-  if (atrPercent < 1.5) return 1.0    // Volatilité normale
-  if (atrPercent < 2.5) return 1.2    // Volatilité élevée
-  return 1.5                           // Volatilité extrême
-}
+export function buildTradingPlanFromBackend(slice: Stats15Min, confidenceScore: number): TradingPlan {
+  const params = slice.straddle_parameters
+  const timeout = params?.timeout_minutes
+    ?? slice.recommended_trade_expiration_minutes
+    ?? slice.recommended_trade_expiration_mean
+    ?? 15
 
-/**
- * Détermine le coefficient de Trailing Stop adaptatif
- */
-export function calculateTsCoefficient(atrPercent: number, tpPoints: number, slPoints: number): number {
-  const tsRatio = 0.6 + 0.4 * (atrPercent / 2.0)  // Plage: 0.6 à 1.0
-  const tpRatio = tpPoints / slPoints
-  return Math.max(tsRatio, tpRatio * 0.95)        // Jamais < TP initial
-}
+  if (params) {
+    return {
+      entryTime: '—',
+      slPips: params.stop_loss_pips,
+      slPoints: params.stop_loss_pips,
+      slUsd: 0,
+      tpPips: params.hard_tp_pips ?? 0,
+      tpPoints: params.hard_tp_pips ?? 0,
+      tpUsd: 0,
+      tpRatio: params.risk_reward_ratio,
+      atrPercentage: 0,
+      atrPoints: slice.atr_mean,
+      winProbability: Math.round(confidenceScore),
+      avgGainR: params.risk_reward_ratio,
+      avgLossR: 1.0,
+      trailingStopCoefficient: params.trailing_stop_pips,
+      recommendation: confidenceScore >= 75 ? 'TRADE' : 'CAUTION',
+      confidence: confidenceScore,
+      riskLevel: confidenceScore >= 75 ? 'LOW' : confidenceScore >= 50 ? 'MEDIUM' : 'HIGH',
+      tradeDurationMinutes: timeout,
+      // Champs utilisés par les rapports PDF
+      offset: params.offset_pips,
+      tp: params.hard_tp_pips ?? 0,
+      sl: params.stop_loss_pips,
+      duration: timeout
+    }
+  }
 
-/**
- * Calcule les moyennes gain/loss basées sur les probabilités
- */
-export function calculateRiskMetrics(
-  tpPoints: number,
-  slPoints: number,
-  winProb: number
-) {
-  const avgGainPoints = tpPoints * winProb
-  // Loss partielle: 50% du SL est perdu en moyenne (plus réaliste)
-  const avgLossPoints = slPoints * (1 - winProb) * 0.5
-  
+  // Fallback si aucun straddle_parameters (rare : archive ancienne)
   return {
-    avgGainPoints,
-    avgLossPoints,
-    avgGainR: (avgGainPoints - avgLossPoints) / slPoints,
-    avgLossR: Math.max(0, avgLossPoints / slPoints)
+    entryTime: '—',
+    slPips: 0, slPoints: 0, slUsd: 0,
+    tpPips: 0, tpPoints: 0, tpUsd: 0,
+    tpRatio: 0, atrPercentage: 0,
+    atrPoints: slice.atr_mean,
+    winProbability: Math.round(confidenceScore),
+    avgGainR: 0, avgLossR: 0,
+    trailingStopCoefficient: 0,
+    recommendation: 'CAUTION',
+    confidence: confidenceScore,
+    riskLevel: 'HIGH',
+    tradeDurationMinutes: timeout,
+    offset: 0, tp: 0, sl: 0, duration: timeout
   }
 }

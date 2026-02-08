@@ -47,16 +47,18 @@ function openArchiveModal() {
     end = new Date(Math.max(...dates)).toISOString()
   }
 
-  // Format: Paire-Evenement-mode de stratégie-offset/SL/TS/Timeout/spread
+  // Format: Paire-Evenement-mode de stratégie-TP/R/ATR/Timeout/Spread
   const pair = result.value.symbol
   const event = result.value.event_name
   const strategyMode = mode.value
-  const offset = config.value?.offset_pips ?? 0
+  const tpR = config.value?.tp_rr ?? 0
   const sl = config.value?.stop_loss_pips ?? 0
+  const atrPeriod = config.value?.atr_period ?? 0
+  const tsCoef = config.value?.trailing_atr_coef ?? 0
   const timeout = config.value?.timeout_minutes ?? 0
   const spread = config.value?.spread_pips ?? 0
 
-  const defaultTitle = `${pair}-${event}-${strategyMode}-${offset}/${sl}/${timeout}/${spread}`
+  const defaultTitle = `${pair}-${event}-${strategyMode}-TP${tpR}/R${sl}/ATR${atrPeriod}x${tsCoef}/${timeout}/${spread}`
 
   archiveData.value = {
     type: 'Backtest',
@@ -98,6 +100,15 @@ const showAnalysisModal = ref(false)
           <button class="btn-icon" @click="showAnalysisModal = true" title="Analyser">🧠 Analyse</button>
           <button class="btn-icon" @click="openArchiveModal" title="Archiver">💾 Archiver</button>
         </div>
+      </div>
+      <div class="results-meta">
+        <span>Paire: {{ result.symbol }}</span>
+        <span class="meta-sep">|</span>
+        <span>Evenement: {{ result.event_name }}</span>
+        <span class="meta-sep">|</span>
+        <span>Spread: {{ config?.spread_pips ?? 0 }} pips</span>
+        <span class="meta-sep">|</span>
+        <span>Slippage: {{ config?.slippage_pips ?? 0 }} pips</span>
       </div>
 
       <BacktestSummary :result="result" />
@@ -155,6 +166,20 @@ const showAnalysisModal = ref(false)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.results-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #a0aec0;
+  font-size: 0.9rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.meta-sep {
+  color: #4a5568;
 }
 
 .results-header h2 {

@@ -1,12 +1,24 @@
-import { computed } from 'vue'
-import { useArchiveStore } from '../stores/archiveStore'
+import { ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import type { Archive } from '../stores/archiveStore'
 
 export function useMetaAnalysis() {
-  const archiveStore = useArchiveStore()
+  const fullArchives = ref<Archive[]>([])
+
+  async function chargerArchivesCompletes() {
+    try {
+      fullArchives.value = await invoke<Archive[]>('list_archives')
+    } catch {
+      // Erreur silencieuse
+    }
+  }
+
+  // Charger automatiquement
+  chargerArchivesCompletes()
 
   // Extraction des données
   const parsedData = computed(() => {
-    return archiveStore.archives
+    return fullArchives.value
       .filter(a => a.archive_type === 'RETRO_ANALYSIS' || a.archive_type === 'Métriques Rétrospectives' || a.archive_type === 'Correlation de la volatilité Paire/Evenement')
       .map(a => {
         try {

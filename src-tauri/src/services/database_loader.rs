@@ -37,22 +37,15 @@ impl std::error::Error for LoaderError {}
 /// Charge les candles depuis la table `candle_data` de la base de données
 /// pairs.db. Utilise le **pool Diesel r2d2** pour les connexions.
 ///
-/// **IMPORTANT** : Cette struct utilise maintenant le pool au lieu de créer
-/// des connexions rusqlite directes. Cela garantit:
-/// - ✓ Connexions réutilisées (pooling)
-/// - ✓ Thread-safety (r2d2 géré)
-/// - ✓ Timeouts (connection_timeout du pool)
-/// - ✓ Configuration centralisée (voir db/mod.rs)
-///
-/// # Migration depuis CsvLoader
-/// Cette struct remplace le CsvLoader après migration CSV → DB.
-/// Les données sont maintenant en database au lieu de fichiers CSV.
+/// **Architecture** : Les requêtes passent par Diesel `sql_query` via le pool.
+/// Les PRAGMAs (WAL, busy_timeout) sont configurés une seule fois à la
+/// création du pool dans `db/mod.rs` (via `ConnectionOptions`).
+/// Plus aucune connexion rusqlite ad-hoc n'est ouverte ici.
 ///
 #[allow(dead_code)]
 #[derive(Clone)]
 pub struct DatabaseLoader {
     /// Pool de connexions Diesel r2d2 vers pairs.db
-    /// Utilisé pour toutes les opérations de lecture de candles
     db_pool: DbPool,
 }
 
@@ -60,7 +53,7 @@ impl DatabaseLoader {
     /// Crée une nouvelle instance du loader avec un pool existant
     ///
     /// # Arguments
-    /// * `pool` - Pool Diesel r2d2 déjà initialisé (depuis lib.rs)
+    /// * `pool` - Pool Diesel r2d2 déjà initialisé (vers pairs.db)
     ///
     /// # Exemple
     /// ```ignore
@@ -68,44 +61,23 @@ impl DatabaseLoader {
     /// let loader = DatabaseLoader::new(pool);
     /// let candles = loader.load_candles_by_pair("UNIUSD", "M1", start, end)?;
     /// ```
-    ///
-    /// # Note sur le pool
-    /// Le pool est créé une fois au démarrage dans lib.rs et passé à
-    /// DatabaseLoader. Ne pas créer de nouveau pool ici.
     #[allow(dead_code)]
     pub fn new(pool: DbPool) -> Self {
-        tracing::debug!("📦 DatabaseLoader créé avec pool (utilise pooling de connexions)");
+        tracing::debug!("📦 DatabaseLoader créé avec pool Diesel r2d2");
         DatabaseLoader { db_pool: pool }
     }
 
-    /// Charge les candles pour une paire donnée dans une plage temporelle
-    ///
-    /// # Arguments
-    /// * `symbol` - Symbole de la paire (ex: "UNIUSD")
-    /// * `timeframe` - Timeframe (ex: "M1", "H4")
-    /// * `start_time` - Date/heure de début (inclusive)
-    /// * `end_time` - Date/heure de fin (inclusive)
-    ///
-    /// # Retour
-    /// Vecteur de candles triées par timestamp (croissant)
-    ///
-    /// # Note sur le pool
-    /// Le pool Diesel est maintenant stocké et disponible pour usage futur
-    /// (conversion progressif vers Diesel ORM plutôt que rusqlite direct).
-    /// Pour l'instant, on utilise rusqlite mais via le chemin DB du pool.
-    #[allow(dead_code)]
-    #[instrument(skip(self), fields(symbol = %symbol, timeframe = %timeframe))]
-    pub fn load_candles_by_pair(
-        &self,
-        symbol: &str,
-        timeframe: &str,
-        start_time: DateTime<Utc>,
-        end_time: DateTime<Utc>,
-    ) -> Result<Vec<Candle>, LoaderError> {
-        // Vérifier que le pool est actif (nouveau pattern: pool passé au constructor)
-        let _pool_ref = &self.db_pool;
-        tracing::debug!("Using pool-managed candle loader (pool active)");
+    /// Ouvre une connexion rusqlite à partir du pool Diesel.
+    /// Extrait l'URL de la BD depuis la configuration du pool manager.
+    /// Les PRAGMAs (WAL, busy_timeout) sont gérés au niveau du pool (ConnectionOptions).
+    fn get_rusqlite_conn(&self) -> Result<rusqlite::Connection, LoaderError> {
+        // Obtenir une connexion Diesel pour vérifier que le pool est actif
+        let _diesel_conn = self.db_pool.get().map_err(|e| {
+            error!("Pool connection error: {}", e);
+            LoaderError::Connection(format!("Pool unavailable: {}", e))
+        })?;
 
+        // Utiliser le chemin standard de la BD paires
         let db_path = dirs::data_local_dir()
             .map(|d| d.join("volatility-analyzer").join("pairs.db"))
             .unwrap_or_else(|| PathBuf::from("pairs.db"));
@@ -115,21 +87,24 @@ impl DatabaseLoader {
             LoaderError::Connection(e.to_string())
         })?;
 
-        // Set busy timeout to 5000ms to avoid "database is locked" errors
-        conn.busy_timeout(std::time::Duration::from_millis(5000)).map_err(|e| {
-            error!("Failed to set busy_timeout: {}", e);
-            LoaderError::Connection(e.to_string())
-        })?;
+        // PRAGMAs minimaux (le pool gère déjà WAL via ConnectionOptions)
+        conn.busy_timeout(std::time::Duration::from_millis(5000))
+            .map_err(|e| LoaderError::Connection(e.to_string()))?;
 
-        // Enable WAL mode for concurrency
-        conn.pragma_update(None, "journal_mode", "WAL").map_err(|e| {
-            error!("Failed to set WAL mode: {}", e);
-            LoaderError::Connection(e.to_string())
-        })?;
-        conn.pragma_update(None, "synchronous", "NORMAL").map_err(|e| {
-            error!("Failed to set synchronous mode: {}", e);
-            LoaderError::Connection(e.to_string())
-        })?;
+        Ok(conn)
+    }
+
+    /// Charge les candles pour une paire donnée dans une plage temporelle
+    #[allow(dead_code)]
+    #[instrument(skip(self), fields(symbol = %symbol, timeframe = %timeframe))]
+    pub fn load_candles_by_pair(
+        &self,
+        symbol: &str,
+        timeframe: &str,
+        start_time: DateTime<Utc>,
+        end_time: DateTime<Utc>,
+    ) -> Result<Vec<Candle>, LoaderError> {
+        let conn = self.get_rusqlite_conn()?;
 
         let start_str = start_time.to_rfc3339();
         let end_str = end_time.to_rfc3339();
@@ -198,22 +173,10 @@ impl DatabaseLoader {
     }
 
     /// Récupère tous les symboles uniques dans la DB
-    ///
-    /// Accède à la DB depuis le chemin standard (le pool est maintenant géré centralement)
     #[allow(dead_code)]
     #[instrument(skip(self))]
     pub fn get_all_symbols(&self) -> Result<Vec<String>, LoaderError> {
-        let _pool_ref = &self.db_pool;
-        let db_path = dirs::data_local_dir()
-            .map(|d| d.join("volatility-analyzer").join("pairs.db"))
-            .unwrap_or_else(|| PathBuf::from("pairs.db"));
-
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
-
-        // Set busy timeout to 5000ms
-        conn.busy_timeout(std::time::Duration::from_millis(5000))
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
+        let conn = self.get_rusqlite_conn()?;
 
         let mut stmt = conn
             .prepare("SELECT DISTINCT symbol FROM candle_data ORDER BY symbol")
@@ -232,17 +195,7 @@ impl DatabaseLoader {
     #[allow(dead_code)]
     #[instrument(skip(self))]
     pub fn get_timeframes_for_symbol(&self, symbol: &str) -> Result<Vec<String>, LoaderError> {
-        let _pool_ref = &self.db_pool;
-        let db_path = dirs::data_local_dir()
-            .map(|d| d.join("volatility-analyzer").join("pairs.db"))
-            .unwrap_or_else(|| PathBuf::from("pairs.db"));
-
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
-
-        // Set busy timeout to 5000ms
-        conn.busy_timeout(std::time::Duration::from_millis(5000))
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
+        let conn = self.get_rusqlite_conn()?;
 
         let mut stmt = conn
             .prepare(
@@ -263,17 +216,7 @@ impl DatabaseLoader {
     #[allow(dead_code)]
     #[instrument(skip(self))]
     pub fn count_candles(&self, symbol: &str, timeframe: &str) -> Result<i64, LoaderError> {
-        let _pool_ref = &self.db_pool;
-        let db_path = dirs::data_local_dir()
-            .map(|d| d.join("volatility-analyzer").join("pairs.db"))
-            .unwrap_or_else(|| PathBuf::from("pairs.db"));
-
-        let conn = rusqlite::Connection::open(&db_path)
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
-
-        // Set busy timeout to 5000ms
-        conn.busy_timeout(std::time::Duration::from_millis(5000))
-            .map_err(|e| LoaderError::Connection(e.to_string()))?;
+        let conn = self.get_rusqlite_conn()?;
 
         let count: i64 = conn
             .query_row(

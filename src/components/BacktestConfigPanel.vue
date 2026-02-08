@@ -10,6 +10,7 @@ const props = defineProps<{
 
 const {
   config,
+  configMode,
   loading,
   selectedSymbol,
   selectedEvent,
@@ -17,7 +18,8 @@ const {
   startDate,
   endDate,
   availableEvents,
-  lancerBacktest
+  lancerBacktest,
+  appliquerParamsAuto
 } = useBacktestConfig(props)
 
 import { computed } from 'vue'
@@ -49,12 +51,20 @@ const disabledReason = computed(() => {
       </div>
 
       <!-- Mode Événement -->
-      <div v-if="backtestType === BacktestType.Event" class="param col-span-4">
+      <div v-if="backtestType === BacktestType.Event" class="param col-span-3">
         <label>Événement</label>
         <SearchableEventDropdown 
           v-model="selectedEvent" 
           :events="availableEvents"
         />
+      </div>
+      <div v-if="backtestType === BacktestType.Event" class="param col-span-1">
+        <label>Écart (pips)</label>
+        <input type="number" v-model.number="config.spread_pips" step="0.1" />
+      </div>
+      <div v-if="backtestType === BacktestType.Event" class="param col-span-1">
+        <label>Glissement (pips)</label>
+        <input type="number" v-model.number="config.slippage_pips" step="0.1" title="Glissement estimé à l'exécution" />
       </div>
 
       <!-- Mode Horaire -->
@@ -79,30 +89,45 @@ const disabledReason = computed(() => {
 
       <!-- Row 2: Parameters -->
       <div class="param col-span-1">
-        <label>Offset (pips)</label>
-        <input type="number" v-model.number="config.offset_pips" step="0.1" />
+        <label>TP (R)</label>
+        <input type="number" v-model.number="config.tp_rr" step="0.5" min="3" max="10" />
       </div>
       <div class="param col-span-1">
-        <label>Stop Loss (pips)</label>
+        <label>R (pips)</label>
         <input type="number" v-model.number="config.stop_loss_pips" step="0.1" />
       </div>
       <div class="param col-span-1">
-        <label>Timeout (min)</label>
+        <label>Stop suiveur (ATR x)</label>
+        <input type="number" v-model.number="config.trailing_atr_coef" step="0.1" min="0.5" max="5" />
+      </div>
+      <div class="param col-span-1">
+        <label>Période ATR</label>
+        <input type="number" v-model.number="config.atr_period" step="1" min="2" max="50" />
+      </div>
+      <div class="param col-span-1">
+        <label>Rafraichissement TS (sec)</label>
+        <input type="number" v-model.number="config.trailing_refresh_seconds" step="1" min="0" />
+      </div>
+      <div class="param col-span-1">
+        <label>Délai max (min)</label>
         <input type="number" v-model.number="config.timeout_minutes" />
       </div>
-      <div class="param col-span-1">
-        <label>Spread (pips)</label>
-        <input type="number" v-model.number="config.spread_pips" step="0.1" />
-      </div>
-      <div class="param col-span-1">
-        <label>Slippage (pips)</label>
-        <input type="number" v-model.number="config.slippage_pips" step="0.1" title="Glissement estimé à l'exécution" />
-      </div>
+      <div class="param col-span-1"></div>
+      <div class="param col-span-1"></div>
       
       <!-- Paramètres spécifiques Simultané (Aucun pour l'instant) -->
     </div>
 
     <div class="actions">
+      <button 
+        class="auto-btn" 
+        @click="appliquerParamsAuto" 
+        :disabled="!selectedSymbol || loading"
+        :title="!selectedSymbol ? 'Sélectionnez une paire d\'abord' : 'Appliquer les paramètres recommandés'"
+      >
+        📚 Params Auto
+      </button>
+      <span v-if="configMode === 'auto'" class="auto-badge">✅ Paramètres recommandés appliqués</span>
       <button 
         class="run-btn" 
         @click="lancerBacktest" 

@@ -204,6 +204,7 @@ impl<'a> Stats15MinCalculator<'a> {
             symbol,
             half_life,
             Some(p95_wick),
+            Some(hour as u32),
         );
 
         // Calcul du profil de volatilité minute par minute (0-14) pour le graphique

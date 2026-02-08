@@ -1,27 +1,10 @@
 // Calculateurs spécialisés pour l'analyse STRADDLE
 import type { Stats15Min } from '../stores/volatility'
-import type { GoldenCombo, DetectedTrap, TradingPlan } from './straddleTypes'
+import type { GoldenCombo, DetectedTrap } from './straddleTypes'
 import {
   estimatePrice,
   calculateVolatilityMetrics,
-  calculateSlCoefficient,
-  calculateTsCoefficient,
-  calculateRiskMetrics
 } from './straddleCalculators.helpers'
-
-/**
- * Calcule la durée optimale du trade basée sur ATR, type d'événement et heure du jour
- */
-export function calculateTradeDuration(atrMean: number, eventType: string = 'AUTRE', hourOfDay: number = 12): number {
-  let duration = atrMean > 0.005 ? 120 : atrMean > 0.004 ? 150 : atrMean > 0.0025 ? 180 : 240
-  const eventFactors: Record<string, number> = { 'nfp': 0.5, 'cpi': 0.7, 'interest rate': 0.8, 'gdp': 1.0, 'jobless claims': 0.6, 'pce': 0.7, 'autre': 1.0 }
-  let eventFactor = 1.0
-  for (const [key, factor] of Object.entries(eventFactors)) {
-    if (eventType.toLowerCase().includes(key)) { eventFactor = factor; break }
-  }
-  const hourFactor = { 8: 0.8, 13: 0.6, 14: 0.7 }[hourOfDay] ?? 1.0
-  return Math.round(duration * eventFactor * hourFactor)
-}
 
 export function calculateStraddleScore(slice: Stats15Min, movementQualityScore?: number): number {
   if (slice.candle_count === 0) return 0
@@ -80,7 +63,11 @@ export function calculateStraddleScore(slice: Stats15Min, movementQualityScore?:
 
 export function detectGoldenCombos(slice: Stats15Min): GoldenCombo[] {
   const combos: GoldenCombo[] = []
-  if (slice.range_mean > 0.0025 && slice.body_range_mean > 40 && slice.noise_ratio_mean < 2.0) {
+  const price = estimatePrice(slice)
+  const rangePercent = (slice.range_mean / price) * 100
+  const atrPercent = (slice.atr_mean / price) * 100
+
+  if (rangePercent > 1.5 && slice.body_range_mean > 40 && slice.noise_ratio_mean < 2.0) {
     combos.push({
       name: 'Range Pur',
       description: 'Movement directionnel avec range excellent et peu de bruit',
@@ -89,7 +76,7 @@ export function detectGoldenCombos(slice: Stats15Min): GoldenCombo[] {
       avgGainR: 0.45
     })
   }
-  if (slice.atr_mean > 0.002 && slice.volume_imbalance_mean > 0.2 && slice.breakout_percentage > 15) {
+  if (atrPercent > 1.0 && slice.volume_imbalance_mean > 0.2 && slice.breakout_percentage > 15) {
     combos.push({
       name: 'Volatilité Haute + Imbalance',
       description: 'Conditions haute volatilité avec imbalance volume confirmée',
@@ -103,6 +90,9 @@ export function detectGoldenCombos(slice: Stats15Min): GoldenCombo[] {
 
 export function detectTraps(slice: Stats15Min): DetectedTrap[] {
   const traps: DetectedTrap[] = []
+  const price = estimatePrice(slice)
+  const rangePercent = (slice.range_mean / price) * 100
+
   if (slice.noise_ratio_mean > 3.0) {
     traps.push({
       name: 'Bruit Excessif',
@@ -114,66 +104,18 @@ export function detectTraps(slice: Stats15Min): DetectedTrap[] {
       recommendation: 'Augmenter SL de 20-30%, réduire position size'
     })
   }
-  if (slice.range_mean < 0.0010) {
+  if (rangePercent < 0.5) {
     traps.push({
       name: 'Range Insuffisant',
       description: 'Marché trop calme, movement insuffisant pour straddle',
       severity: 'CRITIQUE',
-      metric: 'Range',
-      value: slice.range_mean,
-      threshold: 0.0015,
+      metric: 'Range %',
+      value: rangePercent,
+      threshold: 0.5,
       recommendation: 'SKIP ce créneau, pas d\'opportunity'
     })
   }
   return traps
 }
 
-export function calculateTradingPlan(slice: Stats15Min, estimatedPriceValue: number, confidenceScore: number): TradingPlan {
-  const atrPoints = slice.atr_mean
-  const metrics = calculateVolatilityMetrics(slice, estimatedPriceValue)
-  const atrPercent = metrics.atrPercent
-  
-  // SL adaptatif basé sur volatilité
-  const slCoefficient = calculateSlCoefficient(atrPercent)
-  const tpCoefficient = slCoefficient * 1.67
-  
-  // Distances en points
-  const slPoints = atrPoints * slCoefficient
-  const tpPoints = atrPoints * tpCoefficient
-  
-  // USD
-  const slUsd = Math.round(slPoints * estimatedPriceValue)
-  const tpUsd = Math.round(tpPoints * estimatedPriceValue)
-  
-  // Risk metrics
-  const winProb = confidenceScore / 100
-  const riskMetrics = calculateRiskMetrics(tpPoints, slPoints, winProb)
-  
-  // TS adaptatif
-  const tsCoeff = calculateTsCoefficient(atrPercent, tpPoints, slPoints)
-  
-  // Durée du trade
-  const primaryEvent = slice.events?.[0]?.event_name ?? 'AUTRE'
-  const tradeDurationMinutes = calculateTradeDuration(atrPoints, primaryEvent, slice.hour)
-  
-  return {
-    entryTime: '—',
-    slPips: Math.round(slPoints),
-    slPoints: slPoints,
-    slUsd: slUsd,
-    tpPips: Math.round(tpPoints),
-    tpPoints: tpPoints,
-    tpUsd: tpUsd,
-    tpRatio: tpPoints / slPoints,
-    atrPercentage: atrPercent,
-    atrPoints,
-    winProbability: Math.round(winProb * 100),
-    avgGainR: riskMetrics.avgGainR,
-    avgLossR: riskMetrics.avgLossR,
-    trailingStopCoefficient: tsCoeff,
-    recommendation: confidenceScore >= 75 ? 'TRADE' : 'CAUTION',
-    confidence: confidenceScore,
-    riskLevel: confidenceScore >= 75 ? 'LOW' : confidenceScore >= 50 ? 'MEDIUM' : 'HIGH',
-    tradeDurationMinutes
-  }
-}
+

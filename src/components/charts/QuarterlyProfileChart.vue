@@ -46,11 +46,11 @@
         <text x="35" :y="obtenirY(tick) + 2" font-size="7" fill="#8b949e" text-anchor="end">{{ tick }}</text>
       </template>
 
-      <!-- Profile Line -->
-      <polyline :points="points" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
-
-      <!-- Area under curve -->
-      <path :d="areaPath" fill="url(#blueGradient)" stroke="none" opacity="0.3" />
+      <!-- Profile Line + Area (clipped to plot bounds) -->
+      <g clip-path="url(#chartClip)">
+        <polyline :points="points" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+        <path :d="areaPath" fill="url(#blueGradient)" stroke="none" opacity="0.3" />
+      </g>
 
       <!-- Volatility Zone (Pastel Green) -->
       <rect v-if="optimalEntry !== undefined && duration !== undefined && volatilityZoneWidth > 0"
@@ -115,6 +115,9 @@
 
       <!-- Gradients -->
       <defs>
+        <clipPath id="chartClip">
+          <rect x="40" y="20" width="340" height="160" />
+        </clipPath>
         <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" style="stop-color:#58a6ff;stop-opacity:0.5" />
           <stop offset="100%" style="stop-color:#58a6ff;stop-opacity:0" />

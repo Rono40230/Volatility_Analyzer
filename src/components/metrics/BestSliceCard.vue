@@ -209,4 +209,17 @@ const recommendation = computed(() => {
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
 }
+
+@media (max-width: 900px) {
+  .slice-header {
+    flex-wrap: wrap;
+  }
+
+  .analysis-comment {
+    order: 3;
+    flex-basis: 100%;
+    text-align: left;
+    justify-content: flex-start;
+  }
+}
 </style>

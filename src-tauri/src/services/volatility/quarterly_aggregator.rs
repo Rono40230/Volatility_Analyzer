@@ -138,6 +138,7 @@ impl QuarterlyAggregator {
                             symbol,
                             volatility_half_life_mean,
                             Some(p95_wick_avg),
+                            Some(hour as u32),
                         );
 
                         // Agrégation du profil de volatilité (moyenne minute par minute)

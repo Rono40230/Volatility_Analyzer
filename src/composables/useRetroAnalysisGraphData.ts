@@ -35,17 +35,13 @@ export function useRetroAnalysisGraphData() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function chargerDonnéesGraph(pair: string, eventType: string, minDeviation: number | null = null) {
-    // Vérifier la cache d'abord (TODO: inclure minDeviation dans la clé de cache)
-    // Pour l'instant, on bypass le cache si minDeviation est défini
-    if (minDeviation === null) {
-        const cached = store.getRetroAnalysisCache(pair, eventType)
-        if (cached) {
-        graphData.value = cached
-        loading.value = false
-        error.value = null
-        return
-        }
+  async function chargerDonnéesGraph(pair: string, eventType: string) {
+    const cached = store.getRetroAnalysisCache(pair, eventType)
+    if (cached) {
+      graphData.value = cached
+      loading.value = false
+      error.value = null
+      return
     }
 
     loading.value = true
@@ -53,14 +49,10 @@ export function useRetroAnalysisGraphData() {
     try {
       const data = await invoke<RetroGraphData>('analyze_volatility_profile', {
         pair,
-        eventType,
-        minDeviation
+        eventType
       })
       graphData.value = data
-      // Sauvegarder dans la cache seulement si pas de filtre (pour l'instant)
-      if (minDeviation === null) {
-          store.cacheRetroAnalysis(pair, eventType, data)
-      }
+      store.cacheRetroAnalysis(pair, eventType, data)
     } catch (e) {
       error.value = typeof e === 'string' ? e : (e instanceof Error ? e.message : 'Erreur inconnue')
       graphData.value = null

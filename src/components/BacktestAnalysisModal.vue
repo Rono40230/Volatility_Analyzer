@@ -54,7 +54,13 @@
           <p class="advice">{{ exitAdvice }}</p>
         </div>
 
-        <!-- 5. Recommandation Finale -->
+        <!-- 5. Analyse Avancee -->
+        <div class="analysis-section">
+          <h3>📌 Analyse Avancee</h3>
+          <BacktestAnalysisDetails :advanced="advanced" />
+        </div>
+
+        <!-- 6. Recommandation Finale -->
         <div class="analysis-section recommendation">
           <h3>💡 Piste d'optimisation</h3>
           <p>{{ finalRecommendation }}</p>
@@ -72,6 +78,7 @@
 import { defineProps, defineEmits } from 'vue'
 import type { BacktestResult, BacktestConfig } from '../stores/backtest'
 import { useBacktestAnalysis } from '../composables/useBacktestAnalysis'
+import BacktestAnalysisDetails from './backtest/BacktestAnalysisDetails.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -101,7 +108,8 @@ const {
   activityAdvice,
   riskAdvice,
   exitAdvice,
-  finalRecommendation
+  finalRecommendation,
+  advanced
 } = useBacktestAnalysis(props.result, props.config)
 
 </script>

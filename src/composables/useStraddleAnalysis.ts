@@ -44,6 +44,7 @@ export function useStraddleAnalysis() {
       whipsawDetails.value = result.whipsaw.whipsaw_details || []
       confidence.value = result.confidence
       spreadCost.value = result.spread_cost
+
       return result
     } catch (err) {
       error.value = err instanceof Error ? err.message : String(err)

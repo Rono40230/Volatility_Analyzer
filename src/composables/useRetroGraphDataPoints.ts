@@ -22,8 +22,22 @@ export function useRetroGraphDataPoints(props: {
   onUnmounted(() => window.removeEventListener('resize', () => { screenWidth.value = window.innerWidth }))
 
   const allAtrValues = computed(() => [...(props.atrTimelineBefore || []), ...(props.atrTimelineAfter || [])])
-  const minAtr = computed(() => Math.min(...allAtrValues.value, 0))
-  const maxAtr = computed(() => Math.max(...allAtrValues.value, 0.001))
+  const minAtr = computed(() => {
+    const vals = allAtrValues.value
+    if (!vals.length) return 0
+    const rawMin = Math.min(...vals)
+    const rawMax = Math.max(...vals)
+    const padding = (rawMax - rawMin) * 0.1
+    return Math.max(0, rawMin - padding)
+  })
+  const maxAtr = computed(() => {
+    const vals = allAtrValues.value
+    if (!vals.length) return 0.001
+    const rawMax = Math.max(...vals)
+    const rawMin = Math.min(...vals)
+    const padding = (rawMax - rawMin) * 0.1
+    return rawMax + padding || 0.001
+  })
 
   const minAtrLabel = computed(() => Math.ceil(minAtr.value / pointValue.value).toString())
   const maxAtrLabel = computed(() => Math.ceil(maxAtr.value / pointValue.value).toString())

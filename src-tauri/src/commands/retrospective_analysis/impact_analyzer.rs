@@ -18,8 +18,10 @@ impl ImpactAnalyzer {
 
         let date_min = events.first().ok_or("No first event")?.event_time.and_utc();
         let date_max = events.last().ok_or("No last event")?.event_time.and_utc();
+        let candles_start = date_min - chrono::Duration::minutes(30);
+        let candles_end = date_max + chrono::Duration::minutes(90);
 
-        let all_candles = match loader.load_candles_by_pair(pair, "M1", date_min, date_max) {
+        let all_candles = match loader.load_candles_by_pair(pair, "M1", candles_start, candles_end) {
             Ok(data) => data,
             Err(e) => {
                 warn!("ImpactAnalyzer: échec chargement bougies {}: {}", pair, e);
@@ -32,6 +34,12 @@ impl ImpactAnalyzer {
         }
 
         let data = ImpactDataProcessor::process(events, &all_candles);
+        if data.event_count == 0 {
+            return Err(format!(
+                "No events with sufficient candle data: {}",
+                event_type
+            ));
+        }
 
         let event_datetime = chrono::DateTime::<chrono::Utc>::from_timestamp(data.avg_timestamp, 0)
             .map(|dt| dt.format("%Y-%m-%dT%H:%M:%SZ").to_string())

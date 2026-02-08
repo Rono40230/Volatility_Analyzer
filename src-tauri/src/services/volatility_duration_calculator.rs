@@ -56,8 +56,12 @@ pub fn calculer_duree_volatilite(
 
         // Calculer l'ATR pour chaque bougie
         let mut atrs: Vec<(i64, f64)> = Vec::new(); // (minute, atr)
-        for candle in &sorted_candles {
-            let atr = candle.high - candle.low;
+        for (i, candle) in sorted_candles.iter().enumerate() {
+            // Utilise le True Range réel via le module centralisé
+            let prev_close = if i > 0 { Some(sorted_candles[i - 1].close) } else { None };
+            let atr = crate::services::atr::calculate_true_range(
+                candle.high, candle.low, prev_close,
+            );
             let minute = candle.datetime.minute() as i64;
             atrs.push((minute, atr));
         }

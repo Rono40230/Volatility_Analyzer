@@ -116,6 +116,7 @@ pub fn calculer_offset_optimal(
         symbol,
         None,
         Some(p95_pips),
+        None, // Pas d'heure spécifique pour l'analyse globale
     );
 
     let offset_pips = params.offset_pips;

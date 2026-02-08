@@ -9,6 +9,7 @@ export interface HeatmapData {
   pairs: string[]
   event_types: Array<{ name: string; count: number; has_data?: boolean }>
   data: Record<string, Record<string, number>>
+  counts?: Record<string, Record<string, number>>
 }
 
 export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: HeatmapData) {
@@ -21,17 +22,12 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
   })
 
   const minVolatilityThreshold = ref(0)
-  // const maxEventsToDisplay = ref(10) // Removed as we want to show all events
+  const maxEventsToDisplay = ref(50)
 
   async function loadHeatmapData(pairs: string[], calendarId: number | null = null) {
-    if (!pairs || pairs.length === 0) {
-      return
-    }
+    if (!pairs || pairs.length === 0) return
 
-    // Vérifier si on doit recharger
-    if (!analysisStore.shouldReloadHeatmap(pairs, calendarId)) {
-      return
-    }
+    if (!analysisStore.shouldReloadHeatmap(pairs, calendarId)) return
 
     loadingHeatmap.value = true
     try {
@@ -39,9 +35,8 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
         pairs: pairs,
         calendar_id: calendarId
       })
-      // Stocker dans le store pour la persistance
       analysisStore.setPersistentHeatmapData(result, pairs, calendarId)
-    } catch (error) {
+    } catch (_error) {
       analysisStore.setPersistentHeatmapData({ pairs: [], event_types: [], data: {} }, pairs, calendarId)
     } finally {
       loadingHeatmap.value = false
@@ -53,24 +48,51 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     return heatmapData.value.data[eventType][pair] || 0
   }
 
-  function getEventAverage(eventType: string): number {
-    if (!heatmapData.value?.data[eventType] || !heatmapData.value?.pairs.length) return 0
-    const values = Object.values(heatmapData.value.data[eventType]).filter((v) => typeof v === 'number')
-    return values.length > 0 ? values.reduce((a: number, b: number) => a + b, 0) / values.length : 0
+  function getHeatmapCount(eventType: string, pair: string): number {
+    if (!heatmapData.value?.counts?.[eventType]) return 0
+    return heatmapData.value.counts[eventType][pair] ?? 0
   }
+
+  const eventAverages = computed(() => {
+    if (!heatmapData.value?.pairs.length) return new Map<string, number>()
+    const map = new Map<string, number>()
+    for (const eventType of heatmapData.value.event_types) {
+      const data = heatmapData.value.data[eventType.name]
+      if (!data) {
+        map.set(eventType.name, 0)
+        continue
+      }
+      let sum = 0
+      let count = 0
+      for (const value of Object.values(data)) {
+        if (typeof value === 'number') {
+          sum += value
+          count += 1
+        }
+      }
+      map.set(eventType.name, count > 0 ? sum / count : 0)
+    }
+    return map
+  })
 
   const sortedEventTypes = computed(() => {
     if (!heatmapData.value) return []
-    let sorted = [...heatmapData.value.event_types].sort((a, b) => getEventAverage(b.name) - getEventAverage(a.name))
-    // sorted = sorted.slice(0, maxEventsToDisplay.value) // Show all events
-    return sorted
+    const averages = eventAverages.value
+    const sorted = [...heatmapData.value.event_types].sort((a, b) => {
+      return (averages.get(b.name) || 0) - (averages.get(a.name) || 0)
+    })
+    if (maxEventsToDisplay.value <= 0) return sorted
+    return sorted.slice(0, maxEventsToDisplay.value)
   })
 
   function getHeatmapClass(value: number): string {
-    // Score Straddle (0-100)
-    if (value >= 70) return 'heat-very-high' // Excellent (Vert)
-    if (value >= 40) return 'heat-medium'    // Moyen (Orange)
-    return 'heat-very-low'                   // Faible (Rouge)
+    // Score Straddle (0-100) — 5 niveaux de discrimination
+    if (value >= 80) return 'heat-extreme'    // Exceptionnel (Vert vif)
+    if (value >= 65) return 'heat-very-high'  // Excellent (Vert)
+    if (value >= 50) return 'heat-high'       // Bon (Vert clair)
+    if (value >= 35) return 'heat-medium'     // Moyen (Orange)
+    if (value >= 20) return 'heat-low'        // Faible (Rouge clair)
+    return 'heat-very-low'                    // Très faible (Rouge)
   }
 
   function getFormattedEventName(eventName: string): string {
@@ -106,11 +128,12 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     loadingHeatmap,
     heatmapData,
     minVolatilityThreshold,
-    // maxEventsToDisplay,
+    maxEventsToDisplay,
     sortedEventTypes,
     loadHeatmapData,
     forceReloadHeatmap,
     getHeatmapValue,
+    getHeatmapCount,
     getHeatmapClass,
     getFormattedEventName
   }

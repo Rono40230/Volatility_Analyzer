@@ -62,6 +62,7 @@ export interface Stats15Min {
 
 export interface GlobalMetrics {
   mean_atr: number
+  mean_max_true_range: number
   mean_volatility: number
   mean_body_range: number
   mean_noise_ratio: number
@@ -80,7 +81,8 @@ export interface CalendarEvent {
   actual: number | null
   forecast: number | null
   previous: number | null
-  created_at: string
+  created_at?: string
+  label?: string
 }
 
 export interface CorrelatedEvent {

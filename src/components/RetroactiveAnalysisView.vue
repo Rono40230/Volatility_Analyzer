@@ -4,14 +4,12 @@
       :pairs="pairs"
       :selected-pair="store.selectedPair"
       :selected-event-type="store.selectedEventType"
-      :min-deviation="store.minDeviation"
       :event-types="eventTypeOptions"
       :event-types-loading="eventTypesLoading"
       :event-types-error="eventTypesError"
       :show-calendar-selector="props.showCalendarSelector"
       @update:selected-pair="store.selectedPair = $event"
       @update:selected-event-type="store.selectedEventType = $event"
-      @update:min-deviation="store.minDeviation = $event"
       @calendar-selected="onCalendarSelected"
       @load="load"
     />
@@ -65,10 +63,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useRetrospectiveAnalysis } from '../composables/useRetrospectiveAnalysis'
 import { useRetroAnalysisGraphData } from '../composables/useRetroAnalysisGraphData'
+import { useEventTypeResolver } from '../composables/useEventTypeResolver'
 import { useRetroAnalysisStore } from '../stores/retroAnalysisStore'
 import { eventTranslations } from '../stores/eventTranslations'
 import ArchiveModal from './ArchiveModal.vue'
@@ -82,6 +81,7 @@ const props = defineProps<{
   showCalendarSelector?: boolean
   initialPair?: string
   initialEventType?: string
+  debugLog?: (message: string) => void
 }>()
 
 const emit = defineEmits<{
@@ -90,26 +90,47 @@ const emit = defineEmits<{
 
 const store = useRetroAnalysisStore()
 
+function logDebug(message: string) {
+  if (props.debugLog) props.debugLog(message)
+}
+
 // Initialisation depuis les props (mode Modal/Planning)
 onMounted(() => {
   if (props.initialPair) {
     store.selectedPair = props.initialPair
+    logDebug(`Init pair = ${props.initialPair}`)
   }
   if (props.initialEventType) {
     store.selectedEventType = props.initialEventType
+    logDebug(`Init event = ${props.initialEventType}`)
     // Si on a les deux, on lance le chargement automatiquement
     if (props.initialPair) {
-      load()
+      logDebug('Init load()')
+      load(props.initialPair, props.initialEventType)
     }
   }
 })
 
+watch(
+  () => [props.initialPair, props.initialEventType],
+  ([pair, eventType]) => {
+    if (!pair || !eventType) return
+    if (store.selectedPair !== pair) store.selectedPair = pair
+    if (store.selectedEventType !== eventType) store.selectedEventType = eventType
+    logDebug(`Watch load ${pair} / ${eventType}`)
+    load(pair, eventType)
+  }
+)
+
 const { peakDelayLoading, peakDelayError, peakDelayResults, analyzePeakDelay,
          decayLoading, decayError, decayResults, analyzeDecayProfile,
          eventTypes, eventTypesError, eventTypesLoading, loadEventTypes, getEventLabel } = useRetrospectiveAnalysis()
+const { resolveEventType } = useEventTypeResolver(eventTypes, getEventLabel)
 const { graphData, loading: graphLoading, chargerDonnéesGraph } = useRetroAnalysisGraphData()
 
 const pairs = ref<string[]>([])
+const pendingPair = ref<string | null>(null)
+const pendingEvent = ref<string | null>(null)
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
 const archivePeriodEnd = ref('')
@@ -134,27 +155,95 @@ onMounted(async () => {
     pairs.value = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD']
   }
   await loadEventTypes(props.calendarId ?? undefined)
+  if (eventTypes.value.length > 0) {
+    logDebug(`Event types sample: ${eventTypes.value.slice(0, 3).map(e => e.name).join(' | ')}`)
+  }
+  if (pendingPair.value && pendingEvent.value) {
+    const resolved = resolveEventType(pendingEvent.value)
+    if (resolved) {
+      logDebug(`Resolve event -> ${resolved}`)
+      triggerLoad(pendingPair.value, resolved)
+      pendingPair.value = null
+      pendingEvent.value = null
+    } else {
+      logDebug(`Resolve event failed: ${pendingEvent.value}`)
+    }
+  }
 })
 
-async function load() {
-  if (!store.selectedPair || !store.selectedEventType) return
+watch(eventTypes, () => {
+  if (!pendingPair.value || !pendingEvent.value) return
+  const resolved = resolveEventType(pendingEvent.value)
+  if (!resolved) return
+  logDebug(`Resolve event (watch) -> ${resolved}`)
+  triggerLoad(pendingPair.value, resolved)
+  pendingPair.value = null
+  pendingEvent.value = null
+})
+
+async function load(pairOverride?: string, eventTypeOverride?: string) {
+  const pair = pairOverride ?? store.selectedPair
+  const eventType = eventTypeOverride ?? store.selectedEventType
+  if (!pair || !eventType) return
+  logDebug(`Load start -> ${pair} / ${eventType}`)
   store.loading = true
   store.error = null
   try {
-    await analyzePeakDelay(store.selectedPair, store.selectedEventType)
-    await analyzeDecayProfile(store.selectedPair, store.selectedEventType)
-    await chargerDonnéesGraph(store.selectedPair, store.selectedEventType, store.minDeviation)
+    await analyzePeakDelay(pair, eventType)
+    if (peakDelayResults.value) {
+      logDebug(`Peak delay ok (n=${peakDelayResults.value.event_count})`)
+    } else if (peakDelayError.value) {
+      logDebug(`Peak delay error: ${peakDelayError.value}`)
+    } else {
+      logDebug('Peak delay empty')
+    }
+    await analyzeDecayProfile(pair, eventType)
+    if (decayResults.value) {
+      logDebug(`Decay profile ok (n=${decayResults.value.event_count})`)
+    } else if (decayError.value) {
+      logDebug(`Decay profile error: ${decayError.value}`)
+    } else {
+      logDebug('Decay profile empty')
+    }
+    await chargerDonnéesGraph(pair, eventType)
+    if (graphData.value) {
+      logDebug(`Volatility profile ok (n=${graphData.value.event_count})`)
+    } else {
+      logDebug('Volatility profile empty')
+    }
     
     // Sync to store
     store.peakDelayResults = peakDelayResults.value
     store.decayResults = decayResults.value
     store.graphData = graphData.value
+    logDebug(`Store sync ok (graphData=${store.graphData ? 'set' : 'null'})`)
   } catch (e) {
     store.error = String(e)
+    logDebug(`Load error: ${store.error}`)
   } finally {
     store.loading = false
+    logDebug('Load end')
   }
 }
+
+function triggerLoad(pair: string, eventType: string) {
+  if (!pair || !eventType) return
+  let resolvedEventType = resolveEventType(eventType)
+  if (!resolvedEventType) {
+    pendingPair.value = pair
+    pendingEvent.value = eventType
+    logDebug(`Trigger load deferred (event not resolved): ${eventType}`)
+    return
+  }
+  if (store.selectedPair !== pair) store.selectedPair = pair
+  if (store.selectedEventType !== resolvedEventType) store.selectedEventType = resolvedEventType
+  logDebug(`Trigger load ${pair} / ${resolvedEventType}`)
+  load(pair, resolvedEventType)
+}
+
+defineExpose({
+  triggerLoad
+})
 
 function openArchiveModal() {
   if (!store.graphData || !store.selectedPair || !store.selectedEventType) return

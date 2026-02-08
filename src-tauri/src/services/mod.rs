@@ -1,7 +1,10 @@
 // services/mod.rs - Exports publics des services
 pub mod archive_service;
+pub mod atr;
 pub mod backtest;
 pub mod breakout_detector;
+#[allow(dead_code)]
+pub mod cache_service;
 pub mod calendar_converter;
 pub mod calendar_scraper;
 pub mod candle_index;
@@ -30,6 +33,7 @@ pub mod import_processor;
 pub mod metrics;
 pub mod movement_analyzer;
 pub mod movement_quality_analyzer;
+pub mod pair_correlation;
 pub mod pair_data;
 pub mod pair_data_stats;
 pub mod planning;

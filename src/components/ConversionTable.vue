@@ -69,11 +69,11 @@ import { conversionData } from '../data/conversionTableData'
       <div class="footer-section">
         <h4>💰 Valeur en $ (pour 1 lot standard) :</h4>
         <ul>
-          <li><strong>EUR/USD, GBP/USD, USD/CAD, USD/JPY :</strong> 1 pip = 0 (0.0001 × 100,000 unités)</li>
-          <li><strong>GBP/JPY, CAD/JPY :</strong> Variable selon le taux USD/JPY (≈.67 si USD/JPY=150)*</li>
-          <li><strong>XAU/USD (Or) :</strong> 1 pip = 0 (0.10 × 100 oz)</li>
-          <li><strong>XAG/USD (Argent) :</strong> 1 pip = 0 (0.01 × 5,000 oz)</li>
-          <li><strong>USATEC, USAIDX, BTC/USD :</strong> 1 pip =  par contrat</li>
+          <li><strong>EUR/USD, GBP/USD, USD/CAD, USD/JPY :</strong> 1 pip = $10 (0.0001 × 100,000 unités)</li>
+          <li><strong>GBP/JPY, CAD/JPY :</strong> Variable selon le taux USD/JPY (≈$6.67 si USD/JPY=150)*</li>
+          <li><strong>XAU/USD (Or) :</strong> 1 pip = $10 (0.10 × 100 oz)</li>
+          <li><strong>XAG/USD (Argent) :</strong> 1 pip = $50 (0.01 × 5,000 oz)</li>
+          <li><strong>USATEC, USAIDX, BTC/USD :</strong> 1 pip = $1 par contrat</li>
           <li><strong>DEUIDX (DAX) :</strong> 1 pip = €1 par contrat</li>
         </ul>
         <p class="footer-note">*Variable : La valeur en $ dépend du taux de change avec l'USD au moment du trade.</p>

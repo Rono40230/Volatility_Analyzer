@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useArchiveStore } from '../stores/archiveStore'
+import { ref, computed, onMounted } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import type { Archive } from '../stores/archiveStore'
 
 const props = defineProps<{
   isOpen: boolean
 }>()
 
 const emit = defineEmits(['close'])
-const archiveStore = useArchiveStore()
+const fullArchives = ref<Archive[]>([])
+
+onMounted(async () => {
+  try {
+    fullArchives.value = await invoke<Archive[]>('list_archives')
+  } catch {
+    // Erreur silencieuse
+  }
+})
 
 function close() {
   emit('close')
@@ -15,7 +24,7 @@ function close() {
 
 // Extraction des données Heatmap
 const parsedData = computed(() => {
-  return archiveStore.archives
+  return fullArchives.value
     .filter(a => a.archive_type === 'Heatmap' || a.archive_type === 'HEATMAP')
     .map(a => {
       try {
@@ -24,10 +33,9 @@ const parsedData = computed(() => {
           id: a.id,
           title: a.title,
           date: a.created_at,
-          // TODO: Extraire métriques pertinentes des heatmaps
           data: data
         }
-      } catch (e) {
+      } catch {
         return null
       }
     })

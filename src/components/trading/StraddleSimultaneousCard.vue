@@ -1,7 +1,7 @@
 <template>
   <div class="panel-container simultaneous-panel">
     <div class="panel-header">
-      <h4>🟣 Simultané</h4>
+      <h4>🟣 Parametres BIDI</h4>
     </div>
 
     <div class="bidi-grid">
@@ -42,45 +42,6 @@
         <div class="bidi-label">Timeout</div>
         <div class="bidi-value">{{ timeout || '60' }} <span class="bidi-unit">min</span></div>
         <div class="bidi-description">Durée maximale du trade</div>
-      </div>
-
-      <div class="bidi-param graph-param">
-        <div class="bidi-label">Visualisation</div>
-        <div class="visualizer-wrapper">
-          <svg viewBox="0 75 200 150" class="visualizer-svg">
-            <!-- Center Line (Price) -->
-            <line x1="20" y1="150" x2="180" y2="150" stroke="#4a5568" stroke-width="1" stroke-dasharray="4,4" />
-            <text x="185" y="153" font-size="10" fill="#8b949e">T0</text>
-
-            <!-- Buy Stop (At Market/Center) -->
-            <g>
-              <line x1="40" y1="148" x2="160" y2="148" stroke="#4ade80" stroke-width="2" />
-              <text x="165" y="151" font-size="10" fill="#4ade80">BUY</text>
-              
-              <!-- SL Recovery Buy -->
-              <line x1="60" :y1="148 + scaleY(stopLossRecovery)" x2="140" :y2="148 + scaleY(stopLossRecovery)" stroke="#facc15" stroke-width="1" stroke-dasharray="3,3" />
-              <text x="30" :y="148 + scaleY(stopLossRecovery) + 3" font-size="9" fill="#facc15" text-anchor="end">SL Rec</text>
-
-              <!-- Hard TP Buy -->
-              <line v-if="hardTp > 0" x1="60" :y1="148 - scaleY(hardTp)" x2="140" :y2="148 - scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
-              <text v-if="hardTp > 0" x="30" :y="148 - scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
-            </g>
-
-            <!-- Sell Stop (At Market/Center) -->
-            <g>
-              <line x1="40" y1="152" x2="160" y2="152" stroke="#f87171" stroke-width="2" />
-              <text x="165" y="155" font-size="10" fill="#f87171">SELL</text>
-
-              <!-- SL Recovery Sell -->
-              <line x1="60" :y1="152 - scaleY(stopLossRecovery)" x2="140" :y2="152 - scaleY(stopLossRecovery)" stroke="#facc15" stroke-width="1" stroke-dasharray="3,3" />
-              <text x="30" :y="152 - scaleY(stopLossRecovery) + 3" font-size="9" fill="#facc15" text-anchor="end">SL Rec</text>
-
-              <!-- Hard TP Sell -->
-              <line v-if="hardTp > 0" x1="60" :y1="152 + scaleY(hardTp)" x2="140" :y2="152 + scaleY(hardTp)" stroke="#60a5fa" stroke-width="1" stroke-dasharray="3,3" />
-              <text v-if="hardTp > 0" x="30" :y="152 + scaleY(hardTp) + 3" font-size="9" fill="#60a5fa" text-anchor="end">TP</text>
-            </g>
-          </svg>
-        </div>
       </div>
     </div>
   </div>
@@ -198,23 +159,4 @@ const scaleY = (val: number) => {
   font-style: italic;
 }
 
-.graph-param {
-  grid-row: span 2;
-  display: flex;
-  flex-direction: column;
-}
-
-.visualizer-wrapper {
-  flex: 1;
-  min-height: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.visualizer-svg {
-  width: 100%;
-  height: 100%;
-  max-height: 200px;
-}
 </style>

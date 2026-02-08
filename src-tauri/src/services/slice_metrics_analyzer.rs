@@ -127,14 +127,24 @@ fn calculate_metrics_from_candles(
         body_range_sum += body_pct;
 
         // Noise Ratio (wicks / body)
+        // Un doji (body ≈ 0) est le signal de bruit MAXIMAL, pas 0
         let upper_wick = candle.high - candle.close.max(candle.open);
         let lower_wick = candle.open.min(candle.close) - candle.low;
         let total_wicks = upper_wick + lower_wick;
-        let noise = if body > 0.0 { total_wicks / body } else { 0.0 };
+        let noise = if body > f64::EPSILON {
+            total_wicks / body
+        } else if range > f64::EPSILON {
+            // Doji = 100% bruit, convention : noise = 10.0 (valeur haute)
+            10.0
+        } else {
+            0.0 // Bougie plate (H=L=O=C), pas de signal du tout
+        };
         noise_ratio_sum += noise;
 
-        // Volume Imbalance (Direction Strength)
-        // Simplifié: ratio du body par rapport au range
+        // Direction Strength (anciennement "Volume Imbalance")
+        // NOTE: Ce n'est PAS un vrai volume imbalance (buy vs sell volume).
+        // C'est le ratio body/range normalisé, soit la force directionnelle de la bougie.
+        // Un body/range élevé = mouvement directionnel clair (bon pour straddle).
         volume_imbalance_sum += body_pct / 100.0;
 
         // Shadow Ratio

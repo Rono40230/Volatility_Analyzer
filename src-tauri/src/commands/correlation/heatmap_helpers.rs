@@ -8,6 +8,8 @@ use std::collections::HashMap;
 pub struct VolatilityResult {
     pub value: f64,
     pub has_data: bool,
+    /// Nombre d'occurrences (événements avec données) utilisées pour le calcul
+    pub sample_count: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,6 +28,8 @@ pub struct HeatmapData {
     pub pairs: Vec<String>,
     pub event_types: Vec<EventTypeInfo>,
     pub data: HashMap<String, HashMap<String, f64>>,
+    /// Nombre d'occurrences par cellule (event_type → pair → count)
+    pub counts: HashMap<String, HashMap<String, i32>>,
 }
 
 pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
@@ -51,6 +55,7 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
         return Ok(VolatilityResult {
             value: 0.0,
             has_data: false,
+            sample_count: 0,
         });
     }
 
@@ -100,6 +105,7 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
     Ok(VolatilityResult {
         value: avg_score,
         has_data: has_data_found,
+        sample_count: valid_count,
     })
 }
 

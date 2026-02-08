@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useRetroAnalysisCache } from '../composables/useRetroAnalysisCache'
 import type { SymbolInfo, AnalysisResult, HourlyStats } from './volatilityTypes'
@@ -8,7 +8,7 @@ export type { SymbolInfo, AnalysisResult, HourlyStats, Stats15Min, GlobalMetrics
 export const useVolatilityStore = defineStore('volatility', () => {
   const symbols = ref<SymbolInfo[]>([])
   const selectedSymbol = ref('')
-  const analysisResult = ref<AnalysisResult | null>(null)
+  const analysisResult = shallowRef<AnalysisResult | null>(null)
   const loading = ref(false)
   const error = ref('')
   const dataRefreshTrigger = ref(0)
@@ -48,7 +48,8 @@ export const useVolatilityStore = defineStore('volatility', () => {
         throw new Error('Veuillez sélectionner un calendrier avant de lancer l\'analyse')
       }
       
-      analysisResult.value = await invoke<AnalysisResult>('analyze_symbol', { symbol, calendarId: cid })
+      const result = await invoke<AnalysisResult>('analyze_symbol', { symbol, calendarId: cid })
+      analysisResult.value = result
     } catch (e: Error | unknown) {
       error.value = `Erreur analyse: ${e instanceof Error ? e.message : String(e)}`
       analysisResult.value = null

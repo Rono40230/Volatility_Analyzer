@@ -39,6 +39,19 @@ pub async fn analyze_straddle_metrics(
     hour: u8,
     quarter: u8,
 ) -> Result<StraddleMetricsResponse, String> {
+    // Tout le travail lourd (DB + simulation) dans spawn_blocking
+    tokio::task::spawn_blocking(move || {
+        analyze_straddle_metrics_inner(symbol, hour, quarter)
+    })
+    .await
+    .map_err(|e| format!("Straddle metrics task failed: {}", e))?
+}
+
+fn analyze_straddle_metrics_inner(
+    symbol: String,
+    hour: u8,
+    quarter: u8,
+) -> Result<StraddleMetricsResponse, String> {
     use crate::db;
     use crate::services::candle_index::CandleIndex;
     use crate::services::database_loader::DatabaseLoader;
@@ -139,6 +152,6 @@ pub async fn analyze_straddle_metrics(
             score: simulation.confidence_score,
             sample_size_warning: simulation.sample_size_warning,
         },
-        spread_cost: pips_to_points(get_asset_cost(&symbol).spread_avg, &symbol),
+        spread_cost: pips_to_points(get_asset_cost(&symbol).spread_during_event(), &symbol),
     })
 }

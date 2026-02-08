@@ -25,8 +25,6 @@
         <line :x1="svgMargins.left" :y1="yAxisBaseline" :x2="svgMargins.right" :y2="yAxisBaseline" stroke="#4a5568" stroke-width="2" />
         <line :x1="svgMargins.left" y1="50" :x2="svgMargins.left" y2="380" stroke="#4a5568" stroke-width="2" />
 
-        <line :x1="svgMargins.left" :y1="yMidLine" :x2="svgMargins.right" :y2="yMidLine" stroke="#2d3748" stroke-width="1" stroke-dasharray="5,5" />
-
         <line :x1="svgMargins.t0" y1="50" :x2="svgMargins.t0" y2="380" stroke="#fbbf24" stroke-width="2.5" stroke-dasharray="4,4" opacity="0.8" />
         <text :x="svgMargins.t0" y="35" font-size="12" text-anchor="middle" fill="#fbbf24" font-weight="bold">T0 (Événement)</text>
 
@@ -34,12 +32,6 @@
 
         <line v-if="props.meilleurMoment > 0" :x1="bestMomentX" y1="50" :x2="bestMomentX" y2="380" stroke="#10b981" stroke-width="2" stroke-dasharray="6,3" opacity="0.7" />
         <text v-if="props.meilleurMoment > 0" :x="bestMomentX" y="45" font-size="11" text-anchor="middle" fill="#10b981" font-weight="600">Entrée (T0 - {{ props.meilleurMoment }} mn)</text>
-
-        <!-- Graduations Y (tous les 1 pip) -->
-        <template v-for="tick in yAxisTicks" :key="`y-tick-${tick}`">
-          <line :x1="svgMargins.left" :y1="mapPipToY(tick)" :x2="svgMargins.right" :y2="mapPipToY(tick)" stroke="#718096" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
-          <text :x="svgMargins.labelY" :y="mapPipToY(tick) + 4" font-size="11" text-anchor="end" fill="#cbd5e0" font-weight="500">{{ tick }}</text>
-        </template>
 
         <!-- Marqueurs X: AVANT (-30 à 0) -->
         <template v-for="minute in [-30, -20, -10, 0]" :key="`tick-before-${minute}`">
@@ -116,7 +108,6 @@ const props = withDefaults(defineProps<Props>(), {
 const {
   svgMargins,
   yAxisBaseline,
-  yMidLine,
   minAtrLabel,
   maxAtrLabel,
   midAtrLabel,
@@ -129,9 +120,7 @@ const {
   beforePointsString,
   afterPointsString,
   curvePathBefore,
-  curvePathAfter,
-  yAxisTicks,
-  mapPipToY
+  curvePathAfter
 } = useRetroGraphDataPoints({
   atrTimelineBefore: props.atrTimelineBefore,
   atrTimelineAfter: props.atrTimelineAfter,

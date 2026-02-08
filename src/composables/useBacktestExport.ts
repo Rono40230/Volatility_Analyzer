@@ -41,9 +41,9 @@ export function useBacktestExport(
     doc.setFontSize(10)
     if (config.value) {
       doc.text(`Mode: Simultané`, 14, 48)
-      doc.text(`Offset: ${config.value.offset_pips} pips`, 14, 54)
-      doc.text(`SL: ${config.value.stop_loss_pips} pips`, 80, 54)
-      doc.text(`TP: ${config.value.offset_pips * 2} pips`, 140, 54)
+      doc.text(`R: ${config.value.stop_loss_pips} pips`, 14, 54)
+      doc.text(`TP: ${config.value.tp_rr}R`, 80, 54)
+      doc.text(`TS: ATR${config.value.atr_period} x ${config.value.trailing_atr_coef}`, 140, 54)
     }
 
     // Résultats
@@ -82,7 +82,9 @@ export function useBacktestExport(
     const pair = result.value.symbol || 'UnknownPair'
     const event = result.value.event_name || 'UnknownEvent'
     const strategyMode = 'Simultane'
-    const offset = config.value?.offset_pips ?? 0
+    const tpR = config.value?.tp_rr ?? 0
+    const atrPeriod = config.value?.atr_period ?? 0
+    const tsCoef = config.value?.trailing_atr_coef ?? 0
     const sl = config.value?.stop_loss_pips ?? 0
     const timeout = config.value?.timeout_minutes ?? 0
     const spread = config.value?.spread_pips ?? 0
@@ -90,7 +92,7 @@ export function useBacktestExport(
     const safePair = pair.replace(/[^a-zA-Z0-9]/g, '')
     const safeEvent = event.replace(/[^a-zA-Z0-9]/g, '_')
     
-    const filename = `backtest_${safePair}_${safeEvent}_${strategyMode}_${offset}-${sl}-${timeout}-${spread}.pdf`
+    const filename = `backtest_${safePair}_${safeEvent}_${strategyMode}_TP${tpR}-R${sl}-ATR${atrPeriod}x${tsCoef}-${timeout}-${spread}.pdf`
 
     doc.save(filename)
   }

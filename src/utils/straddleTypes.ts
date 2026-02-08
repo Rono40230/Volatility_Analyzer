@@ -33,6 +33,11 @@ export interface TradingPlan {
   confidence: number // Confiance 0-100
   riskLevel: string // Niveau risque
   tradeDurationMinutes?: number // Durée estimée en minutes
+  // Champs normalisés utilisés par les rapports PDF
+  offset?: number // Offset en pips (depuis backend straddle_parameters)
+  tp?: number // Take Profit en pips
+  sl?: number // Stop Loss en pips
+  duration?: number // Durée timeout en minutes
 }
 
 export interface SliceAnalysis {

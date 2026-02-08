@@ -70,8 +70,11 @@ impl VolatilityHeuristics {
     pub fn is_giant_doji(stats: &Stats15Min) -> bool {
         // Seuil de volatilité minimale (pour ne pas flagger les dojis de nuit sans volume)
         // Stats15Min contient des valeurs normalisées (Pips/Points) après agrégation
-        const MIN_ATR_FOR_WHIPSAW: f64 = 15.0; // 15 pips/points min pour considérer ça dangereux
-        const MAX_BODY_RATIO: f64 = 35.0; // Corps < 35% du range (Indécision marquée)
+        // 15 pips = percentile ~75 d'ATR M15 sur Forex majeurs. En-dessous, le doji n'est
+        // pas assez "géant" pour constituer un vrai risque de whipsaw.
+        const MIN_ATR_FOR_WHIPSAW: f64 = 15.0;
+        // Corps < 35% du range = indécision marquée (mèches > corps)
+        const MAX_BODY_RATIO: f64 = 35.0;
 
         // Si l'ATR est faible, ce n'est pas un "Giant" Doji, juste un Doji calme (pas grave)
         if stats.atr_mean < MIN_ATR_FOR_WHIPSAW {

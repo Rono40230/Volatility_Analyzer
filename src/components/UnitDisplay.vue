@@ -9,10 +9,14 @@ const props = defineProps<{
   symbol?: string
 }>()
 
+// Valeur invalide (NaN, Infinity) → afficher N/A
+const isInvalidValue = computed(() => {
+  return isNaN(props.value) || !isFinite(props.value)
+})
+
 const pointsPerPip = computed(() => {
   if (props.symbol) return obtenirPointsParPip(props.symbol)
-  // Fallback: si on parle de pips/pts sans symbole, on suppose Forex (10)
-  if (props.unit === 'pips' || props.unit === 'pts' || props.unit === 'points') return 10
+  // Sans symbole, pas de conversion fiable → afficher en unité brute (×1)
   return 1
 })
 
@@ -56,7 +60,11 @@ const prefix = computed(() => {
 
 <template>
   <span class="unit-display">
-    <template v-if="isPipsOrPoints">
+    <template v-if="isInvalidValue">
+      <span class="na-value">N/A</span>
+    </template>
+
+    <template v-else-if="isPipsOrPoints">
       <!-- Affichage Standardisé : POINTS (soit PIPS) -->
       <!-- Ex: 150.0 pts (soit 15.0 pips) -->
       {{ pointsValue.toFixed(pointsDecimals) }} pts 
@@ -86,5 +94,10 @@ const prefix = computed(() => {
   opacity: 0.6;
   margin-left: 4px;
   font-style: italic;
+}
+.na-value {
+  color: #8b949e;
+  font-style: italic;
+  opacity: 0.7;
 }
 </style>

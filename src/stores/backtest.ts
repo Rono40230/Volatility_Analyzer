@@ -3,8 +3,11 @@ import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 export interface BacktestConfig {
-  offset_pips: number
   stop_loss_pips: number
+  tp_rr: number
+  trailing_atr_coef: number
+  atr_period: number
+  trailing_refresh_seconds: number
   timeout_minutes: number
   sl_recovery_pips: number | null
   spread_pips: number
@@ -48,8 +51,11 @@ export interface BacktestResult {
 
 export const useBacktestStore = defineStore('backtest', () => {
   const config = ref<BacktestConfig>({
-    offset_pips: 5.0,
     stop_loss_pips: 10.0,
+    tp_rr: 3.0,
+    trailing_atr_coef: 1.5,
+    atr_period: 14,
+    trailing_refresh_seconds: 60,
     timeout_minutes: 60,
     sl_recovery_pips: null,
     spread_pips: 1.0,

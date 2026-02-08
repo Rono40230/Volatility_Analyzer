@@ -7,29 +7,52 @@
       </div>
       <div class="modal-body">
         <RetroactiveAnalysisView 
-          :calendar-id="null" 
+          ref="retroViewRef"
+          :calendar-id="calendarId ?? null" 
           :show-calendar-selector="false"
           :initial-pair="initialPair"
           :initial-event-type="eventName"
+          :debug-log="pushDebugLog"
         />
       </div>
+      <!-- Debug panel masqué en production -->
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, defineEmits, ref, watch, nextTick } from 'vue'
 import RetroactiveAnalysisView from '../RetroactiveAnalysisView.vue'
 
-defineProps<{
+const props = defineProps<{
   isOpen: boolean
   eventName: string
   initialPair: string
+  calendarId?: number | null
 }>()
 
 const emit = defineEmits<{
   close: []
 }>()
+
+const retroViewRef = ref<InstanceType<typeof RetroactiveAnalysisView> | null>(null)
+const debugLogs = ref<string[]>([])
+
+function pushDebugLog(message: string) {
+  const ts = new Date().toLocaleTimeString('fr-FR', { hour12: false })
+  debugLogs.value = [`${ts} ${message}`, ...debugLogs.value].slice(0, 50)
+}
+
+watch(
+  () => [props.isOpen, props.initialPair, props.eventName, props.calendarId],
+  async ([isOpen, pair, eventName]) => {
+    if (!isOpen || !pair || !eventName) return
+    await nextTick()
+    pushDebugLog(`Modal open -> load ${pair} / ${eventName}`)
+    retroViewRef.value?.triggerLoad(pair, eventName)
+  },
+  { immediate: true }
+)
 
 function close() {
   emit('close')
@@ -61,6 +84,7 @@ function close() {
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  position: relative;
 }
 
 .modal-header {
@@ -96,6 +120,12 @@ function close() {
   flex: 1;
   overflow: hidden;
   position: relative;
+}
+
+/* Debug panel supprimé */
+
+.debug-line {
+  white-space: pre-wrap;
 }
 
 /* Force le composant enfant à prendre toute la hauteur */

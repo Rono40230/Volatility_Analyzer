@@ -26,7 +26,6 @@ polars = { version = "0.45", features = ["lazy", "temporal", "csv"] }
 ndarray = "0.16"
 statrs = "0.17"
 
-
 # Base de données SQLite
 diesel = { version = "2.2", features = ["sqlite", "chrono", "r2d2"] }
 diesel_migrations = "2.2"

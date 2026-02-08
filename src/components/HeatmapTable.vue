@@ -31,12 +31,15 @@
           </td>
           <td v-for="pair in pairs" :key="`${eventType.name}-${pair}`" 
               :class="['heatmap-cell', getCellClass(eventType.name, pair)]"
-              :title="shouldShowValue(eventType.name, pair) ? 'Analyser ce setup' : ''"
+              :title="getCellTitle(eventType.name, pair)"
               @click="shouldShowValue(eventType.name, pair) ? emit('analyze-cell', eventType.name, pair) : null"
               :style="{ cursor: shouldShowValue(eventType.name, pair) ? 'pointer' : 'default' }"
           >
             <span v-if="shouldShowValue(eventType.name, pair)" class="cell-value">
               {{ formaterPointsAvecPips(pair, getHeatmapValue(eventType.name, pair)) }}
+              <span v-if="getCellCount(eventType.name, pair) > 0" class="cell-count" :class="{ 'low-sample': getCellCount(eventType.name, pair) < 5 }">
+                N={{ getCellCount(eventType.name, pair) }}
+              </span>
             </span>
             <span v-else-if="getHeatmapValue(eventType.name, pair) === -1" class="no-data-indicator">N/A</span>
           </td>
@@ -61,6 +64,7 @@ const props = defineProps<{
   sortedEventTypes: EventTypeEntry[]
   minVolatility: number
   getHeatmapValue: (e: string, p: string) => number
+  getHeatmapCount?: (e: string, p: string) => number
   getHeatmapClass: (v: number) => string
   getFormattedEventName: (e: string) => string
 }>()
@@ -115,11 +119,25 @@ function shouldShowValue(eventName: string, pair: string): boolean {
   return val !== -1 && val >= props.minVolatility
 }
 
+function getCellCount(eventName: string, pair: string): number {
+  return props.getHeatmapCount ? props.getHeatmapCount(eventName, pair) : 0
+}
+
+function getCellTitle(eventName: string, pair: string): string {
+  if (!shouldShowValue(eventName, pair)) return ''
+  const count = getCellCount(eventName, pair)
+  if (count > 0 && count < 5) return `⚠️ N=${count} — échantillon trop petit (< 5), peu fiable`
+  if (count > 0) return `Analyser ce setup (N=${count})`
+  return 'Analyser ce setup'
+}
+
 function getCellClass(eventName: string, pair: string): string {
   const val = props.getHeatmapValue(eventName, pair)
   if (val === -1) return 'no-data-cell'
   if (val < props.minVolatility) return 'filtered-cell'
-  return props.getHeatmapClass(val)
+  const count = getCellCount(eventName, pair)
+  const colorClass = props.getHeatmapClass(val)
+  return count > 0 && count < 5 ? `${colorClass} low-sample-cell` : colorClass
 }
 </script>
 
@@ -142,9 +160,15 @@ function getCellClass(eventName: string, pair: string): string {
 .heatmap-cell.empty-cell { background: #0d1117; color: #6e7681; }
 .heatmap-cell.no-data-cell { background: #161b22; color: #484f58; font-style: italic; font-size: 0.8em; }
 .heatmap-cell.filtered-cell { background: #0d1117; color: #484f58; }
-.cell-value { font-weight: 600; font-size: 0.9em; }
+.cell-value { font-weight: 600; font-size: 0.9em; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.cell-count { font-size: 0.7em; font-weight: 400; opacity: 0.7; }
+.cell-count.low-sample { color: #f0883e; font-weight: 600; opacity: 1; }
+.low-sample-cell { opacity: 0.5; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px) !important; }
 .no-data-indicator { opacity: 0.5; }
-.heat-very-high { background: #238636; color: white; } /* Excellent (Vert) */
-.heat-medium { background: #d29922; color: black; }    /* Moyen (Orange) */
-.heat-very-low { background: #da3633; color: white; }  /* Faible (Rouge) */
+.heat-extreme { background: #1a7f37; color: white; font-weight: 700; }   /* Exceptionnel (Vert vif) */
+.heat-very-high { background: #238636; color: white; }                    /* Excellent (Vert) */
+.heat-high { background: #3fb950; color: #0d1117; }                       /* Bon (Vert clair) */
+.heat-medium { background: #d29922; color: black; }                       /* Moyen (Orange) */
+.heat-low { background: #e16f24; color: white; }                          /* Faible (Orange foncé) */
+.heat-very-low { background: #da3633; color: white; }                     /* Très faible (Rouge) */
 </style>

@@ -128,7 +128,7 @@ const showTooltip = ref(false)
 .tooltip-title {
   font-weight: 700;
   color: white;
-  font-size: 0.95em;
+  font-size: 1.05em;
   letter-spacing: 0.3px;
 }
 
@@ -155,7 +155,7 @@ const showTooltip = ref(false)
 .tooltip-body {
   padding: 16px;
   color: #e2e8f0;
-  font-size: 0.9em;
+  font-size: 1em;
   line-height: 1.6;
 }
 
@@ -172,14 +172,14 @@ const showTooltip = ref(false)
   font-weight: 600;
   color: #58a6ff;
   margin-bottom: 4px;
-  font-size: 0.9em;
+  font-size: 0.95em;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .tooltip-body :deep(.tooltip-section-text) {
   color: #cbd5e0;
-  font-size: 0.9em;
+  font-size: 0.95em;
   line-height: 1.6;
   white-space: pre-wrap;
   word-wrap: break-word;

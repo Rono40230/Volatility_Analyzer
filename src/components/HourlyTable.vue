@@ -52,7 +52,7 @@
               <td class="hour-cell">
                 {{ formatHour(stat.hour) }}
                 <span
-                  v-if="stat.hour == bestSliceHour"
+                  v-if="stat.hour === props.bestQuarter[0]"
                   class="star"
                 >⭐</span>
               </td>
@@ -79,80 +79,14 @@
                 :colspan="props.stats15min ? 9 : 8"
                 class="accordion-cell"
               >
-                <div class="scalping-details">
-                  <table class="scalping-table">
-                    <thead>
-                      <tr>
-                        <th>Tranche</th>
-                        <th>ATR Moyen</th>
-                        <th>Max Spike</th>
-                        <th>Volatilité %</th>
-                        <th>Body Range %</th>
-                        <th>Direction Strength</th>
-                        <th>Noise Ratio</th>
-                        <th>Breakouts %</th>
-                        <th title="TÂCHE 4: Minutes volatilité > 80% pic">
-                          Peak (min)
-                        </th>
-                        <th title="TÂCHE 4: Minutes pour -50% volatilité">
-                          Half-Life (min)
-                        </th>
-                        <th title="TÂCHE 4: Durée optimale fermeture trade">
-                          Trade Exp (min)
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr
-                        v-for="quarter in getQuartersForHour(stat.hour)"
-                        :key="`${stat.hour}-${quarter.quarter}`"
-                        class="scalping-row"
-                        :class="{ 'top3-slice': isBestSliceInHour(stat.hour, quarter.quarter) }"
-                      >
-                        <td class="time-cell">
-                          <span
-                            v-if="isBestSliceInHour(stat.hour, quarter.quarter)"
-                            class="top3-star"
-                          >⭐</span>
-                          {{ formatQuarterLabel(stat.hour, quarter.quarter) }}
-                        </td>
-                        <td><UnitDisplay :value="quarter.atr_mean" :unit="props.unit || 'pts'" :symbol="props.symbol" /></td>
-                        <td><UnitDisplay :value="quarter.max_true_range ?? 0" :unit="props.unit || 'pts'" :symbol="props.symbol" /></td>
-                        <td>{{ (quarter.volatility_mean * 100).toFixed(2) }}%</td>
-                        <td>
-                          {{ Math.abs(quarter.body_range_mean).toFixed(2) }}%
-                          <span style="font-size: 0.8em; opacity: 0.7;">{{ quarter.body_range_mean >= 0 ? '↗' : '↘' }}</span>
-                        </td>
-                        <td>{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
-                        <td>{{ quarter.noise_ratio_mean.toFixed(2) }}%</td>
-                        <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
-                        <td
-                          class="duration-cell"
-                          :title="`Peak duration moyen: ${quarter.peak_duration_mean ?? 'N/A'} min`"
-                        >
-                          {{ quarter.peak_duration_mean !== undefined ? quarter.peak_duration_mean + ' min' : '—' }}
-                        </td>
-                        <td
-                          class="duration-cell"
-                          :title="`Half-life moyen: ${quarter.volatility_half_life_mean ?? 'N/A'} min`"
-                        >
-                          {{ quarter.volatility_half_life_mean !== undefined ? quarter.volatility_half_life_mean + ' min' : '—' }}
-                        </td>
-                        <td
-                          class="trade-exp-cell"
-                          :class="{ 'warning': isTradeExpTooLong(quarter) }"
-                          :title="`Fermer trade après ${quarter.recommended_trade_expiration_mean ?? 'N/A'} min`"
-                        >
-                          {{ quarter.recommended_trade_expiration_mean !== undefined ? quarter.recommended_trade_expiration_mean + ' min' : '—' }}
-                          <span
-                            v-if="isTradeExpTooLong(quarter)"
-                            class="warning-icon"
-                          >⚠️</span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                <QuarterDetails
+                  :hour="stat.hour"
+                  :quarters="getQuartersForHour(stat.hour)"
+                  :best-quarter="props.bestQuarter"
+                  :unit="props.unit || 'pts'"
+                  :symbol="props.symbol"
+                  @analyze-quarter="(h, q) => emit('analyze-quarter', h, q)"
+                />
               </td>
             </tr>
           </template>
@@ -163,9 +97,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed } from 'vue'
 import type { HourlyStats, Stats15Min } from '../stores/volatility'
+import { calculateStraddleScore } from '../utils/straddleCalculators'
 import UnitDisplay from './UnitDisplay.vue'
+import QuarterDetails from './QuarterDetails.vue'
 
 interface GlobalMetrics {
   mean_atr: number
@@ -194,67 +130,36 @@ const props = defineProps<{
   symbol?: string // Symbole pour conversion pips/points
 }>()
 
+const emit = defineEmits<{
+  'analyze-quarter': [hour: number, quarter: number]
+}>()
+
 const stats = computed(() => props.stats ?? [])
-
-
-// Formate le label de quarter avec gestion du changement d'heure
-function formatQuarterLabel(hour: number, quarter: number): string {
-  const startMin = quarter * 15
-  const endMin = startMin + 15
-  
-  if (endMin >= 60) {
-    const endHour = (hour + 1) % 24
-    return `${String(hour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}-${String(endHour).padStart(2, '0')}:00`
-  } else {
-    return `${String(hour).padStart(2, '0')}:${String(startMin).padStart(2, '0')}-${String(hour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`
-  }
-}
 
 // État du drawer
 const expandedHours = ref<number[]>([])
-const top3Slices = ref<Array<{ hour: number; quarter: number }>>([])
 
-// Calculer le TOP 3 au montage/changement des stats
-onMounted(() => {
-  if (stats.value.length > 0 && props.stats15min && props.stats15min.length > 0) {
-    try {
-      // Besoin de globalMetrics pour analyzeTop3Slices
-      // On va créer une fonction locale pour identifier les TOP 3 slices
-      const scoredSlices = props.stats15min.map((slice: Stats15Min): ScoredSlice => ({
-        hour: slice.hour,
-        quarter: slice.quarter,
-        score: calculateSliceScore(slice)
-      }))
-      
-      // Trier par score décroissant et prendre les 3 meilleurs
-      top3Slices.value = scoredSlices
-        .sort((a: ScoredSlice, b: ScoredSlice) => b.score - a.score)
-        .slice(0, 3)
-        .map((item: ScoredSlice) => ({ hour: item.hour, quarter: item.quarter }))
-    } catch (err) {
-      // Erreur calcul TOP 3 - ignorer silencieusement
-    }
+// TOP 3 réactif : se recalcule quand stats15min ou symbol changent
+const top3Slices = computed<Array<{ hour: number; quarter: number }>>(() => {
+  if (!props.stats15min || props.stats15min.length === 0) return []
+  try {
+    const scoredSlices = props.stats15min.map((slice: Stats15Min): ScoredSlice => ({
+      hour: slice.hour,
+      quarter: slice.quarter,
+      score: calculateStraddleScore(slice)
+    }))
+    return scoredSlices
+      .sort((a: ScoredSlice, b: ScoredSlice) => b.score - a.score)
+      .slice(0, 3)
+      .map((item: ScoredSlice) => ({ hour: item.hour, quarter: item.quarter }))
+  } catch {
+    return []
   }
 })
 
 function formatHour(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
 }
-
-function formatNumber(num: number, decimals: number): string {
-  return num.toFixed(decimals)
-}
-
-
-
-const bestSliceHour = computed(() => {
-  return props.bestQuarter[0] // L'heure qui contient le meilleur quarter
-})
-
-function isBestHour(hour: number): boolean {
-  return props.bestQuarter[0] === hour
-}
-
 
 // Fonctions pour accordion 15-minutes
 function toggleExpand(hour: number) {
@@ -300,72 +205,6 @@ function getQuartersForHour(hour: number) {
   }
   return quarters
 }
-
-function calculateSliceScore(slice: Stats15Min): number {
-  // Même logique que straddleAnalysis.ts::calculateStraddleScore
-  if (slice.candle_count === 0) return 0
-  let score = 0
-
-  // TRUE RANGE (60 pts max) - Includes gap detection
-  if (slice.range_mean > 0.0025) {
-    score += 60
-  } else if (slice.range_mean > 0.0020) {
-    score += 50
-  } else if (slice.range_mean > 0.0015) {
-    score += 40
-  } else if (slice.range_mean > 0.0010) {
-    score += 20
-  }
-
-  // ATR (25 pts max)
-  if (slice.atr_mean > 0.0020) {
-    score += 25
-  } else if (slice.atr_mean > 0.0015) {
-    score += 20
-  } else if (slice.atr_mean > 0.0010) {
-    score += 15
-  } else if (slice.atr_mean > 0.0005) {
-    score += 8
-  }
-
-  // BodyRange (15 pts max)
-  if (slice.body_range_mean > 45.0) {
-    score += 15
-  } else if (slice.body_range_mean > 35.0) {
-    score += 12
-  } else if (slice.body_range_mean > 25.0) {
-    score += 8
-  } else if (slice.body_range_mean > 15.0) {
-    score += 3
-  }
-
-  return Math.min(score, 100)
-}
-
-function isInTop3Slice(hour: number, quarter: number): boolean {
-  return top3Slices.value.some(item => item.hour === hour && item.quarter === quarter)
-}
-
-// NEW: Retourner le MEILLEUR créneau 15min de chaque heure (pas les 3 globaux)
-function isBestSliceInHour(hour: number, quarter: number): boolean {
-  // Comparer directement avec le meilleur quarter global
-  // props.bestQuarter est [hour, quarter]
-  return props.bestQuarter[0] === hour && props.bestQuarter[1] === quarter
-}
-
-function getTop3SliceRank(hour: number, quarter: number): number {
-  const found = top3Slices.value.findIndex(item => item.hour === hour && item.quarter === quarter)
-  return found >= 0 ? found + 1 : 0
-}
-
-function hasTop3SlicesInHour(hour: number): boolean {
-  return top3Slices.value.some(item => item.hour === hour)
-}
-
-// TÂCHE 4: Alerter si durée recommandée trop longue (>150 min = 2.5h)
-function isTradeExpTooLong(slice: Stats15Min): boolean {
-  return (slice.recommended_trade_expiration_minutes ?? 0) > 150
-}
 </script>
 
 <style scoped>
@@ -401,66 +240,6 @@ function isTradeExpTooLong(slice: Stats15Min): boolean {
 
 .accordion-cell {
   padding: 0 !important;
-}
-
-.scalping-details {
-  padding: 15px;
-  background: #161b22;
-  border-top: 2px solid #21262d;
-}
-
-.scalping-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85em;
-  margin: 0;
-}
-
-.scalping-table thead {
-  background: #1f6feb;
-}
-
-.scalping-table th {
-  padding: 0.5rem;
-  text-align: left;
-  font-weight: bold;
-  border: 1px solid #30363d;
-  white-space: nowrap;
-}
-
-.scalping-table td {
-  padding: 0.5rem;
-  border: 1px solid #30363d;
-}
-
-/* Fond gris clair pour TOUTES les lignes 15min */
-.scalping-row {
-  background: #2d333b;
-}
-
-.scalping-row:hover {
-  background: #353d48;
-}
-
-/* Fond plus foncé (doré) pour les lignes TOP 3 */
-.scalping-row.top3-slice {
-  background: rgba(251, 191, 36, 0.25);
-  border-left: 4px solid #fbbf24;
-}
-
-.scalping-row.top3-slice:hover {
-  background: rgba(251, 191, 36, 0.35);
-}
-
-.top3-star {
-  color: #fbbf24;
-  font-weight: bold;
-  margin-right: 4px;
-}
-
-.time-cell {
-  font-weight: bold;
-  color: #58a6ff;
 }
 
 .hourly-table {
@@ -642,51 +421,6 @@ tbody tr:hover {
 .no-event {
   color: #6e7681;
   font-size: 1.2rem;
-}
-
-/* TÂCHE 4: Styles pour durées de volatilité */
-.trade-exp-header {
-  background: linear-gradient(135deg, rgba(249, 158, 11, 0.1), rgba(239, 68, 68, 0.1)) !important;
-  font-weight: 600;
-}
-
-.duration-cell {
-  text-align: center;
-  color: #e6edf3;
-  font-size: 0.85em;
-}
-
-.actions-cell {
-  text-align: center;
-  padding: 8px !important;
-}
-
-.btn-bidi-params {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #58a6ff;
-  background: rgba(88, 166, 255, 0.1);
-  color: #58a6ff;
-  font-size: 0.85em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-bidi-params:hover {
-  background: rgba(88, 166, 255, 0.2);
-  border-color: #79c0ff;
-  color: #79c0ff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(88, 166, 255, 0.2);
-}
-
-.btn-bidi-params:active {
-  transform: translateY(0);
 }
 </style>
 

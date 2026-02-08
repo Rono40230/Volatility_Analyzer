@@ -159,6 +159,7 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|_app| Ok(()))
         .manage(calendar_state)
         .manage(pair_state)
         .manage(candles_state)
@@ -181,8 +182,8 @@ pub fn run() {
             load_candles_for_hour, // NEW: Charger 60 candles pour une heure
             get_cached_candles_for_hour, // NEW: Récupérer candles en cache
             get_quarter_events, // NEW: Récupérer événements récurrents pour un quarter
+            check_pair_correlations, // Corrélation inter-paires
             // Calendar commands (Phase 2 MVP)
-            get_upcoming_events,
             load_economic_events_from_csv,
             import_and_convert_calendar, // Nouveau: import automatisé
             get_calendar_import_info,    // Info sur le dernier import
@@ -250,6 +251,7 @@ pub fn run() {
             // Archive commands
             save_archive,
             list_archives,
+            list_archives_light,
             list_all_archives,
             get_archive,
             delete_archive,
@@ -267,6 +269,7 @@ pub fn run() {
             // Backtest commands
             run_backtest,
             run_backtest_time,
+            get_recommended_backtest_config,
             // Planning commands
             project_stats_on_calendar,
             sync_forex_factory_week,

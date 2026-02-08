@@ -31,20 +31,9 @@ impl ImpactDataProcessor {
         let (mut noise_before_sum, mut noise_during_sum, mut noise_after_sum) = (0.0, 0.0, 0.0);
         let (mut event_count, mut deviation_count, mut surprise_event_count) = (0, 0, 0);
         let (mut all_wicks, mut all_ranges, mut total_deviation) = (Vec::new(), Vec::new(), 0.0);
+        let mut valid_events: Vec<crate::models::CalendarEvent> = Vec::new();
 
         for event in events {
-            event_count += 1;
-            
-            // Calcul de la déviation
-            if let (Some(actual), Some(forecast)) = (event.actual, event.forecast) {
-                let deviation = (actual - forecast).abs();
-                total_deviation += deviation;
-                deviation_count += 1;
-                if deviation > 0.0 {
-                    surprise_event_count += 1;
-                }
-            }
-
             let event_time = event.event_time.and_utc();
             let window_start = event_time - Duration::minutes(30);
             let window_end = event_time + Duration::minutes(90);
@@ -56,6 +45,19 @@ impl ImpactDataProcessor {
 
             if occurrence_candles.len() < 120 {
                 continue;
+            }
+
+            event_count += 1;
+            valid_events.push(event.clone());
+
+            // Calcul de la déviation
+            if let (Some(actual), Some(forecast)) = (event.actual, event.forecast) {
+                let deviation = (actual - forecast).abs();
+                total_deviation += deviation;
+                deviation_count += 1;
+                if deviation > 0.0 {
+                    surprise_event_count += 1;
+                }
             }
 
             let (mut atrs, mut bodies) = (Vec::new(), Vec::new());
@@ -155,7 +157,7 @@ impl ImpactDataProcessor {
             0.0
         };
 
-        let avg_timestamp = calculate_avg_timestamp(events, event_count);
+        let avg_timestamp = calculate_avg_timestamp(&valid_events, event_count);
 
         // Calculate P95 Wick & Range
         let p95_wick = calculate_p95(all_wicks.as_mut_slice());

@@ -159,8 +159,24 @@ pub fn get_sl_multiplier(
     default
 }
 
-/// Calculate final SL with time-of-day adjustment
+/// Calculate final SL with time-of-day adjustment.
+/// Multiplie le SL de base par le multiplicateur horaire :
+/// - Heures critiques (ouvertures sessions) : SL × 1.5
+/// - Heures calmes (nuit NY, lunch) : SL × 0.7
+/// - Heures normales : SL × 1.0
+///
 /// # Arguments
+/// * `sl_base` - SL de base en pips/points (déjà multiplié par ATR)
+/// * `hour_utc` - Heure UTC actuelle (0-23)
+///
+/// # Returns
+/// SL ajusté pour le fuseau horaire
+pub fn apply_time_adjustment(sl_base: f64, hour_utc: u32) -> f64 {
+    let zone = get_time_zone(hour_utc);
+    let multiplier = get_time_multiplier(zone);
+    sl_base * multiplier
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,28 +241,24 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // apply_time_adjustment not yet implemented
     fn test_apply_time_adjustment_critical() {
-        // let adjusted = apply_time_adjustment(100.0, 13); // US open
-        // assert_eq!(adjusted, 150.0);
+        let adjusted = apply_time_adjustment(100.0, 13); // US open
+        assert_eq!(adjusted, 150.0);
     }
 
     #[test]
-    #[ignore] // apply_time_adjustment not yet implemented
     fn test_apply_time_adjustment_calm() {
-        // let adjusted = apply_time_adjustment(100.0, 3); // Night NY
-        // assert_eq!(adjusted, 70.0);
+        let adjusted = apply_time_adjustment(100.0, 3); // Night NY
+        assert_eq!(adjusted, 70.0);
     }
 
     #[test]
-    #[ignore] // apply_time_adjustment not yet implemented
     fn test_apply_time_adjustment_normal() {
-        // let adjusted = apply_time_adjustment(100.0, 11); // Normal hour
-        // assert_eq!(adjusted, 100.0);
+        let adjusted = apply_time_adjustment(100.0, 11); // Normal hour
+        assert_eq!(adjusted, 100.0);
     }
 
     #[test]
-    #[ignore] // apply_time_adjustment not yet implemented
     fn test_btc_realistic_scenario() {
         // BTC at critical time with event
         let atr = 1264.0; // From capture: 2.97% of ~$42,500
@@ -254,12 +266,11 @@ mod tests {
         let sl_base = atr * mul;
         assert_eq!(sl_base, 6320.0); // 1264 × 5.0
 
-        // let sl_adjusted = apply_time_adjustment(sl_base, 13); // US open (critical)
-        // assert_eq!(sl_adjusted, 9480.0); // 6320 × 1.5
+        let sl_adjusted = apply_time_adjustment(sl_base, 13); // US open (critical)
+        assert_eq!(sl_adjusted, 9480.0); // 6320 × 1.5
     }
 
     #[test]
-    #[ignore] // apply_time_adjustment not yet implemented
     fn test_btc_calm_scenario() {
         // BTC at calm time, normal
         let atr = 1264.0;
@@ -267,8 +278,8 @@ mod tests {
         let sl_base = atr * mul;
         assert_eq!(sl_base, 5688.0); // 1264 × 4.5
 
-        // let sl_adjusted = apply_time_adjustment(sl_base, 3); // Night NY (calm)
-        // assert_eq!(sl_adjusted, 3981.6); // 5688 × 0.7
+        let sl_adjusted = apply_time_adjustment(sl_base, 3); // Night NY (calm)
+        assert!((sl_adjusted - 3981.6).abs() < 0.01); // 5688 × 0.7
     }
 
     #[test]

@@ -31,6 +31,19 @@ pub async fn analyze_slice_metrics(
     hour: u8,
     quarter: u8,
 ) -> Result<SliceMetricsResponse, String> {
+    // Travail lourd (DB + analyse) dans spawn_blocking
+    tokio::task::spawn_blocking(move || {
+        analyze_slice_metrics_inner(symbol, hour, quarter)
+    })
+    .await
+    .map_err(|e| format!("Slice metrics task failed: {}", e))?
+}
+
+fn analyze_slice_metrics_inner(
+    symbol: String,
+    hour: u8,
+    quarter: u8,
+) -> Result<SliceMetricsResponse, String> {
     use crate::db;
     use crate::services::candle_index::CandleIndex;
     use crate::services::database_loader::DatabaseLoader;

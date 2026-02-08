@@ -141,7 +141,8 @@ impl ConfidenceScorer {
 
         // 7. PÉNALITÉ: ATR élevé MAIS Noise élevé (contradiction)
         // Volatilité chaotique = mauvais pour scalping propre
-        if metrics.mean_atr > 0.0002 && metrics.mean_noise_ratio > 3.0 {
+        // Seuil ATR en PIPS normalisés (pas en prix brut)
+        if metrics.mean_atr > 2.0 && metrics.mean_noise_ratio > 3.0 {
             score -= 15.0; // Volatilité mais signal chaotique = danger
         }
 
@@ -169,6 +170,7 @@ mod tests {
     fn test_confidence_zero_metrics() {
         let metrics = GlobalMetrics {
             mean_atr: 0.0,
+            mean_max_true_range: 0.0,
             mean_volatility: 0.0,
             mean_body_range: 0.0,
             mean_noise_ratio: 10.0,
@@ -190,6 +192,7 @@ mod tests {
     fn test_confidence_perfect_metrics() {
         let metrics = GlobalMetrics {
             mean_atr: 3.0, // 3.0 pips (normalized)
+            mean_max_true_range: 0.0,
             mean_volatility: 0.35,
             mean_body_range: 50.0,
             mean_noise_ratio: 1.5,
@@ -220,6 +223,7 @@ mod tests {
         for (atr, volatility) in test_cases {
             let metrics = GlobalMetrics {
                 mean_atr: atr,
+                mean_max_true_range: 0.0,
                 mean_volatility: volatility,
                 mean_body_range: 40.0,
                 mean_noise_ratio: 2.0,

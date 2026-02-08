@@ -46,6 +46,8 @@ defineProps<{
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  flex: 1;
 }
 
 .graph-container {
@@ -54,7 +56,8 @@ defineProps<{
   border-radius: 8px;
   padding: 4px;
   height: 100%;
-  min-height: 150px;
+  min-height: 0;
+  flex: 1;
   margin-bottom: 0;
 }
 
@@ -95,4 +98,5 @@ defineProps<{
   font-size: 12px;
   color: #6e7681;
 }
+
 </style>

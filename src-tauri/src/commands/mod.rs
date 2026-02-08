@@ -24,7 +24,7 @@ pub mod import_clean;
 pub mod metadata;
 pub mod movement_analysis_commands;
 pub mod pair_data;
-pub mod pair_importer;
+// pair_importer supprimé (Phase 3.2) : code mort, remplacé par pair_data/processor.rs
 pub mod planning;
 pub mod retrospective_analysis;
 
@@ -34,7 +34,6 @@ pub mod volatility_duration_commands;
 
 pub use archive_commands::*;
 pub use backtest::*;
-pub use calendar_commands::get_upcoming_events;
 pub use calendar_import_commands::*;
 pub use candle_index_commands::{
     get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles,
@@ -77,5 +76,6 @@ pub use volatility::{
     analyze_volatility_duration_for_slice, calculer_offset_optimal, calculer_frequence_whipsaw,
     calculer_taux_reussite, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
     get_quarter_events, load_candles_for_hour, load_symbols, ping,
+    check_pair_correlations,
 };
 pub use volatility_duration_commands::analyze_volatility_duration;

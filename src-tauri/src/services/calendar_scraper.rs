@@ -41,30 +41,6 @@ impl CalendarScraper {
             .map_err(|e| VolatilityError::DatabaseError(e.to_string()))
     }
 
-    /// Récupère les événements à venir pour un symbole
-    #[allow(dead_code)]
-    pub fn get_upcoming_events(
-        &self,
-        symbol: &str,
-        hours_ahead: i64,
-    ) -> Result<Vec<CalendarEvent>, VolatilityError> {
-        let mut conn = self
-            .db_pool
-            .get()
-            .map_err(|e| VolatilityError::DatabaseError(e.to_string()))?;
-
-        let now = chrono::Utc::now().naive_utc();
-        let future = now + chrono::Duration::hours(hours_ahead);
-
-        calendar_events::table
-            .filter(calendar_events::symbol.eq(symbol))
-            .filter(calendar_events::event_time.between(now, future))
-            .order(calendar_events::event_time.asc())
-            .select(CalendarEvent::as_select())
-            .load(&mut conn)
-            .map_err(|e| VolatilityError::DatabaseError(e.to_string()))
-    }
-
     /// Sauvegarde une liste d'événements dans la base de données
     #[allow(dead_code)]
     pub fn store_events(&self, events: &[crate::models::calendar_event::NewCalendarEvent]) -> Result<usize, VolatilityError> {

@@ -2,10 +2,8 @@
 // Conforme .clinerules : < 300 lignes, aucun unwrap()
 
 use crate::db::DbPool;
-use crate::models::CalendarEvent;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-use tauri::State;
 
 pub struct CalendarState {
     pub pool: Mutex<Option<DbPool>>,
@@ -20,20 +18,4 @@ impl From<String> for CalendarCommandError {
     fn from(message: String) -> Self {
         Self { message }
     }
-}
-
-#[tauri::command]
-pub async fn get_upcoming_events(
-    state: State<'_, CalendarState>,
-) -> Result<Vec<CalendarEvent>, CalendarCommandError> {
-    let pool_guard = state
-        .pool
-        .lock()
-        .map_err(|e| format!("Failed to lock pool: {}", e))?;
-
-    let _pool = pool_guard
-        .as_ref()
-        .ok_or_else(|| "Database not initialized".to_string())?;
-
-    Ok(vec![])
 }

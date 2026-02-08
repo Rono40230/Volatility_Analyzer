@@ -7,21 +7,75 @@ use crate::models::VolatilityError;
 use crate::services::calendar_scraper::CalendarScraper;
 use chrono::NaiveDateTime;
 use csv::ReaderBuilder;
+use diesel::prelude::*;
 use std::path::Path;
 use tracing::{info, warn};
+
+/// Row helper pour récupérer un id via sql_query
+#[derive(QueryableByName)]
+struct IdRow {
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    id: i32,
+}
 
 /// Service pour charger événements économiques depuis CSV
 pub struct EconomicEventLoader {
     /// NOTE: Ce field est public pour usage futur (Phase 2 - intégration scraper)
     #[allow(dead_code)]
     scraper: CalendarScraper,
+    pool: DbPool,
 }
 
 impl EconomicEventLoader {
     pub fn new(pool: DbPool) -> Self {
         Self {
-            scraper: CalendarScraper::new(pool),
+            scraper: CalendarScraper::new(pool.clone()),
+            pool,
         }
+    }
+
+    /// Crée ou récupère un calendar_import par défaut pour ce fichier CSV.
+    /// Retourne l'id du calendar_import.
+    fn ensure_calendar_import(&self, filename: &str) -> Result<i32, VolatilityError> {
+        use diesel::prelude::*;
+        let mut conn = self.pool.get().map_err(|e| {
+            VolatilityError::DatabaseError(format!("Pool error: {}", e))
+        })?;
+
+        // Essayer de trouver un import existant avec ce nom de fichier
+        let existing: Option<i32> = diesel::sql_query(
+            "SELECT id FROM calendar_imports WHERE filename = ? LIMIT 1"
+        )
+        .bind::<diesel::sql_types::Text, _>(filename)
+        .get_result::<IdRow>(&mut conn)
+        .optional()
+        .map_err(|e| VolatilityError::DatabaseError(format!("Query error: {}", e)))?
+        .map(|row| row.id);
+
+        if let Some(id) = existing {
+            return Ok(id);
+        }
+
+        // Créer un nouvel import
+        let import_name = format!("csv_import_{}", filename);
+        diesel::sql_query(
+            "INSERT INTO calendar_imports (name, filename, event_count) VALUES (?, ?, 0)"
+        )
+        .bind::<diesel::sql_types::Text, _>(&import_name)
+        .bind::<diesel::sql_types::Text, _>(filename)
+        .execute(&mut conn)
+        .map_err(|e| VolatilityError::DatabaseError(format!("Insert error: {}", e)))?;
+
+        // Récupérer l'id généré
+        let new_id: i32 = diesel::sql_query(
+            "SELECT id FROM calendar_imports WHERE filename = ? ORDER BY id DESC LIMIT 1"
+        )
+        .bind::<diesel::sql_types::Text, _>(filename)
+        .get_result::<IdRow>(&mut conn)
+        .map_err(|e| VolatilityError::DatabaseError(format!("Get id error: {}", e)))?
+        .id;
+
+        Ok(new_id)
     }
 
     /// Charge un CSV d'événements économiques dans la DB
@@ -40,6 +94,14 @@ impl EconomicEventLoader {
             )));
         }
 
+        // Créer ou récupérer un calendar_import pour ce fichier
+        let filename = path
+            .file_name()
+            .and_then(|f| f.to_str())
+            .unwrap_or("unknown.csv");
+        let import_id = self.ensure_calendar_import(filename)?;
+        info!("Using calendar_import_id={} for {}", import_id, filename);
+
         let mut reader = ReaderBuilder::new()
             .has_headers(true)
             .from_path(path)
@@ -53,7 +115,7 @@ impl EconomicEventLoader {
                 VolatilityError::CsvLoadError(format!("Line {}: {}", line_num + 2, e))
             })?;
 
-            match self.parse_csv_record(&record, line_num + 2) {
+            match self.parse_csv_record(&record, line_num + 2, import_id) {
                 Ok(event) => events.push(event),
                 Err(e) => {
                     warn!("Skipping line {}: {}", line_num + 2, e);
@@ -79,6 +141,7 @@ impl EconomicEventLoader {
         &self,
         record: &csv::StringRecord,
         line_num: usize,
+        import_id: i32,
     ) -> Result<NewCalendarEvent, VolatilityError> {
         // Format: Date,Time,Currency,Event,Impact,Actual,Forecast,Previous
         if record.len() < 5 {
@@ -132,7 +195,7 @@ impl EconomicEventLoader {
             actual,
             forecast,
             previous,
-            calendar_import_id: 0, // Default to 0 for now as this loader doesn't manage imports
+            calendar_import_id: import_id,
         })
     }
 }
@@ -199,7 +262,7 @@ mod tests {
         ]);
 
         let event = loader
-            .parse_csv_record(&record, 2)
+            .parse_csv_record(&record, 2, 1)
             .expect("Failed to parse record");
 
         assert_eq!(event.symbol, "EUR");

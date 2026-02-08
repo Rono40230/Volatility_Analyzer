@@ -13,8 +13,21 @@ export interface Archive {
     data_json: string
 }
 
+/** Version légère sans data_json — pair et event_label extraits côté SQL */
+export interface ArchiveLight {
+    id: number
+    title: string
+    archive_type: string
+    period_start: string
+    period_end: string
+    comment: string | null
+    created_at: string
+    pair: string
+    event_label: string
+}
+
 export const useArchiveStore = defineStore('archive', () => {
-    const archives = ref<Archive[]>([])
+    const archives = ref<ArchiveLight[]>([])
     const currentArchive = ref<Archive | null>(null)
     const loading = ref(false)
     const error = ref<string | null>(null)
@@ -38,7 +51,8 @@ export const useArchiveStore = defineStore('archive', () => {
                 comment,
                 dataJson
             })
-            archives.value.unshift(archive)
+            // Recharger la liste légère après sauvegarde
+            await chargerArchives()
             return archive
         } catch (e) {
             error.value = e as string
@@ -52,7 +66,7 @@ export const useArchiveStore = defineStore('archive', () => {
         loading.value = true
         error.value = null
         try {
-            archives.value = await invoke<Archive[]>('list_archives')
+            archives.value = await invoke<ArchiveLight[]>('list_archives_light')
         } catch (e) {
             error.value = e as string
             throw e

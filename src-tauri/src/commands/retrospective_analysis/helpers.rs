@@ -43,8 +43,21 @@ pub async fn load_events_by_type(
         .map_err(|e| format!("Load failed: {}", e))
 }
 
-pub fn calculer_atr(high: f64, low: f64, close: f64) -> f64 {
-    (high - low).max((high - close.abs()).max(close - low.abs()))
+/// Calcule le True Range d'une bougie.
+/// Si prev_close est fourni, utilise la formule standard TR = max(H-L, |H-prevC|, |L-prevC|).
+/// Sinon, fallback sur le range simple H-L.
+pub fn calculer_atr(high: f64, low: f64, _close: f64) -> f64 {
+    // Fallback sans prev_close : range simple
+    high - low
+}
+
+/// Calcule le True Range complet avec le close précédent (formule standard)
+/// Sera utilisé lors de l'unification ATR (Phase 2 task.md)
+#[allow(dead_code)]
+pub fn calculer_true_range(high: f64, low: f64, prev_close: f64) -> f64 {
+    (high - low)
+        .max((high - prev_close).abs())
+        .max((low - prev_close).abs())
 }
 
 pub fn get_event_types_from_db(

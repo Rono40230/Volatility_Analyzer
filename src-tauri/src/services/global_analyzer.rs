@@ -46,12 +46,12 @@ impl GlobalAnalyzer {
 
         Ok(GlobalAnalysisResult {
             total_analyses: weighted_data.len(),
-            total_days_analyzed: 0,
+            total_days_analyzed: compute_total_days(&weighted_data),
             filters_applied: filters,
             global_stats: compute_global_stats(&weighted_data),
             best_pairs: compute_best_pairs(&weighted_data),
             golden_hours: compute_golden_hours(&weighted_data),
-            event_impacts: vec![],
+            event_impacts: compute_event_impacts(&filtered_archives),
             tradable_events: compute_tradable_events(&filtered_archives),
             pair_straddle_rates: compute_pair_straddle_rates(&filtered_archives),
             optimal_time_windows: compute_optimal_time_windows(&filtered_archives),

@@ -1,19 +1,29 @@
 // services/cache_service.rs - Service de caching pour résultats
+// Préparé pour utilisation future (mise en cache des résultats d'analyse)
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Entrée en cache avec timestamp d'expiration
+/// Limite par défaut du nombre d'entrées en cache
+const DEFAULT_MAX_ENTRIES: usize = 500;
+
+/// Compteur global monotone pour ordonner les insertions (résolution sub-seconde)
+static INSERTION_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+/// Entrée en cache avec timestamp d'expiration et ordre d'insertion (pour LRU)
 #[derive(Debug, Clone)]
 struct CacheEntry<T> {
     data: T,
-    expires_at: u64,  // UNIX timestamp
+    expires_at: u64,       // UNIX timestamp
+    insertion_order: u64,   // Compteur monotone pour éviction LRU
 }
 
-/// Service de cache global avec TTL (Time To Live)
+/// Service de cache global avec TTL (Time To Live) et limite d'entrées LRU
 pub struct CacheService<T: Clone> {
     cache: Arc<Mutex<HashMap<String, CacheEntry<T>>>>,
     ttl_seconds: u64,
+    max_entries: usize,
 }
 
 impl<T: Clone> CacheService<T> {
@@ -22,6 +32,16 @@ impl<T: Clone> CacheService<T> {
         Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
             ttl_seconds,
+            max_entries: DEFAULT_MAX_ENTRIES,
+        }
+    }
+
+    /// Créer un service de cache avec limite personnalisée
+    pub fn with_max_entries(ttl_seconds: u64, max_entries: usize) -> Self {
+        Self {
+            cache: Arc::new(Mutex::new(HashMap::new())),
+            ttl_seconds,
+            max_entries,
         }
     }
     
@@ -38,15 +58,35 @@ impl<T: Clone> CacheService<T> {
         None
     }
     
-    /// Mettre une valeur en cache
+    /// Mettre une valeur en cache. Évince l'entrée la plus ancienne si max atteint.
     pub fn set(&self, key: String, value: T) {
-        let expires_at = current_unix_timestamp() + self.ttl_seconds;
+        let now = current_unix_timestamp();
+        let expires_at = now + self.ttl_seconds;
+        let order = INSERTION_COUNTER.fetch_add(1, Ordering::Relaxed);
         let entry = CacheEntry {
             data: value,
             expires_at,
+            insertion_order: order,
         };
         
         if let Ok(mut cache) = self.cache.lock() {
+            // Éviction LRU si la limite est atteinte (et ce n'est pas une mise à jour)
+            if cache.len() >= self.max_entries && !cache.contains_key(&key) {
+                // D'abord supprimer les expirés
+                cache.retain(|_, e| e.expires_at > now);
+
+                // Si toujours plein, évincer le plus ancien (plus petit insertion_order)
+                if cache.len() >= self.max_entries {
+                    if let Some(oldest_key) = cache
+                        .iter()
+                        .min_by_key(|(_, e)| e.insertion_order)
+                        .map(|(k, _)| k.clone())
+                    {
+                        cache.remove(&oldest_key);
+                    }
+                }
+            }
+
             cache.insert(key, entry);
         }
     }
@@ -98,5 +138,33 @@ mod tests {
         
         thread::sleep(Duration::from_millis(1100));
         assert_eq!(cache.get("key1"), None);
+    }
+
+    #[test]
+    fn test_cache_lru_eviction() {
+        let cache = CacheService::with_max_entries(60, 3); // max 3 entrées
+
+        cache.set("a".to_string(), 1);
+        cache.set("b".to_string(), 2);
+        cache.set("c".to_string(), 3);
+        // Cache plein (3/3), ajout d'une 4e → évince la plus ancienne ("a")
+        cache.set("d".to_string(), 4);
+
+        assert_eq!(cache.get("a"), None);    // évincée
+        assert_eq!(cache.get("b"), Some(2)); // conservée
+        assert_eq!(cache.get("d"), Some(4)); // nouvelle
+    }
+
+    #[test]
+    fn test_cache_update_no_eviction() {
+        let cache = CacheService::with_max_entries(60, 2);
+
+        cache.set("a".to_string(), 1);
+        cache.set("b".to_string(), 2);
+        // Mettre à jour "a" ne doit pas évincer
+        cache.set("a".to_string(), 10);
+
+        assert_eq!(cache.get("a"), Some(10));
+        assert_eq!(cache.get("b"), Some(2));
     }
 }

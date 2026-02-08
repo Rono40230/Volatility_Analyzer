@@ -1,4 +1,6 @@
 // db/schema.rs - Schéma Diesel minimal pour calendar_events
+// NOTE: Le vrai schéma complet est dans src/schema.rs (généré par diesel print-schema)
+// Ce fichier existe uniquement car certains modules importent depuis db::schema
 
 diesel::table! {
     calendar_events (id) {
@@ -13,18 +15,3 @@ diesel::table! {
         created_at -> Timestamp,
     }
 }
-
-diesel::table! {
-    ohlc_data (id) {
-        id -> Integer,
-        symbol -> Text,
-        timestamp -> BigInt,
-        open -> Double,
-        high -> Double,
-        low -> Double,
-        close -> Double,
-        volume -> Double,
-    }
-}
-
-diesel::allow_tables_to_appear_in_same_query!(calendar_events, ohlc_data,);

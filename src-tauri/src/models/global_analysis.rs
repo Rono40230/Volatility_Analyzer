@@ -71,9 +71,9 @@ pub struct StraddleSuccessRate {
     pub pair: String,
     pub total_events: usize,
     pub directional_move_rate: f64, // % de mouvements directionnels clairs
-    pub whipsaw_rate: f64,          // % de mouvements erratiques (tueur de straddle)
+    pub non_event_rate: f64,        // % d'événements à faible volatilité (non-événements)
     pub avg_volatility: f64,        // Volatilité moyenne sur tous les événements
-    pub straddle_score: f64, // Score composite (0-100) : directional_move_rate - whipsaw_rate
+    pub straddle_score: f64, // Score composite (0-100) : directional_move_rate - non_event_rate
     pub top_events: Vec<String>, // Top 3 événements les plus impactants pour cette paire
 }
 

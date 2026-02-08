@@ -1,13 +1,29 @@
 <script setup lang="ts">
 import type { TradeResult } from '../../stores/backtest'
 import UnitDisplay from '../UnitDisplay.vue'
-import MetricTooltip from '../MetricTooltip.vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   trades: TradeResult[]
   unit: string
   symbol?: string
 }>()
+
+const showMfeHelp = ref(false)
+const openLogIndex = ref<number | null>(null)
+
+const activeLogs = computed(() => {
+  if (openLogIndex.value == null) return []
+  const trade = props.trades[openLogIndex.value]
+  if (!trade) return []
+  return formatLogs(trade.logs)
+})
+
+const activeHasLogs = computed(() => {
+  if (openLogIndex.value == null) return false
+  const trade = props.trades[openLogIndex.value]
+  return !!trade && trade.logs.length > 0
+})
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('fr-FR')
@@ -16,9 +32,7 @@ function formatDate(iso: string) {
 function getOutcomeClass(outcome: string) {
   switch (outcome) {
     case 'TakeProfit': return 'outcome-win'
-    case 'RecoveryWin': return 'outcome-recovery'
     case 'StopLoss': return 'outcome-loss'
-    case 'DoubleLoss': return 'outcome-loss'
     case 'Timeout': return 'outcome-neutral'
     case 'NoEntry': return 'outcome-neutral'
     default: return ''
@@ -31,9 +45,11 @@ function getSequenceIcons(trade: TradeResult): string {
   
   if (logs.includes('SL Long')) icons += 'L:🛑 '
   if (logs.includes('Timeout Long')) icons += 'L:⏰ '
+  if (logs.includes('TS Long')) icons += 'L:🧭 '
   
   if (logs.includes('SL Short')) icons += 'S:🛑 '
   if (logs.includes('Timeout Short')) icons += 'S:⏰ '
+  if (logs.includes('TS Short')) icons += 'S:🧭 '
   
   if (trade.outcome === 'TakeProfit' && !icons.includes('⏰')) {
     // Si gagnant sans timeout explicite, on suppose un TP/TS
@@ -57,6 +73,7 @@ function formatLogs(logs: string[]): string[] {
       let clean = log.replace('💥 ', '').replace('⏰ ', '')
       // Ajouter nos propres puces si besoin
       if (log.includes('SL')) return `🛑 ${clean}`
+      if (log.includes('TS')) return `🧭 ${clean}`
       if (log.includes('Timeout')) return `⏱️ ${clean}`
       return `ℹ️ ${clean}`
   })
@@ -79,20 +96,7 @@ function formatLogs(logs: string[]): string[] {
             <th>
               <div class="header-with-tooltip">
                 MFE / MAE
-                <MetricTooltip title="Excursions de Prix">
-                  <span class="info-icon">ℹ️</span>
-                  <template #definition>
-                    <p><strong>MFE (Maximum Favorable Excursion)</strong> : Le point le plus favorable atteint par le prix pendant le trade (Gain Max Latent).</p>
-                    <p><strong>MAE (Maximum Adverse Excursion)</strong> : Le point le plus défavorable atteint par le prix pendant le trade (Perte Max Latente).</p>
-                  </template>
-                  <template #interpretation>
-                    <p>Ces métriques mesurent la qualité de l'entrée et de la sortie :</p>
-                    <ul>
-                      <li>Un <strong>MFE élevé</strong> avec un gain final faible suggère une sortie tardive (TP raté ou Trailing Stop trop large).</li>
-                      <li>Un <strong>MAE élevé</strong> signifie que le trade à frôlé le Stop Loss (Entrée risquée).</li>
-                    </ul>
-                  </template>
-                </MetricTooltip>
+                <button type="button" class="info-icon" @click="showMfeHelp = true">ℹ️</button>
               </div>
             </th>
             <th>Séquence</th>
@@ -118,21 +122,52 @@ function formatLogs(logs: string[]): string[] {
             </td>
             <td class="sequence-cell">
               <span class="sequence-icons">{{ getSequenceIcons(trade) }}</span>
-              <MetricTooltip title="Journal d'exécution">
-                <span class="log-icon">📝</span>
-                <template #definition>
-                  <ul class="log-list">
-                    <li v-for="(log, i) in formatLogs(trade.logs)" :key="i">
-                      {{ log }}
-                    </li>
-                    <li v-if="trade.logs.length === 0" class="log-empty">Aucun détail disponible</li>
-                  </ul>
-                </template>
-              </MetricTooltip>
+              <button type="button" class="log-icon" @click="openLogIndex = index">📝</button>
             </td>
           </tr>
         </tbody>
       </table>
+    </div>
+
+    <div v-if="showMfeHelp" class="mini-modal-overlay" @click.self="showMfeHelp = false">
+      <div class="mini-modal">
+        <div class="mini-modal-header">
+          <div class="mini-modal-title">Excursions de Prix</div>
+          <button class="mini-modal-close" type="button" @click="showMfeHelp = false">✕</button>
+        </div>
+        <div class="mini-modal-body">
+          <div class="mini-modal-section">
+            <div class="mini-modal-section-title">Definition</div>
+            <p><strong>MFE (Maximum Favorable Excursion)</strong> : Le point le plus favorable atteint par le prix pendant le trade (Gain Max Latent).</p>
+            <p><strong>MAE (Maximum Adverse Excursion)</strong> : Le point le plus defavorable atteint par le prix pendant le trade (Perte Max Latente).</p>
+          </div>
+          <div class="mini-modal-section">
+            <div class="mini-modal-section-title">Interpretation</div>
+            <p>Ces metriques mesurent la qualite de l'entree et de la sortie :</p>
+            <ul class="mini-modal-list">
+              <li>Un <strong>MFE eleve</strong> avec un gain final faible suggere une sortie tardive (TP rate ou Trailing Stop trop large).</li>
+              <li>Un <strong>MAE eleve</strong> signifie que le trade a frole le Stop Loss (Entree risquee).</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="openLogIndex !== null" class="mini-modal-overlay" @click.self="openLogIndex = null">
+      <div class="mini-modal">
+        <div class="mini-modal-header">
+          <div class="mini-modal-title">Journal d'execution</div>
+          <button class="mini-modal-close" type="button" @click="openLogIndex = null">✕</button>
+        </div>
+        <div class="mini-modal-body">
+          <ul class="log-list">
+            <li v-for="(log, i) in activeLogs" :key="i">
+              {{ log }}
+            </li>
+            <li v-if="!activeHasLogs" class="log-empty">Aucun detail disponible</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -217,9 +252,13 @@ tr:hover {
 
 .info-icon {
   font-size: 1.1em;
-  cursor: help;
+  cursor: pointer;
   opacity: 0.6;
   transition: opacity 0.2s;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
 }
 
 .info-icon:hover {
@@ -239,10 +278,14 @@ tr:hover {
 }
 
 .log-icon {
-  cursor: help;
+  cursor: pointer;
   font-size: 1.1em;
   opacity: 0.7;
   transition: opacity 0.2s;
+  background: transparent;
+  border: none;
+  color: inherit;
+  padding: 0;
 }
 
 .log-icon:hover {
@@ -270,5 +313,69 @@ tr:hover {
 .log-empty {
   color: #a0aec0;
   font-style: italic;
+}
+
+.mini-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.mini-modal {
+  width: 420px;
+  max-width: 90vw;
+  background: #1a202c;
+  border: 1px solid #2d3748;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+.mini-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2d3748;
+}
+
+.mini-modal-title {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.mini-modal-close {
+  background: transparent;
+  border: none;
+  color: #a0aec0;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.mini-modal-body {
+  padding: 14px 16px 18px;
+  color: #e2e8f0;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.mini-modal-section {
+  margin-bottom: 12px;
+}
+
+.mini-modal-section-title {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  color: #90cdf4;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.mini-modal-list {
+  margin: 6px 0 0 16px;
 }
 </style>

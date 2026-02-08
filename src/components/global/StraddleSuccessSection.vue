@@ -17,10 +17,10 @@
             </div>
           </div>
           <div class="straddle-metric">
-            <span class="metric-label">Whipsaw Rate</span>
+            <span class="metric-label">Non-Événements</span>
             <div class="metric-bar-container">
-              <div class="metric-bar whipsaw" :style="{ width: rate.whipsaw_rate + '%' }" />
-              <span class="metric-bar-value">{{ rate.whipsaw_rate.toFixed(0) }}%</span>
+              <div class="metric-bar whipsaw" :style="{ width: rate.non_event_rate + '%' }" />
+              <span class="metric-bar-value">{{ rate.non_event_rate.toFixed(0) }}%</span>
             </div>
           </div>
           <div class="straddle-metric"><span class="metric-label">Volatilité Moyenne</span><span class="metric-value">{{ (rate.avg_volatility * 100).toFixed(2) }}%</span></div>
@@ -34,7 +34,7 @@
     </div>
     <div class="insight-box glass">
       <h4>💡 Comment Interpréter</h4>
-      <p>Le <strong>Score Straddle</strong> = Directional Move Rate - Whipsaw Rate. Un score élevé indique que la paire génère des mouvements directionnels clairs (bon pour straddle) avec peu de whipsaws (allers-retours qui tuent les positions). Privilégiez les paires avec un score > 40 et au moins 10 événements analysés.</p>
+      <p>Le <strong>Score Straddle</strong> = Directional Move Rate - Non-Événements Rate. Un score élevé indique que la paire génère des mouvements directionnels clairs (bon pour straddle) avec peu de non-événements (événements à faible volatilité). Privilégiez les paires avec un score > 40 et au moins 10 événements analysés.</p>
     </div>
   </div>
   <div v-else class="straddle-placeholder glass">
@@ -50,7 +50,7 @@ interface PairStraddleRate {
   pair: string
   straddle_score: number
   directional_move_rate: number
-  whipsaw_rate: number
+  non_event_rate: number
   avg_volatility: number
   total_events: number
   top_events: string[]

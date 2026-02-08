@@ -2,6 +2,7 @@ import type { SliceAnalysis } from '../../utils/straddleAnalysis'
 
 interface GlobalMetrics {
   mean_atr?: number
+  mean_max_true_range?: number
   mean_range?: number
   mean_volatility?: number
   mean_body_range?: number
@@ -24,21 +25,15 @@ export interface MetricConfig {
   suffix?: string
   prefix?: string
   decimals?: number
-}
-
-export function obtenirPrixEstime(analysisData: AnalysisData): number {
-  const globalMetrics = analysisData?.globalMetrics
-  if (!globalMetrics) return 100000
-  const atr = globalMetrics.mean_atr ?? 0
-  if (atr > 1000) return 100000
-  if (atr > 10) return 10000
-  return 1.0
+  definition?: string
+  usage?: string
+  scoring?: string
+  realUseCases?: string
 }
 
 export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: AnalysisData): MetricConfig[] {
   const stats = analysis.slice.stats
   const globals: GlobalMetrics = analysisData?.globalMetrics || {}
-  const price = obtenirPrixEstime(analysisData)
   const unit = (analysisData?.unit as string) || 'pts'
   const isCrypto = unit === '$'
   const suffix = isCrypto ? '' : unit
@@ -53,17 +48,25 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       excellentThreshold: 100,
       suffix,
       prefix,
-      decimals: 1
+      decimals: 1,
+      definition: 'Average True Range en points sur la periode. Mesure la volatilite exploitable pour regler SL/TP.',
+      usage: 'ATR eleve = mouvements amples et spreads proportionnellement plus faibles. ATR faible = mouvement limite, risque de faux depart.',
+      scoring: '🟢 Excellent > 100 pts | 🔵 Bon 50-100 pts | 🟡 Acceptable 20-50 pts | 🔴 Faible < 20 pts',
+      realUseCases: 'Ex: ATR 120 pts -> SL ~180, TP ~300, conditions agressives possibles.\nEx: ATR 30 pts -> SL ~45, TP ~75, risques de slippage plus eleves.'
     },
     {
       label: 'Max Spike',
       value15: stats.max_true_range ?? 0,
-      valueGlobal: 0,
+      valueGlobal: globals.mean_max_true_range ?? 0,
       goodThreshold: 50,
       excellentThreshold: 100,
       suffix,
       prefix,
-      decimals: 1
+      decimals: 1,
+      definition: 'Pic de mouvement (P95 du true range) sur le quarter. Reflete les pointes extremes possibles.',
+      usage: 'Utile pour plafonner SL/TP et calibrer les niveaux de securite (SL recovery, hard TP).',
+      scoring: '🟢 Excellent > 100 pts | 🔵 Bon 50-100 pts | 🟡 Acceptable 20-50 pts | 🔴 Faible < 20 pts',
+      realUseCases: 'Ex: Max Spike 140 pts -> SL recovery cap a ~210 pts (1.5x).\nEx: Max Spike 25 pts -> plafonner agressivite, preferer objectifs courts.'
     },
     {
       label: 'Volatilité %',
@@ -72,7 +75,11 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       goodThreshold: 15.0,
       excellentThreshold: 25.0,
       suffix: '%',
-      decimals: 1
+      decimals: 1,
+      definition: 'Volatilite relative (ATR / prix) en %. Indique l amplitude potentielle du mouvement.',
+      usage: 'Plus haut = potentiel de profit plus fort, execution plus exigeante. Trop bas = range.',
+      scoring: '🟢 Excellent > 25% | 🔵 Bon 15-25% | 🟡 Acceptable 5-15% | 🔴 Faible < 5%',
+      realUseCases: 'Ex: 22% -> straddle viable, offset normal.\nEx: 3% -> eviter, mouvement trop faible.'
     },
     {
       label: 'Body Range %',
@@ -81,7 +88,11 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       goodThreshold: 35.0,
       excellentThreshold: 45.0,
       suffix: '%',
-      decimals: 1
+      decimals: 1,
+      definition: 'Part du body dans le range total. Mesure la purete directionnelle du mouvement.',
+      usage: 'Eleve = bougies pleines (direction claire). Bas = meches longues, bruit et indecision.',
+      scoring: '🟢 Excellent > 45% | 🔵 Bon 35-45% | 🟡 Acceptable 15-35% | 🔴 Faible < 15%',
+      realUseCases: 'Ex: 52% -> impulsion propre, TP plus ambitieux.\nEx: 18% -> meches dominantes, elargir SL ou eviter.'
     },
     {
       label: 'Direction Strength',
@@ -90,7 +101,11 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       goodThreshold: 15.0,
       excellentThreshold: 20.0,
       suffix: '%',
-      decimals: 1
+      decimals: 1,
+      definition: 'Force directionnelle combinee (body + breakout). Indique la conviction du mouvement.',
+      usage: 'Elevee = tendance nette, meilleure probabilite de poursuite. Faible = indecision.',
+      scoring: '🟢 Excellent > 20% | 🔵 Bon 15-20% | 🟡 Acceptable 5-15% | 🔴 Faible < 5%',
+      realUseCases: 'Ex: 22% -> straddle directionnel agressif.\nEx: 4% -> reduire taille ou passer.'
     },
     {
       label: 'Noise Ratio',
@@ -99,7 +114,11 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       goodThreshold: 2.0,
       excellentThreshold: 1.5,
       suffix: '%',
-      decimals: 2
+      decimals: 2,
+      definition: 'Ratio bruit/signal (meches vs body). Bas = mouvement propre, haut = erratique.',
+      usage: 'Plus bas est meilleur. Un ratio eleve implique plus de faux signaux et SL plus larges.',
+      scoring: '🟢 Excellent < 1.5 | 🔵 Bon 1.5-2.0 | 🟡 Acceptable 2.0-3.0 | 🔴 Faible > 3.0',
+      realUseCases: 'Ex: 1.7 -> execution standard.\nEx: 3.4 -> augmenter SL de 20-30% ou eviter.'
     },
     {
       label: 'Breakout %',
@@ -108,7 +127,11 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       goodThreshold: 15.0,
       excellentThreshold: 20.0,
       suffix: '%',
-      decimals: 1
+      decimals: 1,
+      definition: 'Frequence des cassures de niveau. Mesure l impulsivite du marche.',
+      usage: 'Haut = marche actif, bon pour straddle. Bas = range, nombreux faux departs.',
+      scoring: '🟢 Excellent > 15% | 🔵 Bon 10-15% | 🟡 Acceptable 5-10% | 🔴 Faible < 5%',
+      realUseCases: 'Ex: 18% -> impulsions frequentes, TP rapides possibles.\nEx: 3% -> marche endormi, mieux vaut attendre.'
     }
   ]
 }

@@ -19,6 +19,7 @@ impl MetricsAggregator {
         if stats_with_data.is_empty() {
             return GlobalMetrics {
                 mean_atr: 0.0,
+                mean_max_true_range: 0.0,
                 mean_volatility: 0.0,
                 mean_body_range: 0.0,
                 mean_noise_ratio: 0.0,
@@ -33,6 +34,11 @@ impl MetricsAggregator {
 
         GlobalMetrics {
             mean_atr: stats_with_data.iter().map(|h| h.atr_mean).sum::<f64>() / count,
+            mean_max_true_range: stats_with_data
+                .iter()
+                .map(|h| h.max_true_range)
+                .sum::<f64>()
+                / count,
             mean_volatility: stats_with_data
                 .iter()
                 .map(|h| h.volatility_mean)

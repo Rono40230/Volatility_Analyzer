@@ -1,5 +1,7 @@
 use crate::services::backtest::{BacktestConfig, BacktestEngine, BacktestResult};
 use crate::commands::retrospective_analysis::helpers::{setup_databases, load_events_by_type};
+use crate::models::trading_costs::TradingCostProfile;
+use crate::models::AssetProperties;
 use chrono::{NaiveDate, NaiveTime, Duration, Datelike, Utc};
 use crate::models::calendar_event::CalendarEvent;
 
@@ -17,7 +19,12 @@ pub async fn run_backtest(
         return Err(format!("No events found for type: {}", event_type));
     }
 
-    BacktestEngine::run(&pair, &events, config, &loader)
+    // BacktestEngine::run est CPU-intensif → spawn_blocking
+    tokio::task::spawn_blocking(move || {
+        BacktestEngine::run(&pair, &events, config, &loader)
+    })
+    .await
+    .map_err(|e| format!("Backtest task failed: {}", e))?
 }
 
 #[tauri::command]
@@ -68,5 +75,39 @@ pub async fn run_backtest_time(
         return Err("No valid weekdays found in range".to_string());
     }
 
-    BacktestEngine::run(&pair, &events, config, &loader)
+    // BacktestEngine::run est CPU-intensif → spawn_blocking
+    tokio::task::spawn_blocking(move || {
+        BacktestEngine::run(&pair, &events, config, &loader)
+    })
+    .await
+    .map_err(|e| format!("Backtest time task failed: {}", e))?
+}
+
+/// Retourne une configuration de backtest avec les paramètres recommandés
+/// basés sur le profil de coûts du symbole et les ratios standards du Straddle.
+#[tauri::command]
+pub async fn get_recommended_backtest_config(symbol: String) -> Result<BacktestConfig, String> {
+    if symbol.is_empty() {
+        return Err("Symbole requis".to_string());
+    }
+
+    let costs = TradingCostProfile::get_profile(&symbol);
+    let asset_props = AssetProperties::from_symbol(&symbol);
+
+    // SL basé sur le profil de coûts : 5× le spread moyen (conservateur)
+    // Cohérent avec StraddleParameterService (2.0-6.0× ATR → ~5× spread)
+    let stop_loss_pips = (costs.spread_avg * 5.0).ceil();
+
+    Ok(BacktestConfig {
+        stop_loss_pips,
+        tp_rr: 2.0,                    // R/R standard (cohérent avec hard_tp = 2× SL)
+        trailing_atr_coef: 1.5,        // Trailing = 1.5× ATR (standard)
+        atr_period: 14,                // Période ATR classique
+        trailing_refresh_seconds: 60,  // Rafraîchissement standard
+        timeout_minutes: 20,           // Fenêtre événementielle standard [10-30]
+        sl_recovery_pips: Some((stop_loss_pips * 1.2).ceil()), // 1.2× SL (cohérent)
+        spread_pips: costs.spread_avg,
+        slippage_pips: costs.slippage,
+        point_value: asset_props.pip_value,
+    })
 }

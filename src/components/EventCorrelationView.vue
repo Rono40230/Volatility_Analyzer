@@ -55,6 +55,7 @@
       :is-open="showAnalysisModal"
       :event-name="analysisEventName"
       :initial-pair="analysisInitialPair"
+      :calendar-id="analysisCalendarId"
       @close="showAnalysisModal = false"
     />
   </div>
@@ -83,10 +84,12 @@ const heatmapComponentRef = ref()
 const showAnalysisModal = ref(false)
 const analysisEventName = ref('')
 const analysisInitialPair = ref('')
+const analysisCalendarId = ref<number | null>(null)
 
 function openAnalysis(eventName: string, pair: string) {
   analysisEventName.value = eventName
   analysisInitialPair.value = pair
+  analysisCalendarId.value = selectedCalendarId.value
   showAnalysisModal.value = true
 }
 

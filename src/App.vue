@@ -35,20 +35,27 @@ watch(activeTab, (newTab) => {
 })
 
 onMounted(async () => {
+  console.log('[DIAG] App.vue onMounted START, activeTab =', activeTab.value)
   try {
+    console.log('[DIAG] Calling init_candle_index...')
     await invoke('init_candle_index', {})
-  } catch (error) {
-    // Non-bloquant
+    console.log('[DIAG] init_candle_index OK')
+  } catch (err) {
+    console.log('[DIAG] init_candle_index failed (non-blocking):', err)
   }
+  console.log('[DIAG] Calling loadSymbols...')
   volatilityStore.loadSymbols()
+  console.log('[DIAG] Calling restoreHeatmapFromStorage...')
   analysisStore.restoreHeatmapFromStorage()
+  console.log('[DIAG] App.vue onMounted END')
 })
 
 // Gestion des modales globales
 const showFormulasModal = ref(false)
 const showExportModal = ref(false)
-const showImportHub = ref(false)
-const showEventCorrelation = ref(false)
+const isQuarterAnalysisOpen = ref(false)
+const quarterAnalysisHour = ref<number | undefined>(undefined)
+const quarterAnalysisQuarter = ref<number | undefined>(undefined)
 
 async function handleSymbolSelected(symbol: string) {
   await volatilityStore.analyzeSymbol(symbol)
@@ -70,6 +77,12 @@ function handleOpenModal(modal: 'formulas' | 'export') {
   if (modal === 'export') showExportModal.value = true
 }
 
+function handleQuarterAnalyze(hour: number, quarter: number) {
+  quarterAnalysisHour.value = hour
+  quarterAnalysisQuarter.value = quarter
+  isQuarterAnalysisOpen.value = true
+}
+
 // Window Actions
 function minimize() { appWindow.minimize() }
 function toggleMaximize() { appWindow.toggleMaximize() }
@@ -80,21 +93,21 @@ function closeApp() { appWindow.close() }
   <div class="app-shell">
     
     <!-- === SYSTEME WINDOW (Drag + Controls) === -->
-    <!-- 1. DRAG REGION : Invisible layer on top (z-40) -->
-    <div data-tauri-drag-region @dblclick="toggleMaximize" class="drag-region"></div>
-    
-    <!-- 2. WINDOW CONTROLS : Floating buttons on top right (z-50) -->
-    <div class="window-controls">
-      <button @click="minimize" class="win-btn" title="Réduire">
-        <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
-      </button>
-      <button @click="toggleMaximize" class="win-btn" title="Agrandir">
-        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 L1,9 z" fill="none" stroke="currentColor"/></svg>
-      </button>
-      <button @click="closeApp" class="win-btn close-btn" title="Fermer">
-        <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 M9,1 L1,9" stroke="currentColor"/></svg>
-      </button>
-    </div>
+    <!-- Masqué sur Linux : decorations: true utilise la titlebar native du WM -->
+    <!-- <div class="titlebar" data-tauri-drag-region @dblclick="toggleMaximize">
+      <div class="titlebar-spacer"></div>
+      <div class="window-controls">
+        <button @click="minimize" class="win-btn" title="Réduire">
+          <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+        </button>
+        <button @click="toggleMaximize" class="win-btn" title="Agrandir">
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 L1,9 z" fill="none" stroke="currentColor"/></svg>
+        </button>
+        <button @click="closeApp" class="win-btn close-btn" title="Fermer">
+          <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1,1 L9,9 M9,1 L1,9" stroke="currentColor"/></svg>
+        </button>
+      </div>
+    </div> -->
 
     <!-- === MAIN NAVIGATION HEADER === -->
     <!-- Positionné en flux normal, mais doit être capable d'être cliqué si pas couvert totalement par Drag Region -->
@@ -119,12 +132,10 @@ function closeApp() { appWindow.close() }
     <main class="app-viewport">
       
       <!-- HOME VIEW -->
-      <template v-if="activeTab === 'home'">
-        <HomeView @navigate="switchTab" @open-modal="handleOpenModal"/>
-      </template>
+      <HomeView v-show="activeTab === 'home'" @navigate="switchTab" @open-modal="handleOpenModal"/>
 
-      <!-- WORKSPACE VIEWS -->
-      <div v-else class="workspace-container">
+      <!-- WORKSPACE VIEWS (v-show pour préserver le cache KeepAlive lors du passage par Home) -->
+      <div v-show="activeTab !== 'home'" class="workspace-container">
         <!-- Volatility Tab -->
         <template v-if="activeTab === 'volatility'">
            <div class="volatility-layout">
@@ -165,6 +176,7 @@ function closeApp() { appWindow.close() }
                   :point-value="analysisResult.point_value"
                   :unit="analysisResult.unit"
                   :symbol="analysisResult.symbol"
+                  @analyze-quarter="handleQuarterAnalyze"
                 />
              </template>
            </div>
@@ -172,10 +184,19 @@ function closeApp() { appWindow.close() }
 
         <!-- Other Tabs -->
         <template v-if="activeTab === 'calendar'"><ImportHub /></template>
-        <template v-if="activeTab === 'heatmap'"><EventCorrelationView :view-mode="'heatmap'" /></template>
-        <template v-if="activeTab === 'retrospective'"><EventCorrelationView :view-mode="'retrospective'" /></template>
+
+        <!-- KeepAlive : préserve l'état des onglets lourds lors des switches -->
+        <KeepAlive>
+          <EventCorrelationView v-if="activeTab === 'heatmap'" :view-mode="'heatmap'" key="heatmap" />
+        </KeepAlive>
+        <KeepAlive>
+          <EventCorrelationView v-if="activeTab === 'retrospective'" :view-mode="'retrospective'" key="retrospective" />
+        </KeepAlive>
+        <KeepAlive>
+          <BacktestView v-if="activeTab === 'backtest'" key="backtest" />
+        </KeepAlive>
+
         <template v-if="activeTab === 'archives'"><ArchivesView /></template>
-        <template v-if="activeTab === 'backtest'"><BacktestView /></template>
         <template v-if="activeTab === 'planning'"><PlanningView /></template>
       </div>
 
@@ -184,6 +205,13 @@ function closeApp() { appWindow.close() }
     <!-- MODALS -->
     <FormulasModal :is-open="showFormulasModal" @close="showFormulasModal = false" />
     <ExportModal :is-open="showExportModal" :current-symbol="selectedSymbolLocal" @close="showExportModal = false" />
+    <MetricsAnalysisModal
+      :is-open="isQuarterAnalysisOpen"
+      :analysis-result="analysisResult"
+      :pre-selected-hour="quarterAnalysisHour"
+      :pre-selected-quarter="quarterAnalysisQuarter"
+      @close="isQuarterAnalysisOpen = false"
+    />
     
   </div>
 </template>
@@ -205,6 +233,16 @@ body {
   color: var(--text-primary);
   overflow: hidden; /* Prevent body scroll */
 }
+
+select {
+  background: #ffffff;
+  color: #000000;
+}
+
+select option {
+  background: #ffffff;
+  color: #000000;
+}
 </style>
 
 <style scoped>
@@ -218,28 +256,23 @@ body {
   position: relative;
 }
 
-/* --- TITLE BAR SYSTEM (TagOtomatik Style) --- */
+/* --- TITLE BAR SYSTEM (Custom, safe drag region) --- */
 
-/* 1. Drag Region */
-.drag-region {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 32px;
-  z-index: 40; /* Lower than buttons, higher than content usually */
-  /* background: rgba(255,0,0,0.1); Debug only */
-}
-
-/* 2. Window Controls */
-.window-controls {
-  position: fixed;
-  top: 0;
-  right: 0;
+.titlebar {
   height: 32px;
   display: flex;
   align-items: center;
-  z-index: 50; /* Topmost */
+  justify-content: flex-end;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border-color);
+  user-select: none;
+}
+
+.titlebar-spacer { flex: 1; }
+
+.window-controls {
+  display: flex;
+  align-items: center;
   padding-right: 4px;
 }
 .win-btn {
@@ -324,6 +357,14 @@ body {
   gap: 16px;
 }
 
+.tab-panel {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 /* States */
 .state-msg { text-align: center; padding: 40px; color: var(--text-secondary); }
 .spinner { width: 30px; height: 30px; border: 3px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto 10px; }
@@ -347,8 +388,11 @@ body {
   font-size: 1rem;
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  background: #0d1117;
-  color: white;
+  background: #ffffff;
+  color: #000000;
   min-width: 200px;
+}
+.symbol-select option {
+  color: #000000;
 }
 </style>

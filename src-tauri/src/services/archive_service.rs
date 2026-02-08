@@ -1,7 +1,8 @@
 use crate::db::DbPool;
-use crate::models::archive::{Archive, NewArchive};
+use crate::models::archive::{Archive, ArchiveLight, NewArchive};
 use crate::schema::archives;
 use diesel::prelude::*;
+use diesel::RunQueryDsl;
 use tracing::error;
 
 #[derive(Clone)]
@@ -56,6 +57,26 @@ impl ArchiveService {
 
         result.map_err(|e| {
             error!("Error listing archives: {}", e);
+            e.to_string()
+        })
+    }
+
+    /// Liste légère : exclut data_json, extrait pair + event_label via json_extract().
+    pub fn list_archives_light(&self) -> Result<Vec<ArchiveLight>, String> {
+        let mut conn = self.pool.get().map_err(|e| {
+            error!("❌ Pool error (light): {}", e);
+            e.to_string()
+        })?;
+
+        diesel::sql_query(
+            "SELECT id, title, archive_type, period_start, period_end, comment, created_at, \
+             COALESCE(json_extract(data_json, '$.pair'), json_extract(data_json, '$.analysisResult.symbol'), '') as pair, \
+             COALESCE(json_extract(data_json, '$.eventLabel'), json_extract(data_json, '$.eventType'), json_extract(data_json, '$.pair'), '') as event_label \
+             FROM archives ORDER BY created_at DESC"
+        )
+        .load::<ArchiveLight>(&mut conn)
+        .map_err(|e| {
+            error!("Error listing archives light: {}", e);
             e.to_string()
         })
     }

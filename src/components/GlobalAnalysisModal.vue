@@ -6,7 +6,7 @@
   >
     <div class="modal-content">
       <div class="modal-header">
-        <h2>✨ IAnalyse Statistique - Archives</h2>
+        <h2>✨ Analyse Statistique - Archives</h2>
         <button
           class="close-button"
           @click="close"

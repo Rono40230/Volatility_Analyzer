@@ -25,7 +25,7 @@ export interface ChartProps {
 }
 
 export function useQuarterlyProfileChart(props: ChartProps) {
-  const filterMode = ref<'none' | 'all' | 'peak'>('none')
+  const filterMode = ref<'none' | 'all' | 'peak'>('peak')
 
   const isExtended = computed(() => props.profile.length > 15)
   const minMinute = computed(() => isExtended.value ? -5 : 0)
@@ -46,8 +46,12 @@ export function useQuarterlyProfileChart(props: ChartProps) {
     return [0, 5, 10, 14]
   })
 
+  const maxIndex = computed(() => maxMinute.value - minMinute.value)
+  const profileSlice = computed(() => props.profile.slice(0, maxIndex.value + 1))
+
   const maxValue = computed(() => {
-    const max = Math.max(...props.profile)
+    const values = profileSlice.value
+    const max = values.length > 0 ? Math.max(...values) : 0
     const ceiling = Math.ceil(max)
     return ceiling === 0 ? 1 : ceiling
   })
@@ -69,7 +73,7 @@ export function useQuarterlyProfileChart(props: ChartProps) {
   const obtenirY = (val: number) => obtenirYUtil(val, maxValue.value)
 
   const points = computed(() => {
-    return props.profile.map((val, idx) => {
+    return profileSlice.value.map((val, idx) => {
       const minute = minMinute.value + idx
       return `${obtenirX(minute)},${obtenirY(val)}`
     }).join(' ')
@@ -78,7 +82,7 @@ export function useQuarterlyProfileChart(props: ChartProps) {
   const areaPath = computed(() => {
     const pts = points.value
     const firstX = obtenirX(minMinute.value)
-    const lastX = obtenirX(minMinute.value + props.profile.length - 1)
+    const lastX = obtenirX(minMinute.value + profileSlice.value.length - 1)
     const bottomY = 180
     return `M ${firstX},${bottomY} L ${pts} L ${lastX},${bottomY} Z`
   })

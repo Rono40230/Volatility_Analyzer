@@ -1,5 +1,5 @@
 // composables/useMetricsModalLoad.ts - Logic for loading metrics in MetricsAnalysisModal
-import { watch, onMounted, Ref } from 'vue'
+import { watch, Ref } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import type { SliceAnalysis } from '../utils/straddleAnalysis'
 import { useMetricsAnalysisData } from './useMetricsAnalysisData'
@@ -77,7 +77,7 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
   const { offsetOptimal, winRate, whipsawAnalysis, confidence, spreadCost, analyzeStraddleMetrics } = useStraddleAnalysis()
 
   const loadAnalysis = async () => {
-    if (!props.analysisResult) return
+    if (!props.analysisResult || !isOpen.value) return
     try {
       // En mode archive, restaurer directement les données sauvegardées
       if (props.isArchiveMode && props.archivedData) {
@@ -117,9 +117,10 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
     }
   }
 
-  watch(() => props.analysisResult, loadAnalysis)
+  // Ne déclencher les calculs lourds QUE quand le modal s'ouvre
   watch(() => isOpen.value, (isOpenVal) => { if (isOpenVal) loadAnalysis() })
   watch(() => ({ hour: props.preSelectedHour, quarter: props.preSelectedQuarter }), async (newSelection) => {
+    if (!isOpen.value) return
     if (newSelection.hour !== undefined && newSelection.quarter !== undefined && props.analysisResult) {
       if (props.isArchiveMode) return
       try {
@@ -131,7 +132,6 @@ export function useMetricsModalLoad(props: ModalProps, isOpen: Ref<boolean>) {
       }
     }
   })
-  onMounted(loadAnalysis)
 
   return { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, winRate, whipsawAnalysis, confidence, spreadCost }
 }

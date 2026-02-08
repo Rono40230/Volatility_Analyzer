@@ -84,7 +84,7 @@ pub fn process_single_file(
         // Format: YYYY-MM-DD HH:MM:SS (pour compatibilité avec calendar_events)
         let dt = chrono::DateTime::<Utc>::from_timestamp(candle.timestamp, 0)
             .ok_or(format!("Invalid timestamp: {}", candle.timestamp))?;
-        let time_str = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+        let time_str = dt.to_rfc3339();
 
         let res = stmt.execute(rusqlite::params![
             &metadata.pair,

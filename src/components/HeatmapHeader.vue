@@ -46,6 +46,15 @@
     </div>
 
     <div class="header-actions">
+      <div class="limit-control">
+        <label for="heatmap-limit">Evenements:</label>
+        <select id="heatmap-limit" :value="maxEvents ?? 50" @change="onLimitChange">
+          <option :value="50">50</option>
+          <option :value="150">150</option>
+          <option :value="300">300</option>
+          <option :value="0">Tous (lent)</option>
+        </select>
+      </div>
       <button 
         class="action-button reload-button"
         title="Recharger la heatmap"
@@ -67,15 +76,25 @@
 <script setup lang="ts">
 import MetricTooltip from './MetricTooltip.vue'
 
-defineProps<{
+const props = defineProps<{
   currentFilter?: number
+  maxEvents?: number
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   'filter-click': [value: number]
+  'limit-change': [value: number]
   'reload': []
   'archive': []
 }>()
+
+function onLimitChange(event: Event) {
+  const target = event.target as HTMLSelectElement
+  const value = Number.parseInt(target.value, 10)
+  if (!Number.isNaN(value)) {
+    emit('limit-change', value)
+  }
+}
 </script>
 
 <style scoped>
@@ -120,6 +139,24 @@ defineEmits<{
 .heat-very-low { background: #da3633; }  /* Rouge foncé */
 
 .header-actions { display: flex; gap: 10px; }
+.limit-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5e0;
+  font-size: 0.85em;
+}
+.limit-control select {
+  background: #ffffff;
+  border: 1px solid #30363d;
+  color: #000000;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.9em;
+}
+.limit-control select option {
+  color: #000000;
+}
 .action-button {
   padding: 8px 16px;
   border-radius: 6px;

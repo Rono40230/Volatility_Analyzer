@@ -24,6 +24,7 @@ pub struct AnalysisResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalMetrics {
     pub mean_atr: f64,
+    pub mean_max_true_range: f64,
     pub mean_volatility: f64,
     pub mean_body_range: f64,
     pub mean_noise_ratio: f64,

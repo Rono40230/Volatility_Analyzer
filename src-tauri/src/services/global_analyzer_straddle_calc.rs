@@ -68,17 +68,19 @@ pub fn compute_pair_straddle_rates(
                 0.0
             };
 
-            let whipsaw_moves = volatilities
+            // Non-événements : volatilité < 30% de la moyenne = événement sans impact réel
+            // Ce n'est PAS un whipsaw (qui implique un faux breakout suivi d'un reversal)
+            let non_event_moves = volatilities
                 .iter()
                 .filter(|&&v| v < avg_volatility * 0.3)
                 .count();
-            let whipsaw_rate = if total_events > 0 {
-                (whipsaw_moves as f64 / total_events as f64) * 100.0
+            let non_event_rate = if total_events > 0 {
+                (non_event_moves as f64 / total_events as f64) * 100.0
             } else {
                 0.0
             };
 
-            let straddle_score = (directional_move_rate - whipsaw_rate).max(0.0);
+            let straddle_score = (directional_move_rate - non_event_rate).max(0.0);
 
             let mut event_vol_pairs: Vec<(String, f64)> = event_names
                 .iter()
@@ -96,7 +98,7 @@ pub fn compute_pair_straddle_rates(
                 pair,
                 total_events,
                 directional_move_rate,
-                whipsaw_rate,
+                non_event_rate,
                 avg_volatility,
                 straddle_score,
                 top_events,

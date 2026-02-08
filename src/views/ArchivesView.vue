@@ -222,26 +222,7 @@
                 </div>
               </div>
 
-              <div v-if="archive.archive_type === 'Backtest' && getBacktestSummary(archive)" class="backtest-summary">
-                <div class="summary-item">
-                  <span class="summary-label">P/L</span>
-                  <span class="summary-value" :class="{ 'positive': getBacktestSummary(archive).total_pips > 0, 'negative': getBacktestSummary(archive).total_pips < 0 }">
-                    {{ getBacktestSummary(archive).total_pips.toFixed(1) }} pips
-                  </span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">Win Rate</span>
-                  <span class="summary-value">{{ formatPercent(getBacktestSummary(archive).win_rate_percent) }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">PF</span>
-                  <span class="summary-value">{{ getBacktestSummary(archive).profit_factor.toFixed(2) }}</span>
-                </div>
-                <div class="summary-item">
-                  <span class="summary-label">DD</span>
-                  <span class="summary-value negative">{{ getBacktestSummary(archive).max_drawdown_pips.toFixed(1) }}</span>
-                </div>
-              </div>
+              <!-- Résumé backtest supprimé : ArchiveLight n'a pas data_json. Visible via le bouton "Voir". -->
 
               <div class="card-actions-compact">
                 <button
@@ -318,7 +299,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
-import { useArchiveStore, type Archive } from '../stores/archiveStore'
+import { useArchiveStore, type Archive, type ArchiveLight } from '../stores/archiveStore'
 import MetricsAnalysisModal from '../components/MetricsAnalysisModal.vue'
 import RetroactiveAnalysisResultsViewer from '../components/RetroactiveAnalysisResultsViewer.vue'
 import EventCorrelationHeatmap from '../components/EventCorrelationHeatmap.vue'
@@ -327,7 +308,6 @@ import MetaAnalysisModal from '../components/MetaAnalysisModal.vue'
 import HeatmapMetaModal from '../components/HeatmapMetaModal.vue'
 import VolatilityMetaModal from '../components/VolatilityMetaModal.vue'
 import ExportModal from '../components/ExportModal.vue'
-import type { Archive as ArchiveType } from '../stores/archiveStore'
 
 const archiveStore = useArchiveStore()
 const selectedArchive = ref<Archive | null>(null)
@@ -339,7 +319,7 @@ const showExportModal = ref(false)
 const viewerData = ref<any>(null)
 const showDeleteConfirmModal = ref(false)
 const showDeleteAllConfirmModal = ref(false)
-const archiveToDelete = ref<Archive | null>(null)
+const archiveToDelete = ref<ArchiveLight | null>(null)
 const selectedPair = ref<string>('all')
 const expandedTypes = ref<Set<string>>(new Set())
 
@@ -367,20 +347,11 @@ const archivesByType = computed(() => {
   
   // Filtrer selon la paire sélectionnée
   if (selectedPair.value !== 'all') {
-    filtered = filtered.filter(archive => {
-      try {
-        const data = JSON.parse(archive.data_json)
-        // Chercher la paire dans les données
-        const archivePair = data.pair || data.analysisResult?.symbol || null
-        return archivePair === selectedPair.value
-      } catch {
-        return false
-      }
-    })
+    filtered = filtered.filter(archive => archive.pair === selectedPair.value)
   }
   
   // Grouper par type
-  const grouped: Record<string, Archive[]> = {}
+  const grouped: Record<string, ArchiveLight[]> = {}
   filtered.forEach(archive => {
     const type = archive.archive_type
     if (!grouped[type]) {
@@ -429,22 +400,8 @@ function openMetaAnalysis(type: string) {
 const availablePairs = computed(() => {
   const pairs = new Set<string>()
   archiveStore.archives.forEach(archive => {
-    try {
-      const data = JSON.parse(archive.data_json)
-      // Chercher la paire dans les données de l'archive
-      if (data.pair) {
-        pairs.add(data.pair)
-      }
-      // Pour les archives Volatilité brute, chercher dans analysisResult
-      if (data.analysisResult?.symbol) {
-        pairs.add(data.analysisResult.symbol)
-      }
-      // Pour les heatmaps et corrélations
-      if (data.pairMetrics) {
-        Object.keys(data.pairMetrics).forEach(pair => pairs.add(pair))
-      }
-    } catch {
-      // Ignorer les erreurs de parsing
+    if (archive.pair) {
+      pairs.add(archive.pair)
     }
   })
   return Array.from(pairs).sort()
@@ -505,26 +462,12 @@ function formatDate(dateStr: string): string {
   })
 }
 
-function extractEventLabel(archive: Archive): string {
-  try {
-    const data = JSON.parse(archive.data_json)
-    // Chercher eventLabel en priorité, puis eventType, puis pair (paire)
-    const label = data.eventLabel || data.eventType || data.pair || ''
-    return label.trim() || 'Événement inconnu'
-  } catch (e) {
-    return 'Événement inconnu'
-  }
+function extractEventLabel(archive: ArchiveLight): string {
+  return archive.event_label?.trim() || 'Événement inconnu'
 }
 
-function getBacktestSummary(archive: Archive): any | null {
-  if (archive.archive_type !== 'Backtest') return null
-  try {
-    const data = JSON.parse(archive.data_json)
-    return data.result || null
-  } catch {
-    return null
-  }
-}
+// getBacktestSummary supprimé : ArchiveLight n'a pas data_json.
+// Le résumé backtest est visible en ouvrant l'archive (bouton "Voir").
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD' }).format(value)
@@ -534,14 +477,17 @@ function formatPercent(value: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(value / 100)
 }
 
-function viewArchive(archive: Archive) {
+async function viewArchive(archive: ArchiveLight) {
   try {
-    const data = JSON.parse(archive.data_json)
+    await archiveStore.chargerArchive(archive.id)
+    const fullArchive = archiveStore.currentArchive
+    if (!fullArchive) return
+    const data = JSON.parse(fullArchive.data_json)
     viewerData.value = data
-    selectedArchive.value = archive
+    selectedArchive.value = fullArchive
     showViewer.value = true
   } catch (e) {
-    // Erreur silencieuse - JSON invalide
+    // Erreur silencieuse - chargement ou JSON invalide
   }
 }
 
@@ -551,7 +497,7 @@ function closeViewer() {
   viewerData.value = null
 }
 
-async function confirmDelete(archive: Archive) {
+async function confirmDelete(archive: ArchiveLight) {
   archiveToDelete.value = archive
   showDeleteConfirmModal.value = true
 }

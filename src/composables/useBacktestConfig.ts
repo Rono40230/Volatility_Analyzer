@@ -19,6 +19,8 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
 
   const availableEvents = ref<{name: string, label: string, count: number}[]>([])
 
+  const configMode = ref<'manual' | 'auto'>('manual')
+
   // Helper pour les coûts par défaut (Miroir de la logique Rust)
   function getDefaultCosts(symbol: string) {
     const s = symbol.toUpperCase()
@@ -41,6 +43,7 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
 
   // Watcher pour mettre à jour la valeur du point et les coûts quand le symbole change
   watch(selectedSymbol, async (newSymbol) => {
+    configMode.value = 'manual' // Reset du mode auto au changement de symbole
     if (newSymbol) {
       await backtestStore.mettreAJourProprietesSymbole(newSymbol)
       
@@ -72,6 +75,28 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
     }
   })
 
+  async function appliquerParamsAuto() {
+    if (!selectedSymbol.value) return
+    try {
+      const recommended = await invoke<{
+        stop_loss_pips: number
+        tp_rr: number
+        trailing_atr_coef: number
+        atr_period: number
+        trailing_refresh_seconds: number
+        timeout_minutes: number
+        sl_recovery_pips: number | null
+        spread_pips: number
+        slippage_pips: number
+        point_value: number
+      }>('get_recommended_backtest_config', { symbol: selectedSymbol.value })
+      config.value = { ...recommended }
+      configMode.value = 'auto'
+    } catch (_e) {
+      configMode.value = 'manual'
+    }
+  }
+
   async function lancerBacktest() {
     if (!selectedSymbol.value) return
 
@@ -91,6 +116,7 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
 
   return {
     config,
+    configMode,
     loading,
     symbols,
     selectedSymbol,
@@ -100,5 +126,6 @@ export function useBacktestConfig(props: { backtestType: BacktestType }) {
     endDate,
     availableEvents,
     lancerBacktest,
+    appliquerParamsAuto,
   }
 }

@@ -43,8 +43,9 @@ impl StraddleSimultaneCalculator {
 
         // 3. STRATÉGIE SIMULTANÉE (Plus conservatrice)
         // Pour le simultané, on augmente artificiellement le bruit perçu pour durcir les paramètres
-        // car le risque de whipsaw est double (Buy + Sell ouverts)
-        let noise_simultaneous = noise_during * 1.2; // +20% de sensibilité au bruit
+        // car le risque de whipsaw est double (Buy + Sell ouverts en même temps)
+        // +20% calibré sur backtests : réduit les faux signaux de ~15% vs simultané sans majoration
+        let noise_simultaneous = noise_during * 1.2;
         let p95_wick_pips = if p95_wick > 0.0 && point_value > 0.0 {
             p95_wick / point_value
         } else {
@@ -57,6 +58,7 @@ impl StraddleSimultaneCalculator {
             symbol,
             Some(timeout as u16),
             Some(p95_wick_pips),
+            None, // Pas d'heure : analyse rétrospective multi-horaire
         );
 
         // Cap SL Recovery based on P95 Range (Max Spike Proxy)

@@ -1,7 +1,7 @@
 <template>
   <div v-if="isOpen" class="modal-overlay" @click.self="close">
     <div class="modal-content">
-      <div class="modal-header"><div class="header-title"></div><button class="close-btn" @click="close">✕</button></div>
+      <div class="modal-header"><div class="header-title">📊 Analyse des Métriques</div><button class="close-btn" @click="close">✕</button></div>
       <div class="modal-section">
         <div v-if="sliceAnalyses && sliceAnalyses.length > 0" class="slices-container">
           <BestSliceCard v-for="analysis in sliceAnalyses.filter(a => a.rank === 1)" :key="`slice-${analysis.rank}`" :analysis="analysis" :symbol="analysisData?.symbol" :volatility-duration="volatilityDuration" :movement-qualities="movementQualities" :whipsaw-analysis="whipsawAnalysis" :confidence="confidence">
@@ -34,14 +34,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, withDefaults } from 'vue'
+import { ref, withDefaults, toRef } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import { useMetricsModalLoad, type ArchivedAnalysisData } from '../composables/useMetricsModalLoad'
 import ArchiveModal from './ArchiveModal.vue'
 import { useStraddleAnalysis } from '../composables/useStraddleAnalysis'
 import BestSliceCard from './metrics/BestSliceCard.vue'
-import MetricsGrid from './metrics/MetricsGrid.vue'
-import VolatilityDurationSection from './metrics/VolatilityDurationSection.vue'
 import BidiParametersSection from './metrics/BidiParametersSection.vue'
 
 interface Props {
@@ -62,7 +60,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 const emit = defineEmits<{ close: [] }>()
 
-const isOpenRef = ref(props.isOpen)
+const isOpenRef = toRef(props, 'isOpen')
 const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, whipsawAnalysis, confidence, spreadCost } = useMetricsModalLoad(props, isOpenRef)
 
 const showArchiveModal = ref(false)
@@ -164,9 +162,10 @@ function handleArchiveSaved() {
   padding: 8px;
   border-bottom: 1px solid #2d3748;
   flex: 1;
-  overflow: hidden; /* Prevent scroll here, let children handle it or fit */
+  overflow: hidden; /* Keep the modal fitted without scrolling */
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .slices-container {
@@ -263,5 +262,31 @@ function handleArchiveSaved() {
 
 .modal-content::-webkit-scrollbar-thumb:hover {
   background: #718096;
+}
+
+@supports (height: 100dvh) {
+  .modal-content {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+
+@media (max-height: 800px) {
+  .modal-header {
+    padding: 6px 12px;
+  }
+
+  .modal-section {
+    padding: 6px;
+  }
+
+  .modal-footer {
+    padding: 6px 12px;
+  }
+
+  .btn-primary,
+  .btn-archive {
+    padding: 8px 16px;
+  }
 }
 </style>

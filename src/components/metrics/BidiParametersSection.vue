@@ -194,12 +194,13 @@ const placementTime = computed(() => {
 
 .cockpit-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: minmax(0, 1fr) clamp(220px, 28vw, 320px);
   gap: 8px;
   margin-top: 8px;
   align-items: stretch; /* Stretch to fill height */
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 /* Responsive adjustments */
@@ -212,6 +213,23 @@ const placementTime = computed(() => {
     max-width: 400px;
     margin: 0 auto;
     width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .cockpit-grid {
+    gap: 6px;
+  }
+
+  .col-right {
+    max-width: none;
+  }
+}
+
+@media (max-height: 800px) {
+  .cockpit-grid {
+    margin-top: 4px;
+    gap: 6px;
   }
 }
 </style>

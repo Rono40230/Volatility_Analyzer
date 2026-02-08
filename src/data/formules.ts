@@ -237,15 +237,15 @@ export const formules: Record<string, Formule> = {
 
   volume_imbalance: {
     id: 'volume_imbalance',
-    titre: 'Volume Imbalance',
+    titre: 'Direction Strength',
     categorieId: 'mouvement',
-    definition: 'Déséquilibre entre acheteurs et vendeurs (Bid/Ask). Prédit la direction du prochain mouvement.',
-    explication_litterale: 'Cette formule regarde s\'il y a plus d\'acheteurs ou plus de vendeurs. Quand beaucoup plus de gens veulent acheter que vendre, les prix montent généralement. Si beaucoup plus vendent que n\'achètent, les prix baissent. Ce déséquilibre nous dit où le marché veut aller.',
-    formule: 'Imbalance = (Bid_Volume - Ask_Volume) / Total × 100',
-    inputs: ['Bid Volume', 'Ask Volume'],
+    definition: 'Force directionnelle de la bougie : ratio body/range normalisé. Mesure la conviction du mouvement (pas un vrai volume imbalance bid/ask).',
+    explication_litterale: 'Cette formule mesure quelle part du mouvement total (high-low) est due au corps réel de la bougie (open-close). Plus le corps est grand par rapport au mouvement total, plus la direction est claire et convaincante. C\'est un proxy de la force directionnelle, pas une mesure de flux acheteurs/vendeurs.',
+    formule: 'Direction Strength = Body / Range = |Close - Open| / (High - Low)',
+    inputs: ['Open', 'High', 'Low', 'Close'],
     output: {
       type: 'float',
-      range: '-100 - 100',
+      range: '0 - 100',
       unite: '%'
     },
     exemple: 'Bid=1000, Ask=600 → Imbalance = 400/1600 × 100 = 25%',

@@ -4,8 +4,10 @@
 // prepare for later consolidation/refactor.
 
 mod implementation;
+mod trade_simulation;
 
 pub use implementation::*;
+pub use trade_simulation::*;
 
 // This module now centralizes the canonical implementations under
 // `services::straddle::...`. Legacy modules in `services/` delegate to

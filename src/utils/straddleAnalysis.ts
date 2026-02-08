@@ -1,9 +1,11 @@
 // Re-exports consolidés pour straddleAnalysis
-export { calculateStraddleScore, detectGoldenCombos, detectTraps, calculateTradingPlan, calculateTradeDuration } from './straddleCalculators'
+export { calculateStraddleScore, detectGoldenCombos, detectTraps } from './straddleCalculators'
+export { buildTradingPlanFromBackend } from './straddleCalculators.helpers'
 export type { Slice15minWithScore, GoldenCombo, DetectedTrap, TradingPlan, SliceAnalysis } from './straddleTypes'
 import type { Stats15Min } from '../stores/volatility'
 import type { Slice15minWithScore, SliceAnalysis } from './straddleTypes'
-import { calculateStraddleScore, calculateTradingPlan, calculateTradeDuration } from './straddleCalculators'
+import { calculateStraddleScore } from './straddleCalculators'
+import { buildTradingPlanFromBackend } from './straddleCalculators.helpers'
 
 export function findTop3Slices(stats15min: Stats15Min[]): Slice15minWithScore[] {
   return stats15min.map(stat => ({
@@ -19,7 +21,7 @@ export function analyzeTop3Slices(stats15min: Stats15Min[]): SliceAnalysis[] {
     slice,
     combos: [],
     traps: [],
-    tradingPlan: calculateTradingPlan(slice.stats, 100000, slice.straddleScore)
+    tradingPlan: buildTradingPlanFromBackend(slice.stats, slice.straddleScore)
   }))
 }
 

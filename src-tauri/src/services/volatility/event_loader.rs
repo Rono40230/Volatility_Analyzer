@@ -4,6 +4,7 @@
 use crate::db::DbPool;
 use crate::models::{EventInHour, HourlyStats, Result, Stats15Min, VolatilityError};
 use chrono::Timelike;
+use std::collections::HashSet;
 
 /// Service de chargement des événements économiques
 pub struct EventLoader;
@@ -48,6 +49,9 @@ impl EventLoader {
         tracing::info!("   Stats available hours (UTC): {:?}", stats_hours);
 
         let mut associated_count = 0;
+        // Dédupliquer par (event_name, impact, hour) pour éviter des centaines de milliers d'entrées
+        let mut seen: HashSet<(String, String, u8)> = HashSet::new();
+        
         for (i, event) in events.iter().enumerate() {
             // FILTRE DEVIATION (Priority 2): Ignorer les événements sans surprise (Actual == Forecast)
             if let (Some(actual), Some(forecast)) = (event.actual, event.forecast) {
@@ -74,15 +78,21 @@ impl EventLoader {
                 );
             }
 
-            if let Some(stat) = hourly_stats.iter_mut().find(|s| s.hour == event_hour) {
-                let impact_upper = event.impact.to_uppercase();
-                let normalized_impact = match impact_upper.as_str() {
-                    "H" | "HIGH" => "HIGH",
-                    "M" | "MEDIUM" => "MEDIUM",
-                    "L" | "LOW" => "LOW",
-                    _ => "NONE",
-                };
+            let impact_upper = event.impact.to_uppercase();
+            let normalized_impact = match impact_upper.as_str() {
+                "H" | "HIGH" => "HIGH",
+                "M" | "MEDIUM" => "MEDIUM",
+                "L" | "LOW" => "LOW",
+                _ => "NONE",
+            };
 
+            // Dédupliquer : un seul EventInHour par (nom, impact, heure)
+            let key = (event.description.clone(), normalized_impact.to_string(), event_hour);
+            if !seen.insert(key) {
+                continue;
+            }
+
+            if let Some(stat) = hourly_stats.iter_mut().find(|s| s.hour == event_hour) {
                 let event_in_hour = EventInHour {
                     event_name: event.description.clone(),
                     impact: normalized_impact.to_string(),
@@ -162,6 +172,8 @@ impl EventLoader {
         let mut matched_count = 0;
         let mut unmatched_count = 0;
         let mut skipped_impact_count = 0;
+        // Dédupliquer par (event_name, impact, hour, quarter)
+        let mut seen: HashSet<(String, String, u8, u8)> = HashSet::new();
 
         for (i, event) in events.iter().enumerate() {
             // FILTRE DEVIATION (Priority 2): Ignorer les événements sans surprise (Actual == Forecast)
@@ -194,6 +206,12 @@ impl EventLoader {
             let utc_hour = event.event_time.hour() as u8;
             let utc_minute = event.event_time.minute() as u8;
             let quarter = utc_minute / 15;
+
+            // Dédupliquer : un seul EventInHour par (nom, impact, heure, quarter)
+            let key = (event.description.clone(), normalized_impact.to_string(), utc_hour, quarter);
+            if !seen.insert(key) {
+                continue;
+            }
 
             // Trouver la tranche de 15 minutes correspondante
             if let Some(slot) = stats_15min

@@ -1,5 +1,5 @@
 // Composable pour gérer l'état de la heatmap et les watchers
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, onDeactivated } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAnalysisStore } from '../stores/analysisStore'
 import { useDataRefresh } from './useDataRefresh'
@@ -30,7 +30,13 @@ export function useHeatmapState(props: HeatmapStateProps) {
 
   const { onPairDataRefresh } = useDataRefresh()
   const unsubscribe = onPairDataRefresh(chargerPairesDisponibles)
+  // KeepAlive : onBeforeUnmount est appelé quand le KeepAlive est détruit (fermeture app)
+  // onDeactivated est appelé quand le composant est mis en cache (switch onglet)
   onBeforeUnmount(() => unsubscribe())
+  onDeactivated(() => {
+    // Le listener reste actif pendant le cache pour recevoir les refresh
+    // Pas d'unsubscribe ici : on veut que les données se mettent à jour en arrière-plan
+  })
 
   // Calendar change watcher
   let isFirstCalendarChange = true

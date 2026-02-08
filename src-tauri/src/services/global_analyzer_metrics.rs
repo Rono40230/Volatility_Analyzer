@@ -77,7 +77,7 @@ pub fn compute_global_stats(results: &[WeightedArchiveData]) -> GlobalStats {
         average_volatility: avg_volatility,
         average_confidence: avg_confidence,
         most_analyzed_pair,
-        most_frequent_recommendation: "Scalp Prudent".to_string(),
+        most_frequent_recommendation: compute_recommendation(avg_volatility, avg_confidence),
     }
 }
 
@@ -132,26 +132,42 @@ pub fn compute_best_pairs(results: &[WeightedArchiveData]) -> Vec<BestPair> {
 
 pub fn compute_golden_hours(results: &[WeightedArchiveData]) -> Vec<GoldenHour> {
     let mut hour_weights: HashMap<u8, f64> = HashMap::new();
+    let mut hour_volatilities: HashMap<u8, (f64, f64)> = HashMap::new(); // (sum_vol*weight, sum_weight)
     let mut total_weight = 0.0;
 
     for r in results {
+        let vol = r
+            .data
+            .global_metrics
+            .as_ref()
+            .map(|m| m.mean_volatility)
+            .unwrap_or(0.0);
         for &hour in &r.data.best_hours {
             *hour_weights.entry(hour).or_insert(0.0) += r.weight;
+            let entry = hour_volatilities.entry(hour).or_insert((0.0, 0.0));
+            entry.0 += vol * r.weight;
+            entry.1 += r.weight;
         }
         total_weight += r.weight * r.data.best_hours.len() as f64;
     }
 
     let mut golden_hours: Vec<GoldenHour> = hour_weights
         .into_iter()
-        .map(|(hour, weight)| GoldenHour {
-            hour,
-            score: weight,
-            avg_volatility: 0.0,
-            reliability: if total_weight > 0.0 {
-                (weight / total_weight) * 100.0
-            } else {
-                0.0
-            },
+        .map(|(hour, weight)| {
+            let avg_vol = hour_volatilities
+                .get(&hour)
+                .map(|(sum, w)| if *w > 0.0 { sum / w } else { 0.0 })
+                .unwrap_or(0.0);
+            GoldenHour {
+                hour,
+                score: weight,
+                avg_volatility: avg_vol,
+                reliability: if total_weight > 0.0 {
+                    (weight / total_weight) * 100.0
+                } else {
+                    0.0
+                },
+            }
         })
         .collect();
 
@@ -178,4 +194,88 @@ pub fn compute_pair_straddle_rates(
 
 pub fn compute_optimal_time_windows(archives: &[crate::models::Archive]) -> Vec<OptimalTimeWindow> {
     global_analyzer_event_analysis::compute_optimal_time_windows(archives)
+}
+
+/// Recommandation dynamique basée sur volatilité et confiance moyennes
+/// - Volatilité haute + confiance haute → "Straddle Agressif"
+/// - Volatilité haute + confiance basse → "Straddle Prudent"
+/// - Volatilité basse + confiance haute → "Scalp Prudent"
+/// - Volatilité basse + confiance basse → "Attendre / Pas de trade"
+fn compute_recommendation(avg_volatility: f64, avg_confidence: f64) -> String {
+    // Seuils calibrés : volatilité en unité brute (pips), confiance 0-100
+    let high_vol = avg_volatility > 0.5;
+    let high_conf = avg_confidence > 60.0;
+    match (high_vol, high_conf) {
+        (true, true) => "Straddle Agressif".to_string(),
+        (true, false) => "Straddle Prudent".to_string(),
+        (false, true) => "Scalp Prudent".to_string(),
+        (false, false) => "Attendre / Pas de trade".to_string(),
+    }
+}
+
+/// Calcule le nombre de jours couverts par les archives (date min → date max)
+pub fn compute_total_days(results: &[WeightedArchiveData]) -> usize {
+    if results.is_empty() {
+        return 0;
+    }
+    let min_date = results.iter().map(|r| r.created_at).min();
+    let max_date = results.iter().map(|r| r.created_at).max();
+    match (min_date, max_date) {
+        (Some(min), Some(max)) => {
+            let diff = max.signed_duration_since(min);
+            // Au minimum 1 jour si on a des données
+            std::cmp::max(diff.num_days() as usize, 1)
+        }
+        _ => 0,
+    }
+}
+
+/// Calcule les impacts d'événements depuis les archives de corrélation
+pub fn compute_event_impacts(archives: &[crate::models::Archive]) -> Vec<crate::models::EventImpact> {
+    use super::global_analyzer_types::EventImpactArchive;
+
+    let mut event_map: HashMap<String, (f64, usize, String)> = HashMap::new(); // (sum_impact, count, currency)
+
+    for archive in archives {
+        if let Ok(event_archive) = serde_json::from_str::<EventImpactArchive>(&archive.data_json) {
+            let ei = &event_archive.event_impact;
+            if ei.pair_impacts.is_empty() {
+                continue;
+            }
+            // Calculer l'impact moyen sur toutes les paires pour cet événement
+            let avg_impact: f64 = ei.pair_impacts.iter()
+                .map(|p| (p.event_volatility - p.baseline_volatility).max(0.0))
+                .sum::<f64>() / ei.pair_impacts.len() as f64;
+
+            let entry = event_map
+                .entry(ei.event_name.clone())
+                .or_insert((0.0, 0, ei.currency.clone()));
+            entry.0 += avg_impact;
+            entry.1 += 1;
+        }
+    }
+
+    let mut impacts: Vec<crate::models::EventImpact> = event_map
+        .into_iter()
+        .map(|(event_name, (sum_impact, count, currency))| {
+            let avg = if count > 0 { sum_impact / count as f64 } else { 0.0 };
+            let impact_level = if avg > 5.0 {
+                "High".to_string()
+            } else if avg > 2.0 {
+                "Medium".to_string()
+            } else {
+                "Low".to_string()
+            };
+            crate::models::EventImpact {
+                event_name,
+                currency,
+                avg_impact_pips: avg,
+                occurrence_count: count,
+                impact_level,
+            }
+        })
+        .collect();
+
+    impacts.sort_by(|a, b| b.avg_impact_pips.partial_cmp(&a.avg_impact_pips).unwrap_or(std::cmp::Ordering::Equal));
+    impacts
 }
