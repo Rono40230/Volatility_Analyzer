@@ -18,6 +18,7 @@ pub mod trading_recommendation;
 pub mod volatility_duration;
 pub mod asset_class;
 pub mod planning;
+pub mod symbol_conversion;
 pub mod trading_costs;
 
 

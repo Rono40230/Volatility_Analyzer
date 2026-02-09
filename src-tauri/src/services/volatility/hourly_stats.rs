@@ -2,7 +2,7 @@
 // Conforme .clinerules : < 150L, pas d'unwrap()
 
 use super::utils::{max, mean};
-use crate::models::{AssetProperties, Candle, HourlyStats, Result};
+use crate::models::{Candle, HourlyStats, Result};
 use crate::services::MetricsCalculator;
 use std::collections::HashMap;
 use tracing::debug;
@@ -78,8 +78,8 @@ impl<'a> HourlyStatsCalculator<'a> {
         let noise_ratios = calc.calculer_ratio_bruit();
         let tr_dist = calc.calculer_distribution_true_range()?;
 
-        // Normalisation des valeurs (Pips/Points)
-        let asset_props = AssetProperties::from_symbol(&self.symbol);
+        // Normalisation des valeurs (Pips/Points) — DB override en priorité
+        let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(&self.symbol);
 
         // Calcule les moyennes
         let raw_atr_mean = mean(&atr_values); // FIX-01: Moyenne au lieu de last()

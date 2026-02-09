@@ -7,7 +7,7 @@ use crate::models::{Candle, EventMovementQuality, VolatilityError};
 // MODULE PRIVÉ: Calculs auxiliaires
 // ============================================================================
 mod calculations {
-    use crate::models::{Candle, VolatilityError, AssetProperties};
+    use crate::models::{Candle, VolatilityError};
 
     /// Calcule l'ATR (Average True Range) sur une série de candles
     /// Délègue au module centralisé `services::atr`
@@ -29,7 +29,7 @@ mod calculations {
         reversal_window_minutes: i32,
         symbol: &str,
     ) -> Result<(f64, f64, f64), VolatilityError> {
-        let asset_props = AssetProperties::from_symbol(symbol);
+        let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
         let directional_threshold = pre_event_atr * directional_threshold_atr_ratio;
 
         let mut directional_count = 0;

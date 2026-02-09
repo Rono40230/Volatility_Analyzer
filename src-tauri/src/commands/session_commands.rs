@@ -3,7 +3,6 @@ use crate::services::session_analyzer::{
     OverlapStats, SessionAnalysisResult, SessionAnalyzer, SessionStats, TradingSession,
 };
 use crate::services::{CalendarCorrelator, CsvLoader};
-use crate::models::AssetProperties;
 use chrono::{NaiveDateTime, Timelike};
 use std::collections::HashMap;
 use tauri::State;
@@ -79,7 +78,7 @@ pub async fn analyze_sessions(
     // On utilise l'heure d'hiver par défaut pour l'affichage
     let is_winter = true;
 
-    let asset_props = AssetProperties::from_symbol(&pair_symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(&pair_symbol);
 
     for session in &sessions {
         let vols = session_volatilities
@@ -149,7 +148,7 @@ fn calculer_chevauchements(
     avg_daily_vol: f64,
     symbol: &str,
 ) -> Result<Vec<OverlapStats>, String> {
-    let asset_props = AssetProperties::from_symbol(symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
     let mut overlaps = Vec::new();
 
     // Définir les chevauchements connus

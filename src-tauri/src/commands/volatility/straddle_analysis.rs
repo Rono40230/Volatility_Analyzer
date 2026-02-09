@@ -1,5 +1,5 @@
 // commands/volatility/straddle_analysis.rs - Commands pour calculs Straddle
-use crate::models::{Candle, AssetProperties};
+use crate::models::Candle;
 use crate::services::straddle::calculer_atr_moyen;
 use crate::services::volatility::calculer_frequence_whipsaw as service_calculer_frequence_whipsaw;
 use crate::services::straddle::simulate_straddle;
@@ -55,7 +55,7 @@ pub fn calculer_offset_optimal(
 
     // 1. Récupérer les infos du symbole
     let symbol = &candles[0].symbol;
-    let asset_props = AssetProperties::from_symbol(symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
     let pip_value = asset_props.pip_value;
 
     // 2. Calculer les métriques nécessaires

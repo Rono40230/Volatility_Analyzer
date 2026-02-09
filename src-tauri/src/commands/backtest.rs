@@ -1,7 +1,6 @@
 use crate::services::backtest::{BacktestConfig, BacktestEngine, BacktestResult};
 use crate::commands::retrospective_analysis::helpers::{setup_databases, load_events_by_type};
 use crate::models::trading_costs::TradingCostProfile;
-use crate::models::AssetProperties;
 use chrono::{NaiveDate, NaiveTime, Duration, Datelike, Utc};
 use crate::models::calendar_event::CalendarEvent;
 
@@ -38,7 +37,7 @@ pub async fn run_backtest_time(
 ) -> Result<BacktestResult, String> {
     let (_, loader) = setup_databases(&state).await?;
 
-    let asset_props = AssetProperties::from_symbol(&pair);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(&pair);
     let is_crypto = asset_props.asset_type == crate::models::asset_class::AssetType::Crypto;
 
     let time = NaiveTime::parse_from_str(&time, "%H:%M")
@@ -95,7 +94,7 @@ pub async fn get_recommended_backtest_config(symbol: String) -> Result<BacktestC
     }
 
     let costs = TradingCostProfile::get_profile(&symbol);
-    let asset_props = AssetProperties::from_symbol(&symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(&symbol);
 
     // SL basé sur le profil de coûts : 5× le spread moyen (conservateur)
     // Cohérent avec StraddleParameterService (2.0-6.0× ATR → ~5× spread)

@@ -168,6 +168,33 @@ pub fn ensure_calendar_imports_table(pool: &DbPool) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
+/// Crée la table symbol_conversions si elle n'existe pas (dans pairs.db)
+/// Stocke les overrides utilisateur pour pip_value / unit / display_digits / mt5_digits
+pub fn ensure_symbol_conversions_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
+    let mut conn = pool.get()?;
+
+    diesel::sql_query(
+        "CREATE TABLE IF NOT EXISTS symbol_conversions (
+            symbol TEXT PRIMARY KEY NOT NULL,
+            pip_value REAL NOT NULL,
+            unit TEXT NOT NULL DEFAULT 'pips',
+            display_digits INTEGER NOT NULL DEFAULT 1,
+            mt5_digits INTEGER NOT NULL DEFAULT 5,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )",
+    )
+    .execute(&mut conn)?;
+
+    // Migration: ajouter mt5_digits si la colonne n'existe pas encore
+    let _ = diesel::sql_query(
+        "ALTER TABLE symbol_conversions ADD COLUMN mt5_digits INTEGER NOT NULL DEFAULT 5",
+    )
+    .execute(&mut conn);
+
+    tracing::info!("✅ Table symbol_conversions vérifiée/créée");
+    Ok(())
+}
+
 /// Crée la table archives si elle n'existe pas
 pub fn ensure_archives_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = pool.get()?;

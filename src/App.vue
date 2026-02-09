@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { useVolatilityStore } from './stores/volatility'
 import { useAnalysisStore } from './stores/analysisStore'
+import { setConversionCache } from './utils/pipConverter'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import HourlyTable from './components/HourlyTable.vue'
 import MetricsAnalysisModal from './components/MetricsAnalysisModal.vue'
@@ -38,6 +39,13 @@ onMounted(async () => {
     await invoke('init_candle_index', {})
   } catch (_err) {
     // Non-bloquant
+  }
+  // Charger le cache de conversions pip depuis la DB
+  try {
+    const conversions = await invoke<Array<{ symbol: string; pip_value: number; mt5_digits: number }>>('get_all_conversions')
+    setConversionCache(conversions)
+  } catch (_err) {
+    // Fallback sur les valeurs hardcodées
   }
   volatilityStore.loadSymbols()
   analysisStore.restoreHeatmapFromStorage()

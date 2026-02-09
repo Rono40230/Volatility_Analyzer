@@ -67,6 +67,7 @@ pub use metadata::{
 };
 pub use movement_analysis_commands::{analyze_movement_quality, get_movement_qualities};
 pub use pair_data::{import_pair_data, get_symbol_properties};
+pub use pair_data::conversion_commands::{get_all_conversions, save_conversion, delete_conversion};
 pub use planning::projection::project_stats_on_calendar;
 // Phase 7: Retrospective analysis commands (fully integrated)
 pub use retrospective_analysis::{analyze_decay_profile, analyze_peak_delay, get_event_types};

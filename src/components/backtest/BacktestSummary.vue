@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import MetricTooltip from '../MetricTooltip.vue'
-import UnitDisplay from '../UnitDisplay.vue'
 import type { BacktestResult } from '../../stores/backtest'
 
 const props = defineProps<{
@@ -41,19 +40,27 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
     <MetricTooltip title="Profit Factor">
       <div class="metric-card">
         <h4>Profit Factor</h4>
-        <div :class="['metric-value', pfClass]">{{ result.profit_factor.toFixed(2) }}</div>
+        <div :class="['metric-value', pfClass]">
+          {{ result.profit_factor.toFixed(2) }}
+        </div>
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Ratio : (Somme des Gains Bruts) / (Somme des Pertes Brutes).</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            Ratio : (Somme des Gains Bruts) / (Somme des Pertes Brutes).
+          </div>
         </div>
       </template>
       <template #usage>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="tooltip-section-title">
+            📊 Interprétation
+          </div>
           <div class="tooltip-section-text">
-            <strong>< 1.0</strong> : Stratégie perdante.<br>
+            <strong>&lt; 1.0</strong> : Stratégie perdante.<br>
             <strong>1.0 - 1.5</strong> : Rentable mais fragile.<br>
             <strong>1.5 - 2.0</strong> : Bonne stratégie.<br>
             <strong>> 2.0</strong> : Excellente stratégie.
@@ -79,22 +86,30 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
     <MetricTooltip title="Win Rate">
       <div class="metric-card">
         <h4>Win Rate</h4>
-        <div :class="['metric-value', winRateClass]">{{ result.win_rate_percent.toFixed(1) }}%</div>
+        <div :class="['metric-value', winRateClass]">
+          {{ result.win_rate_percent.toFixed(1) }}%
+        </div>
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Pourcentage de trades gagnants par rapport au nombre total de trades.</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            Pourcentage de trades gagnants par rapport au nombre total de trades.
+          </div>
         </div>
       </template>
       <template #usage>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="tooltip-section-title">
+            📊 Interprétation
+          </div>
           <div class="tooltip-section-text">
             Un Win Rate faible n'est pas grave si le Profit Factor est élevé (stratégie de type "Sniper").
             <br><br>
             <strong>> 50%</strong> : Majorité de gains.<br>
-            <strong>< 40%</strong> : Typique des stratégies de suivi de tendance (beaucoup de petites pertes, quelques gros gains).
+            <strong>&lt; 40%</strong> : Typique des stratégies de suivi de tendance (beaucoup de petites pertes, quelques gros gains).
           </div>
         </div>
       </template>
@@ -109,8 +124,12 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Résultat net cumulé en pips (Gains - Pertes).</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            Résultat net cumulé en pips (Gains - Pertes).
+          </div>
         </div>
       </template>
     </MetricTooltip>
@@ -124,8 +143,12 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Moyenne des gains/pertes par trade (Espérance mathématique).</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            Moyenne des gains/pertes par trade (Espérance mathématique).
+          </div>
         </div>
       </template>
     </MetricTooltip>
@@ -133,12 +156,18 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
     <MetricTooltip title="Max Drawdown">
       <div class="metric-card">
         <h4>Max Drawdown</h4>
-        <div :class="['metric-value', ddClass]">-{{ result.max_drawdown_pips.toFixed(1) }}</div>
+        <div :class="['metric-value', ddClass]">
+          -{{ result.max_drawdown_pips.toFixed(1) }}
+        </div>
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">La plus grande baisse cumulée du capital (du plus haut sommet au plus bas creux).</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            La plus grande baisse cumulée du capital (du plus haut sommet au plus bas creux).
+          </div>
         </div>
       </template>
     </MetricTooltip>
@@ -152,13 +181,19 @@ const tpClass = computed(() => tpCount.value > 0 ? 'metric-excellent' : 'metric-
       </div>
       <template #definition>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📖 Définition</div>
-          <div class="tooltip-section-text">Nombre de trades ayant atteint le Take Profit sur la période backtestée.</div>
+          <div class="tooltip-section-title">
+            📖 Définition
+          </div>
+          <div class="tooltip-section-text">
+            Nombre de trades ayant atteint le Take Profit sur la période backtestée.
+          </div>
         </div>
       </template>
       <template #usage>
         <div class="tooltip-section">
-          <div class="tooltip-section-title">📊 Interprétation</div>
+          <div class="tooltip-section-title">
+            📊 Interprétation
+          </div>
           <div class="tooltip-section-text">
             Mesure la capacité du setup à atteindre la cible de profit.<br><br>
             <strong>Ratio TP/Total élevé</strong> : Le mouvement directionnel est suffisant pour atteindre le TP.<br>

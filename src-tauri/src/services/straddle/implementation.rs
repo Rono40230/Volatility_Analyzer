@@ -78,7 +78,6 @@ pub fn simulate_straddle(
     use crate::services::straddle_adjustments::AdjustedMetrics;
     use crate::services::straddle_types::{StraddleSimulationResult, WhipsawDetail};
     use crate::services::pair_data::symbol_properties::normalize_to_pips;
-    use crate::models::AssetProperties;
 
     if candles.is_empty() {
         return StraddleSimulationResult {
@@ -126,7 +125,7 @@ pub fn simulate_straddle(
     let mut total_pnl_net = 0.0;
     let mut sum_offsets_used = 0.0;
 
-    let asset_props = AssetProperties::from_symbol(symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
 
     let window_size = 5usize;
     let mut wicks_history: Vec<Vec<f64>> = Vec::new();

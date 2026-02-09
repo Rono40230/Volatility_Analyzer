@@ -1,5 +1,4 @@
 use chrono::{Datelike, DateTime, NaiveDateTime, Utc};
-use crate::models::AssetProperties;
 
 /// Helper pour afficher une date en français
 pub fn format_date_fr(date_str: &str) -> String {
@@ -86,8 +85,7 @@ pub fn parse_sqlite_datetime(s: &str) -> Result<NaiveDateTime, String> {
     ))
 }
 
-/// Retourne la valeur d'1 pip pour une paire donnée
+/// Retourne la valeur d'1 pip pour une paire donnée (DB override en priorité)
 pub fn get_pip_value(symbol: &str) -> f64 {
-    let props = AssetProperties::from_symbol(symbol);
-    props.pip_value
+    crate::services::pair_data::symbol_properties::get_point_value(symbol)
 }

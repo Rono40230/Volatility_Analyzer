@@ -17,7 +17,7 @@ pub fn calculer_frequence_whipsaw(candles: &[Candle], offset_pips: f64, symbol: 
         return WhipsawAnalysis::default();
     }
 
-    let asset_props = crate::models::AssetProperties::from_symbol(symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
 
     info!("🔄 Calculant whipsaw frequency (mode réaliste) pour {}", symbol);
     info!("   - Offset: {} pips", offset_pips);

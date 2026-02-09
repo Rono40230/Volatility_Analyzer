@@ -6,6 +6,7 @@ mod datetime_parser;
 mod formats;
 mod metadata;
 pub mod symbol_properties;
+pub mod conversion_db;
 mod types;
 
 // Ré-exports publics

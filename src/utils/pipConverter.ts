@@ -4,41 +4,71 @@
  * MT5 utilise nativement les "points" (unité minimale).
  * Mais les traders parlent en "pips" (unité de cotation).
  * 
- * Tableau de conversion (basé sur norme MT5 officielle):
- * - Forex 5 décimales (EURUSD, GBPUSD, USDCAD, EURJPY, CADJPY, etc): 1 pip = 10 points
- * - Or (XAUUSD, XAUJPY): 1 pip = 10 points
- * - Argent (XAGUSD): 1 pip = 1000 points
- * - Indices (USA500IDXUSD): 1 pip = 1 point
- * - Crypto (BTCUSD, ETHUSD): 1 pip = 1 point
+ * Les valeurs sont chargées dynamiquement depuis la DB (ConversionTable).
+ * Fallback sur les valeurs par défaut si le cache n'est pas alimenté.
  */
+
+/** Cache des conversions chargées depuis la DB */
+interface ConversionCacheEntry {
+  pip_value: number
+  mt5_digits: number
+}
+
+const conversionCache = new Map<string, ConversionCacheEntry>()
+
+/**
+ * Alimenter le cache de conversions depuis les données DB
+ * Appelé au démarrage de l'app et après chaque modification du ConversionTable
+ */
+export function setConversionCache(entries: Array<{ symbol: string; pip_value: number; mt5_digits: number }>): void {
+  conversionCache.clear()
+  for (const entry of entries) {
+    conversionCache.set(entry.symbol.toUpperCase(), {
+      pip_value: entry.pip_value,
+      mt5_digits: entry.mt5_digits,
+    })
+  }
+}
 
 type SymbolType = 'forex' | 'gold' | 'silver' | 'indices' | 'crypto'
 
 /**
- * Déterminer le type de symbole pour obtenir le bon ratio points→pips
+ * Déterminer le type de symbole (fallback uniquement)
  */
 function obtenirTypeSymbole(symbol: string): SymbolType {
   if (symbol.includes('XAU')) return 'gold'
   if (symbol.includes('XAG')) return 'silver'
   if (symbol.includes('US30') || symbol.includes('DE30') || symbol.includes('NAS100') || symbol.includes('SPX500') || symbol.includes('USA500') || symbol.includes('DEUIDX') || symbol.includes('USAIDX') || symbol.includes('USATEC')) return 'indices'
   if (symbol.includes('BTC') || symbol.includes('ETH')) return 'crypto'
-  return 'forex'  // Tous les autres: EURUSD, USDJPY, CADJPY, EURJPY, etc
+  return 'forex'
+}
+
+/**
+ * Fallback hardcodé (utilisé uniquement si le cache est vide)
+ */
+function obtenirPointsParPipFallback(symbol: string): number {
+  const type = obtenirTypeSymbole(symbol)
+  switch (type) {
+    case 'gold':     return 10
+    case 'silver':   return 1000
+    case 'indices':  return 1
+    case 'crypto':   return 1
+    default:         return 10
+  }
 }
 
 /**
  * Obtenir le nombre de points par pip
- * points_per_pip = nombre de points qu'il faut pour faire 1 pip
+ * Formule: points_per_pip = pip_value × 10^mt5_digits
+ * Lit depuis le cache DB, sinon fallback hardcodé
  */
 export function obtenirPointsParPip(symbol: string): number {
-  const type = obtenirTypeSymbole(symbol)
-  
-  switch (type) {
-    case 'gold':     return 10        // 1 pip = 10 points
-    case 'silver':   return 1000      // 1 pip = 1000 points
-    case 'indices':  return 1         // 1 pip = 1 point
-    case 'crypto':   return 1         // 1 pip = 1 point
-    default:         return 10        // Forex (tous): 1 pip = 10 points
+  const cached = conversionCache.get(symbol.toUpperCase())
+  if (cached) {
+    const result = cached.pip_value * Math.pow(10, cached.mt5_digits)
+    if (result > 0) return Math.round(result)
   }
+  return obtenirPointsParPipFallback(symbol)
 }
 
 /**

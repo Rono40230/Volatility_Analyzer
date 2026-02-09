@@ -2,6 +2,7 @@
 // Conforme .clinerules : < 150L
 
 use serde::{Deserialize, Serialize};
+use crate::models::symbol_conversion::SymbolConversion;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum AssetType {
@@ -21,6 +22,7 @@ pub struct AssetProperties {
     pub pip_value: f64, // Valeur d'un "pip" ou "point" standardisé
     pub unit: String,   // "pips", "points", "$"
     pub display_digits: usize,
+    pub mt5_digits: usize, // Nombre de décimales dans MT5 (détermine le point_size)
 }
 
 impl AssetProperties {
@@ -32,7 +34,8 @@ impl AssetProperties {
                 asset_type: AssetType::ForexJpy,
                 pip_value: 0.01,
                 unit: "pips".to_string(),
-                display_digits: 1,
+                display_digits: 2,
+                mt5_digits: 3,
             }
         } else if s.contains("XAU") || s.contains("GOLD") {
             AssetProperties {
@@ -40,6 +43,7 @@ impl AssetProperties {
                 pip_value: 0.1, // Convention standard Gold: 0.1$ = 1 pip
                 unit: "pips".to_string(),
                 display_digits: 1,
+                mt5_digits: 2,
             }
         } else if s.contains("XAG") || s.contains("SILVER") {
             AssetProperties {
@@ -47,29 +51,33 @@ impl AssetProperties {
                 pip_value: 0.01, // Convention Silver
                 unit: "pips".to_string(),
                 display_digits: 2,
+                mt5_digits: 3,
             }
         } else if s.contains("BTC") || s.contains("ETH") || s.contains("CRYPTO") || s.contains("SOL") || s.contains("BNB") || s.contains("XRP") || s.contains("ADA") || s.contains("DOT")
             || s.contains("LTC") || s.contains("BCH") || s.contains("DOGE") || s.contains("SHIB") || s.contains("LINK") || s.contains("MATIC") || s.contains("AVAX") || s.contains("UNI") || s.contains("XLM") || s.contains("TRX") || s.contains("ATOM") || s.contains("NEAR") || s.contains("PEPE")
         {
             AssetProperties {
                 asset_type: AssetType::Crypto,
-                pip_value: 1.0, // Crypto: 1$ = 1 point
-                unit: "pts".to_string(),
+                pip_value: 1.0, // Crypto: 1$ = 1 pip
+                unit: "pips".to_string(),
                 display_digits: 0,
+                mt5_digits: 2,
             }
         } else if s.contains("OIL") || s.contains("WTI") || s.contains("BRENT") || s.contains("CRUDE") || s.contains("XPT") || s.contains("XPD") {
             AssetProperties {
                 asset_type: AssetType::Commodity,
                 pip_value: 0.01, // Pétrole/Platine: souvent 0.01
-                unit: "pts".to_string(),
+                unit: "pips".to_string(),
                 display_digits: 2,
+                mt5_digits: 3,
             }
         } else if s.contains("NGAS") {
             AssetProperties {
                 asset_type: AssetType::Commodity,
                 pip_value: 0.001, // Gaz Naturel: souvent 0.001
-                unit: "pts".to_string(),
+                unit: "pips".to_string(),
                 display_digits: 3,
+                mt5_digits: 4,
             }
         } else if s.contains("IDX") || s.contains("US30") || s.contains("DAX") || s.contains("NAS")
             || s.contains("GER") || s.contains("SPX") || s.contains("US100") || s.contains("US500")
@@ -82,9 +90,10 @@ impl AssetProperties {
         {
             AssetProperties {
                 asset_type: AssetType::Index,
-                pip_value: 1.0, // Indices: on parle en points
-                unit: "pts".to_string(),
-                display_digits: 1,
+                pip_value: 1.0, // Indices: 1 pip = 1 point
+                unit: "pips".to_string(),
+                display_digits: 0,
+                mt5_digits: 1,
             }
         } else if s.contains("HUF") || s.contains("CZK") {
             // Forex Exotique (souvent 2 décimales comme JPY)
@@ -93,6 +102,7 @@ impl AssetProperties {
                 pip_value: 0.01,
                 unit: "pips".to_string(),
                 display_digits: 2,
+                mt5_digits: 3,
             }
         } else {
             // Par défaut: Forex Major (5 digits)
@@ -100,8 +110,27 @@ impl AssetProperties {
                 asset_type: AssetType::ForexMajor,
                 pip_value: 0.0001,
                 unit: "pips".to_string(),
-                display_digits: 1,
+                display_digits: 4,
+                mt5_digits: 5,
             }
+        }
+    }
+
+    /// Crée les propriétés depuis un override DB (si fourni), sinon fallback hardcodé
+    pub fn from_symbol_with_override(symbol: &str, db_override: Option<SymbolConversion>) -> Self {
+        match db_override {
+            Some(conv) => {
+                // Déterminer le type d'actif depuis le hardcodé (pour la cohérence)
+                let base = Self::from_symbol(symbol);
+                AssetProperties {
+                    asset_type: base.asset_type,
+                    pip_value: conv.pip_value,
+                    unit: conv.unit,
+                    display_digits: conv.display_digits as usize,
+                    mt5_digits: conv.mt5_digits as usize,
+                }
+            }
+            None => Self::from_symbol(symbol),
         }
     }
 

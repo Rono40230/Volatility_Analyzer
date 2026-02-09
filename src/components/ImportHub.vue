@@ -2,31 +2,73 @@
   <div class="import-hub">
     <div class="sections-container">
       <CalendarImportSection
-        :calendars-metadata="calendarsMetadata" :loading="loadingCalendars" :active-calendar-id="activeCalendarId"
-        @import="importCalendars" @delete="deleteCalendar" @set-active="setActiveCalendar" @clean-rare="showRareEventsModal = true"
+        :calendars-metadata="calendarsMetadata"
+        :loading="loadingCalendars"
+        :active-calendar-id="activeCalendarId"
+        @import="importCalendars"
+        @delete="deleteCalendar"
+        @set-active="setActiveCalendar"
+        @clean-rare="showRareEventsModal = true"
       />
       <PairImportSection
-        :pairs-metadata="pairsMetadata" :loading="loadingPairs"
-        @import="importPairs" @delete="deletePair"
+        :pairs-metadata="pairsMetadata"
+        :loading="loadingPairs"
+        @import="importPairs"
+        @delete="deletePair"
       />
     </div>
 
-    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
+    <div class="conversion-btn-wrapper">
+      <button
+        class="btn-conversion"
+        @click="showConversionTable = true"
+      >
+        📊 Table de Conversion Points/Pips
+      </button>
+    </div>
+
+    <div
+      v-if="showDeleteConfirm"
+      class="modal-overlay"
+      @click.self="showDeleteConfirm = false"
+    >
       <div class="confirmation-box">
-        <div class="warning-icon">⚠️</div>
+        <div class="warning-icon">
+          ⚠️
+        </div>
         <h3>Confirmation</h3>
         <p>{{ deleteMessage }}</p>
-        <p class="warning-text">Cette action est irréversible.</p>
+        <p class="warning-text">
+          Cette action est irréversible.
+        </p>
         <div class="modal-buttons">
-          <button class="btn-secondary" @click="showDeleteConfirm = false">Annuler</button>
-          <button class="btn-danger" @click="confirmDelete">Confirmer la suppression</button>
+          <button
+            class="btn-secondary"
+            @click="showDeleteConfirm = false"
+          >
+            Annuler
+          </button>
+          <button
+            class="btn-danger"
+            @click="confirmDelete"
+          >
+            Confirmer la suppression
+          </button>
         </div>
       </div>
     </div>
 
     <RareEventsModal
-      v-if="showRareEventsModal" :min-occurrences="5" :calendar-id="activeCalendarId"
-      @close="showRareEventsModal = false" @deleted="loadMetadata"
+      v-if="showRareEventsModal"
+      :min-occurrences="5"
+      :calendar-id="activeCalendarId"
+      @close="showRareEventsModal = false"
+      @deleted="loadMetadata"
+    />
+
+    <ConversionTable
+      v-if="showConversionTable"
+      @close="showConversionTable = false"
     />
   </div>
 </template>
@@ -39,6 +81,7 @@ import { useVolatilityStore } from '../stores/volatility'
 import CalendarImportSection from './CalendarImportSection.vue'
 import PairImportSection from './PairImportSection.vue'
 import RareEventsModal from './RareEventsModal.vue'
+import ConversionTable from './ConversionTable.vue'
 
 interface CalendarMetadata { id: number; name: string; event_count: number; start_date?: string; end_date?: string }
 interface PairMetadataInfo { symbol: string; timeframe: string; row_count: number; last_updated: string; last_imported_file: string; quality_score: number; candle_count?: number; start_date?: string; end_date?: string; id?: number }
@@ -50,6 +93,7 @@ const loadingCalendars = ref(false)
 const loadingPairs = ref(false)
 const showDeleteConfirm = ref(false)
 const showRareEventsModal = ref(false)
+const showConversionTable = ref(false)
 const deleteMessage = ref('')
 const deleteType = ref<'calendar' | 'pair'>('calendar')
 const deleteId = ref(0)
@@ -140,6 +184,9 @@ async function confirmDelete() {
 .btn-danger:hover { background: #dc2626; }
 .btn-secondary { padding: 10px 20px; background: #334155; color: #e2e8f0; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
 .btn-secondary:hover { background: #475569; }
+.conversion-btn-wrapper { margin-top: 20px; text-align: center; }
+.btn-conversion { padding: 10px 24px; background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.95rem; transition: all 0.2s; box-shadow: 0 2px 8px rgba(108, 92, 231, 0.3); }
+.btn-conversion:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108, 92, 231, 0.4); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 </style>

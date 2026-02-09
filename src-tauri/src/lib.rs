@@ -144,6 +144,15 @@ pub fn run() {
 
     tracing::info!("✅ Tables paires vérifiées/créées");
 
+    // Crée la table symbol_conversions si elle n'existe pas
+    if let Err(e) = db::ensure_symbol_conversions_table(&pairs_pool) {
+        tracing::error!("❌ ERREUR: Impossible de créer la table symbol_conversions: {}", e);
+        std::process::exit(1);
+    }
+
+    // Enregistre le pool pour les conversions dynamiques
+    services::pair_data::symbol_properties::set_pairs_pool(pairs_pool.clone());
+
     let pair_state = pair_data::PairDataState {
         pool: Mutex::new(Some(pairs_pool)),
     };
@@ -206,6 +215,9 @@ pub fn run() {
             // Pair data import commands (Phase 4)
             import_pair_data,
             get_symbol_properties, // NEW: Récupérer point_value et pip_value
+            get_all_conversions,   // NEW: Toutes les conversions (hardcodé + DB)
+            save_conversion,       // NEW: Sauvegarder une conversion personnalisée
+            delete_conversion,     // NEW: Supprimer une conversion (retour au hardcodé)
             clean_csv_files,        // Nouveau: nettoyage CSV européens
             import_and_clean_files, // Nouveau: import unifié (clean + import)
             // Session analysis commands (Phase 5)

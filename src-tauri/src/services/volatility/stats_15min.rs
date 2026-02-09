@@ -137,12 +137,12 @@ impl<'a> Stats15MinCalculator<'a> {
         let noise_ratios = calc.calculer_ratio_bruit();
         let tr_dist = calc.calculer_distribution_true_range()?;
 
-        // Normalisation des valeurs (Pips/Points)
+        // Normalisation des valeurs (Pips/Points) — DB override en priorité
         let symbol = candles
             .first()
             .map(|c| c.symbol.as_str())
             .unwrap_or("EURUSD");
-        let asset_props = AssetProperties::from_symbol(symbol);
+        let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
 
         // Calcule les moyennes
         let raw_atr_mean = mean(&atr_values); // FIX-01: Moyenne au lieu de last()

@@ -1,4 +1,5 @@
 mod processor;
+pub mod conversion_commands;
 
 use crate::db::DbPool;
 pub use processor::process_single_file;

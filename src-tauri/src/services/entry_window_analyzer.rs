@@ -1,7 +1,7 @@
 // services/entry_window_analyzer.rs - Analyse de fenêtre d'entrée optimale
 // Trouvez le meilleur timing pour entrer avant un événement
 
-use crate::models::{Candle, EntryOffsetMetrics, EntryWindowAnalysisResult, Result, AssetProperties};
+use crate::models::{Candle, EntryOffsetMetrics, EntryWindowAnalysisResult, Result};
 use chrono::{DateTime, Duration, Utc};
 use tracing::info;
 
@@ -105,7 +105,7 @@ impl EntryWindowAnalyzer {
         offset: i32,
         symbol: &str,
     ) -> EntryOffsetMetrics {
-        let asset_props = AssetProperties::from_symbol(symbol);
+        let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
         let mut winning = 0;
         let mut losing = 0;
         let mut total_pips_gained = 0.0;

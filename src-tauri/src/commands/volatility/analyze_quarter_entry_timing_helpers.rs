@@ -68,7 +68,7 @@ pub fn calculer_metriques_minute(
     }
 
     let symbol = candles[0].symbol.as_str();
-    let asset_props = crate::models::AssetProperties::from_symbol(symbol);
+    let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
 
     let mut atr_sum = 0.0;
     let mut range_sum = 0.0;

@@ -10,7 +10,7 @@ use super::stats_15min::Stats15MinCalculator;
 use super::volatility_heuristics::VolatilityHeuristics;
 use crate::db::DbPool;
 use crate::models::{
-    AnalysisResult, AssetProperties, Candle, Result, RiskLevel, TradingRecommendation,
+    AnalysisResult, Candle, Result, RiskLevel, TradingRecommendation,
     VolatilityError,
 };
 use chrono::Datelike;
@@ -136,8 +136,8 @@ impl VolatilityAnalyzer {
         let calculator_15min = Stats15MinCalculator::new(&self.candles);
         let mut stats_15min = calculator_15min.calculer()?;
 
-        // Détection des propriétés de l'actif (Unités, Pips)
-        let asset_props = AssetProperties::from_symbol(symbol);
+        // Détection des propriétés de l'actif (Unités, Pips) — DB override en priorité
+        let asset_props = crate::services::pair_data::symbol_properties::get_asset_properties(symbol);
         let point_value = asset_props.pip_value;
         let unit = asset_props.unit;
 

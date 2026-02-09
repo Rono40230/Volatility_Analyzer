@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 pub type DbPool = Arc<r2d2::Pool<ConnectionManager<SqliteConnection>>>;
 
-pub use migrations::{ensure_calendar_imports_table, ensure_calendar_table, ensure_pair_tables, ensure_archives_table};
+pub use migrations::{ensure_calendar_imports_table, ensure_calendar_table, ensure_pair_tables, ensure_archives_table, ensure_symbol_conversions_table};
 
 /// Initialise un pool de connexions SQLite optimisé
 ///
