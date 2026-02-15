@@ -36,12 +36,18 @@
               :style="{ cursor: shouldShowValue(eventType.name, pair) ? 'pointer' : 'default' }"
           >
             <span v-if="shouldShowValue(eventType.name, pair)" class="cell-value">
-              {{ formaterPointsAvecPips(pair, getHeatmapValue(eventType.name, pair)) }}
+              <template v-if="conversionStore.getUnitForSymbol(pair) === '%'">
+                {{ Math.max(0.1, props.getHeatmapPercentage?.(eventType.name, pair) || 0).toFixed(1) }}%
+              </template>
+              <template v-else>
+                {{ conversionStore.pipsToDisplayValue(getHeatmapValue(eventType.name, pair), pair).toFixed(1) }} {{ conversionStore.getUnitForSymbol(pair) }}
+              </template>
               <span v-if="getCellCount(eventType.name, pair) > 0" class="cell-count" :class="{ 'low-sample': getCellCount(eventType.name, pair) < 5 }">
                 N={{ getCellCount(eventType.name, pair) }}
               </span>
             </span>
             <span v-else-if="getHeatmapValue(eventType.name, pair) === -1" class="no-data-indicator">N/A</span>
+            <span v-if="props.isArchived?.(eventType.name, pair)" class="archived-badge" title="Cette analyse est archivée">📦</span>
           </td>
         </tr>
       </tbody>
@@ -51,7 +57,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { formaterPointsAvecPips } from '../utils/pipConverter'
+import { useConversionStore } from '../stores/conversionStore'
+
+const conversionStore = useConversionStore()
 
 interface EventTypeEntry {
   name: string
@@ -64,11 +72,38 @@ const props = defineProps<{
   sortedEventTypes: EventTypeEntry[]
   minVolatility: number
   getHeatmapValue: (e: string, p: string) => number
+  getHeatmapPercentage?: (e: string, p: string) => number
   getHeatmapCount?: (e: string, p: string) => number
   getHeatmapClass: (v: number) => string
   getFormattedEventName: (e: string) => string
+  unit?: string
+  isArchived?: (e: string, p: string) => boolean
 }>()
 
+// Pré-calcul des min/max par paire pour normalisation 0-100
+const pairMinMax = computed(() => {
+  const result = new Map<string, { min: number; max: number }>()
+  for (const pair of props.pairs) {
+    let min = Infinity, max = -Infinity
+    for (const et of props.sortedEventTypes) {
+      const v = props.getHeatmapValue(et.name, pair)
+      if (v > 0 && v !== -1) {
+        if (v < min) min = v
+        if (v > max) max = v
+      }
+    }
+    result.set(pair, { min: min === Infinity ? 0 : min, max: max === -Infinity ? 0 : max })
+  }
+  return result
+})
+
+function getNormalizedScore(eventType: string, pair: string): number {
+  const val = props.getHeatmapValue(eventType, pair)
+  if (val <= 0 || val === -1) return 0
+  const mm = pairMinMax.value.get(pair)
+  if (!mm || mm.max === mm.min) return 50
+  return ((val - mm.min) / (mm.max - mm.min)) * 100
+}
 const emit = defineEmits<{
   (e: 'analyze-cell', eventName: string, pair: string): void
 }>()
@@ -136,7 +171,8 @@ function getCellClass(eventName: string, pair: string): string {
   if (val === -1) return 'no-data-cell'
   if (val < props.minVolatility) return 'filtered-cell'
   const count = getCellCount(eventName, pair)
-  const colorClass = props.getHeatmapClass(val)
+  const normalizedScore = getNormalizedScore(eventName, pair)
+  const colorClass = props.getHeatmapClass(normalizedScore)
   return count > 0 && count < 5 ? `${colorClass} low-sample-cell` : colorClass
 }
 </script>
@@ -156,7 +192,7 @@ function getCellClass(eventName: string, pair: string): string {
 .event-type-cell.no-data { opacity: 0.6; }
 .event-type-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
 .event-count { font-size: 0.85em; color: #8b949e; font-weight: 400; }
-.heatmap-cell { padding: 12px; text-align: center; border: 1px solid #30363d; white-space: nowrap; }
+.heatmap-cell { padding: 12px; text-align: center; border: 1px solid #30363d; white-space: nowrap; position: relative; }
 .heatmap-cell.empty-cell { background: #0d1117; color: #6e7681; }
 .heatmap-cell.no-data-cell { background: #161b22; color: #484f58; font-style: italic; font-size: 0.8em; }
 .heatmap-cell.filtered-cell { background: #0d1117; color: #484f58; }
@@ -165,6 +201,7 @@ function getCellClass(eventName: string, pair: string): string {
 .cell-count.low-sample { color: #f0883e; font-weight: 600; opacity: 1; }
 .low-sample-cell { opacity: 0.5; background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(0,0,0,0.1) 3px, rgba(0,0,0,0.1) 6px) !important; }
 .no-data-indicator { opacity: 0.5; }
+.archived-badge { position: absolute; bottom: 2px; right: 2px; font-size: 1.2em; cursor: default; }
 .heat-extreme { background: #1a7f37; color: white; font-weight: 700; }   /* Exceptionnel (Vert vif) */
 .heat-very-high { background: #238636; color: white; }                    /* Excellent (Vert) */
 .heat-high { background: #3fb950; color: #0d1117; }                       /* Bon (Vert clair) */

@@ -47,15 +47,6 @@ export interface Stats15Min {
   peak_duration_mean?: number
   volatility_half_life_mean?: number
   recommended_trade_expiration_mean?: number
-  straddle_parameters?: {
-    offset_pips: number
-    stop_loss_pips: number
-    trailing_stop_pips: number
-    timeout_minutes: number
-    sl_recovery_pips: number
-    risk_reward_ratio: number
-    hard_tp_pips?: number
-  }
   volatility_profile?: number[]
   optimal_entry_minute?: number
 }

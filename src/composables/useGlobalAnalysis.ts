@@ -2,7 +2,7 @@ import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { GlobalAnalysisResult } from './globalAnalysisTypes'
 
-export { type GlobalStats, type BestPairGlobal, type GoldenHourGlobal, type TradableEventGlobal, type PairStraddleRateGlobal, type OptimalTimeWindowGlobal, type GlobalAnalysisResult } from './globalAnalysisTypes'
+export { type GlobalStats, type BestPairGlobal, type GoldenHourGlobal, type TradableEventGlobal, type OptimalTimeWindowGlobal, type GlobalAnalysisResult } from './globalAnalysisTypes'
 
 export function useGlobalAnalysis() {
   const loading = ref(false)

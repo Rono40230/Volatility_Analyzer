@@ -43,35 +43,20 @@
           <td class="row-label">Valeur pour la période</td>
           <td v-for="metric in displayedMetrics" :key="`value-${metric.label}`" class="metric-value">
             <span :class="['value-cell', getMetricStatus(metric.value15, metric.goodThreshold, metric.excellentThreshold)]">
-              <UnitDisplay 
-                :value="metric.value15" 
-                :unit="metric.suffix || ''" 
-                :decimals="metric.decimals ?? 2" 
-                :symbol="analysisData.symbol"
-              />
+              {{ metric.value15.toFixed(metric.decimals ?? 2) }}{{ metric.suffix ? (' ' + metric.suffix) : '' }}
             </span>
           </td>
         </tr>
         <tr class="average-row">
           <td class="row-label">Moyenne globale</td>
           <td v-for="metric in displayedMetrics" :key="`avg-${metric.label}`" class="metric-average">
-            <UnitDisplay 
-              :value="metric.valueGlobal" 
-              :unit="metric.suffix || ''" 
-              :decimals="metric.decimals ?? 2" 
-              :symbol="analysisData.symbol"
-            />
+            {{ metric.valueGlobal.toFixed(metric.decimals ?? 2) }}{{ metric.suffix ? (' ' + metric.suffix) : '' }}
           </td>
         </tr>
         <tr class="threshold-row">
           <td class="row-label">Seuil</td>
           <td v-for="metric in displayedMetrics" :key="`thr-${metric.label}`" class="metric-threshold">
-            <UnitDisplay 
-              :value="metric.excellentThreshold" 
-              :unit="metric.suffix || ''" 
-              :decimals="metric.decimals ?? 2" 
-              :symbol="analysisData.symbol"
-            />
+            {{ metric.excellentThreshold.toFixed(metric.decimals ?? 2) }}{{ metric.suffix ? (' ' + metric.suffix) : '' }}
           </td>
         </tr>
         <tr class="status-row">
@@ -89,8 +74,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { SliceAnalysis } from '../../utils/straddleAnalysis'
-import UnitDisplay from '../UnitDisplay.vue'
+import type { SliceAnalysis } from '../../utils/volatilityScore'
 import MetricTooltip from '../MetricTooltip.vue'
 import {
   buildMetricsConfig,

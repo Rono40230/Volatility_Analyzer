@@ -3,8 +3,9 @@
 // Teste chaque minute du quarter sur tout l'historique et retourne l'offset optimal
 
 use super::analyze_quarter_entry_timing_helpers::*;
+use crate::commands::pair_data::PairDataState;
 use serde::{Deserialize, Serialize};
-use tauri::command;
+use tauri::{command, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuarterEntryTimingResponse {
@@ -22,8 +23,8 @@ pub async fn analyze_quarter_entry_timing(
     symbol: String,
     hour: u8,
     quarter: u8,
+    pair_state: State<'_, PairDataState>,
 ) -> Result<QuarterEntryTimingResponse, String> {
-    use crate::db;
     use crate::services::candle_index::CandleIndex;
     use crate::services::database_loader::DatabaseLoader;
 
@@ -35,17 +36,14 @@ pub async fn analyze_quarter_entry_timing(
         quarter
     );
 
-    // Créer le pool de connexions pour la BD paires
-    let data_dir =
-        dirs::data_local_dir().ok_or_else(|| "Failed to get data directory".to_string())?;
-    let pairs_db_path = data_dir.join("volatility-analyzer").join("pairs.db");
-    let pairs_db_url = format!("sqlite://{}", pairs_db_path.display());
+    let pool = pair_state
+        .pool
+        .lock()
+        .map_err(|e| format!("Lock pair pool failed: {e}"))?
+        .clone()
+        .ok_or("Pair database pool not initialized")?;
 
-    let pairs_pool = db::create_pool(&pairs_db_url)
-        .map_err(|e| format!("Failed to create pairs DB pool: {}", e))?;
-
-    // Créer un CandleIndex avec DatabaseLoader
-    let db_loader = DatabaseLoader::new(pairs_pool);
+    let db_loader = DatabaseLoader::new(pool);
     let mut candle_index = CandleIndex::with_db_loader(db_loader);
 
     // Charger la paire

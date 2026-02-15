@@ -5,18 +5,12 @@
       :key="index"
       :title="metric.label"
     >
-      <div class="metric-card">
+      <div :class="['metric-card', isSpecialMetric(metric.key) && `metric-special-${getColorClass(metric.key, metric.value)}`]">
         <h4>{{ metric.label }}</h4>
         <div
           :class="['metric-value', getColorClass(metric.key, metric.value)]"
         >
-          <UnitDisplay 
-            v-if="metric.unit" 
-            :value="metric.value" 
-            :unit="metric.unit" 
-            :decimals="1"
-            :symbol="props.symbol"
-          />
+          <span v-if="metric.unit">{{ formatATR(metric.value) }}</span>
           <span v-else>{{ metric.formattedValue }}</span>
         </div>
       </div>
@@ -51,7 +45,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import MetricTooltip from '../MetricTooltip.vue'
-import UnitDisplay from '../UnitDisplay.vue'
+import { pipsToDisplayValue } from '../../utils/assetUnit'
 
 interface GlobalMetrics {
   mean_atr: number
@@ -81,6 +75,9 @@ const props = defineProps<{
   pointValue?: number
   unit?: string
   symbol?: string
+  recommendation?: string
+  riskLevel?: string
+  confidenceScore?: number
 }>()
 
 function getMetricQuality(metric: string, value: number): string {
@@ -130,20 +127,41 @@ function getMetricQuality(metric: string, value: number): string {
       if (value >= 10) return 'good'
       if (value >= 5) return 'acceptable'
       return 'poor'
+    case 'setupquality':
+      if (value >= 80) return 'excellent'
+      if (value >= 65) return 'good'
+      if (value >= 50) return 'acceptable'
+      return 'poor'
+    case 'movementquality':
+      if (value >= 80) return 'excellent'
+      if (value >= 55) return 'good'
+      if (value >= 30) return 'acceptable'
+      return 'poor'
+    case 'confidence':
+      if (value >= 80) return 'excellent'
+      if (value >= 65) return 'good'
+      if (value >= 50) return 'acceptable'
+      if (value >= 35) return 'poor'
+      return 'poor'
     default:
       return 'neutral'
   }
 }
 
 function formatATR(atr: number): string {
+  const converted = props.symbol ? pipsToDisplayValue(atr, props.symbol) : atr
   const unit = props.unit || 'pts'
   const prefix = unit === '$' ? '$' : ''
   const suffix = unit === '$' ? '' : ` ${unit}`
-  return `${prefix}${atr.toFixed(1)}${suffix}`
+  return `${prefix}${converted.toFixed(1)}${suffix}`
 }
 
 function getColorClass(metric: string, value: number): string {
   return `metric-${getMetricQuality(metric, value)}`
+}
+
+function isSpecialMetric(key: string): boolean {
+  return ['setupquality', 'movementquality', 'confidence'].includes(key)
 }
 
 const displayedMetrics = computed(() => [
@@ -183,20 +201,20 @@ const displayedMetrics = computed(() => [
     label: 'Direction Strength',
     value: props.globalMetrics.mean_volume_imbalance,
     formattedValue: `${(props.globalMetrics.mean_volume_imbalance * 100).toFixed(1)}%`,
-    definition: 'Force du mouvement directionnel = (Body Range % × Breakout %). Mesure la COMBINAISON de pureté du signal ET des cassures. Critique pour straddle: besoin de direction forte.',
+    definition: 'Force du mouvement directionnel [Ratio 0-1] = (Body Range / 100) × (Breakout / 100). Stocké comme ratio, affiché en %. Mesure la COMBINAISON de pureté du signal ET des cassures. Critique pour straddle: besoin de direction forte.',
     usage: '>20% = direction TRÈS forte confirmée\n10-20% = bon directif\n5-10% = moyen, pas assez fort\n<5% = trop faible, movement indécis.',
     scoring: '🟢 Excellent (>20%) = Force directionnelle maximale\n🔵 Bon (10-20%) = Momentum clair\n🟡 Acceptable (5-10%) = Modéré, risqué\n🔴 Pauvre (<5%) = Pas assez de conviction',
-    realUseCases: 'DAX à 8h, direction strength = 22%\n→ Force maximale = momentum confirmé\n→ Probabilité de poursuite: 65%+\n→ Position full size\n→ TP agressif (+2.5× ATR)\n\nMême créneau autre jour, direction strength = 4%\n→ Force minimale = indécision\n→ Probabilité de reversal: 50%+\n→ Recommandation: réduire 50% ou SKIP'
+    realUseCases: 'DAX à 8h, direction strength = 22%\n→ Force maximale = momentum confirmé (0.22 ratio)\n→ Probabilité de poursuite: 65%+\n→ Position full size\n→ TP agressif (+2.5× ATR)\n\nMême créneau autre jour, direction strength = 4%\n→ Force minimale = indécision (0.04 ratio)\n→ Probabilité de reversal: 50%+\n→ Recommandation: réduire 50% ou SKIP'
   },
   {
     key: 'noiseratio',
     label: 'Noise Ratio',
     value: props.globalMetrics.mean_noise_ratio,
-    formattedValue: `${props.globalMetrics.mean_noise_ratio.toFixed(2)}%`,
+    formattedValue: `${props.globalMetrics.mean_noise_ratio.toFixed(2)}x`,
     definition: 'Ratio Wicks/Body : mesure le ratio bruit/signal. Bas = direction confirmée, spread étroit. Haut = beaucoup de rejets (fausses mèches) = problème majeur pour straddle.',
-    usage: '<2.0 = signal excellent, spreads serrés\n2.0-3.0 = acceptable, quelques rejets\n3.0-4.0 = très bruyant, spreads larges\n>4.0 = chaotique, rejets constants.',
-    scoring: '🟢 Excellent (<2.0) = Direction nette, pas de spreads larges\n🔵 Bon (2.0-3.0) = Acceptable\n🟡 Acceptable (3.0-4.0) = Rejets importants, TP/SL plus large\n🔴 Pauvre (>4.0) = Chaos, à éviter absolument',
-    realUseCases: 'Gold à NFP, noise ratio = 1.8\n→ Peu de rejets, direction confirmée\n→ SL standard (1.5× ATR)\n→ Breakout fiable\n→ Recommandation: TRADE en confiance\n\nMême paire en CPI, noise ratio = 3.2\n→ Beaucoup de fausses mèches\n→ Augmenter SL de 30% (2× ATR au lieu de 1.5×)\n→ Réduire position size de 20%'
+    usage: '<2.0x = signal excellent, spreads serrés\n2.0-3.0x = acceptable, quelques rejets\n3.0-4.0x = très bruyant, spreads larges\n>4.0x = chaotique, rejets constants.',
+    scoring: '🟢 Excellent (<2.0x) = Direction nette, pas de spreads larges\n🔵 Bon (2.0-3.0x) = Acceptable\n🟡 Acceptable (3.0-4.0x) = Rejets importants, TP/SL plus large\n🔴 Pauvre (>4.0x) = Chaos, à éviter absolument',
+    realUseCases: 'Gold à NFP, noise ratio = 1.8x\n→ Peu de rejets, direction confirmée\n→ SL standard (1.5× ATR)\n→ Breakout fiable\n→ Recommandation: TRADE en confiance\n\nMême paire en CPI, noise ratio = 3.2x\n→ Beaucoup de fausses mèches\n→ Augmenter SL de 30% (2× ATR au lieu de 1.5×)\n→ Réduire position size de 20%'
   },
   {
     key: 'breakout',
@@ -207,8 +225,81 @@ const displayedMetrics = computed(() => [
     usage: '>15% = breakouts fréquents, marché actif = excellent\n10-15% = bon, quelques impulsions\n5-10% = moyen, range-bound\n<5% = consolidation, peu de mouvement.',
     scoring: '🟢 Excellent (>15%) = Marché très impulsif, gains fréquents\n🔵 Bon (10-15%) = Activité normale\n🟡 Acceptable (5-10%) = Peu de dynamique\n🔴 Pauvre (<5%) = Marché range-bound, stagnant',
     realUseCases: 'Bitcoin après news positive, breakout % = 18%\n→ 18 cassures par 100 bougies = très actif\n→ Chaque signal a 70% chance de suivre\n→ Taille position: normal\n→ Récompense: gains rapides\n\nBitcoin en sideways, breakout % = 3%\n→ 3 cassures par 100 bougies = très peu\n→ 95% du temps = fausses cassures\n→ Recommandation: SKIP, attendre volatilité'
+  },
+  {
+    key: 'setupquality',
+    label: 'Setup Quality',
+    value: getSetupQualityScore(props.recommendation),
+    formattedValue: `${getSetupQualityScore(props.recommendation)}/100`,
+    definition: 'Score de qualité du setup Straddle (0-100) : évalue la qualité globale des conditions économiques et techniques pour exécuter un straddle basé sur les patterns historiques.',
+    usage: '80-100 = SETUP OPTIMAL, conditions idéales\n65-80 = SETUP CORRECT, bon setup\n50-65 = SETUP ACCEPTABLE, moyen\n35-50 = SETUP RISQUÉ, conditions médiocres\n<35 = NE PAS TRADER, conditions inadaptées',
+    scoring: '🟢 Excellent (80-100) = Conditions optimales pour straddle\n🔵 Bon (65-80) = Conditions favorables\n🟡 Acceptable (50-65) = Conditions moyennes\n🔴 Risqué (35-50) = Envisager de passer\n🔴 Pauvre (<35) = Ne pas trader',
+    realUseCases: 'EUR/USD à 15h (NY Open), setup quality = 95\n→ Patterns historiques favorables\n→ Volatilité attendue élevée\n→ Recommandation: TRADE en confiance, position full size\n\nMême paire le jour suivant, setup quality = 32\n→ Patterns défavorables\n→ Volatilité imprévisible\n→ Recommandation: SKIP, attendre conditions meilleures'
+  },
+  {
+    key: 'movementquality',
+    label: 'Movement Quality',
+    value: getMovementQualityScore(props.riskLevel),
+    formattedValue: getMovementQualityLabel(props.riskLevel),
+    definition: 'Qualité du mouvement attendu (Directional/Moderate/Erratic) : caractérise le type de volatilité basée sur l\'analyse des patterns.',
+    usage: 'DIRECTIONNEL (Low) = volatilité 15-30% avec faible bruit, idéal straddle\nMODÉRÉ (Medium) = volatilité 5-15% avec bruit acceptable\nERRATIQUE (High) = soit <5% soit >30%, à éviter',
+    scoring: '🟢 Excellent (Directionnel) = Volatilité nette, spreads serrés\n🔵 Bon (Modéré) = Conditions acceptables\n🔴 Pauvre (Erratique) = Trop calme ou chaotique',
+    realUseCases: 'NFP sur EUR/USD, movement quality = DIRECTIONNEL\n→ Volatilité 22%, noise ratio 1.9x\n→ Direction nette, peu de rejets\n→ Recommandation: TRADE normal\n\nMême événement, autre paire, movement quality = ERRATIQUE\n→ Volatilité 3%, chaos des spreads\n→ Trop calme\n→ Recommandation: SKIP, attendre meilleur setup'
+  },
+  {
+    key: 'confidence',
+    label: 'Confidence Score',
+    value: props.confidenceScore || 0,
+    formattedValue: `${Math.round(props.confidenceScore || 0)}/100`,
+    definition: 'Score de confiance global (0-100) : mesure "à quel point on peut confier sa stratégie Straddle scalping à cette paire durant cette période". Somme pondérée de 6 facteurs: ATR (30pts), Body Range (25pts), Volatilité (25pts), Noise Ratio (10pts), Breakout (10pts), Bonus Données (5pts).',
+    usage: '80-100 = Excellent, conditions optimales pour scalper agressivement\n65-80 = Bon, scalper normalement\n50-65 = Prudent, scalper avec SL serrés\n35-50 = Risqué, très prudent ou breakouts only\n0-35 = Mauvais, ne pas trader',
+    scoring: '🟢 Excellent (80-100) = Volatilité constante, signal pur, données fiables\n🔵 Bon (65-80) = Conditions stables, peu de risques\n🟡 Acceptable (50-65) = Conditions moyennes, rendement limité\n🔴 Pauvre (35-50) = Beaucoup de rejets ou volatilité basse\n🔴 Mauvais (<35) = À éviter complètement',
+    realUseCases: 'EURUSD 10h-11h UTC, confiance = 95\n→ ATR 2.5 pips (30pts) + BodyRange 52% (25pts) + Vol 25% (25pts) + NR 1.8 (10pts) + Breakout 18% (10pts) + Bonus (5pts)\n→ = 105 → cappé à 100\n→ Recommandation: TRADE agressif, position full size\n\nMême paire 13h, confiance = 32\n→ Peu de volatilité (8pts), signal bruyant (4pts), peu de cassures (2pts)\n→ Recommandation: SKIP, attendre meilleur setup'
   }
 ] as MetricConfig[])
+
+function getSetupQualityScore(recommendation?: string): number {
+  switch (recommendation) {
+    case 'StraddleOptimal':
+      return 90
+    case 'StraddleGood':
+      return 72
+    case 'StraddleCautious':
+      return 57
+    case 'StraddleRisky':
+      return 42
+    case 'NoTrade':
+      return 20
+    default:
+      return 50
+  }
+}
+
+function getMovementQualityScore(riskLevel?: string): number {
+  switch (riskLevel) {
+    case 'Low':
+      return 85
+    case 'Medium':
+      return 60
+    case 'High':
+      return 25
+    default:
+      return 50
+  }
+}
+
+function getMovementQualityLabel(riskLevel?: string): string {
+  switch (riskLevel) {
+    case 'Low':
+      return '🟢 DIRECTIONNEL'
+    case 'Medium':
+      return '🔵 MODÉRÉ'
+    case 'High':
+      return '🔴 ERRATIQUE'
+    default:
+      return '⚪ NEUTRE'
+  }
+}
 </script>
 
 <style scoped>
@@ -225,6 +316,12 @@ const displayedMetrics = computed(() => [
 .metric-card:has(.metric-good) { border-left-color: #3b82f6; }
 .metric-card:has(.metric-acceptable) { border-left-color: #f59e0b; }
 .metric-card:has(.metric-poor) { border-left-color: #ef4444; }
+
+/* Special metrics with pastel backgrounds */
+.metric-special-metric-excellent { background: rgba(16, 185, 129, 0.1) !important; border-left-color: #10b981 !important; }
+.metric-special-metric-good { background: rgba(59, 130, 246, 0.1) !important; border-left-color: #3b82f6 !important; }
+.metric-special-metric-acceptable { background: rgba(245, 158, 11, 0.1) !important; border-left-color: #f59e0b !important; }
+.metric-special-metric-poor { background: rgba(239, 68, 68, 0.1) !important; border-left-color: #ef4444 !important; }
 
 .tooltip-section { margin-bottom: 15px; }
 .tooltip-section:last-child { margin-bottom: 0; }

@@ -3,21 +3,11 @@
     <h3>1. Sélectionner les rapports</h3>
     <div class="checkbox-group">
       <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('straddle_period')" @change="toggleReport('straddle_period')">
-        <span class="label-text">Fiche Straddle Simultané : Paire/Période</span>
-        <span class="label-desc">Volatilité Brute (Session Trading)</span>
-      </label>
-
-      <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('straddle_event')" @change="toggleReport('straddle_event')">
-        <span class="label-text">Fiche Straddle Simultané : Paire/Événements</span>
-        <span class="label-desc">Corrélation (News Trading)</span>
-      </label>
-      
-      <label class="checkbox-label">
-        <input type="checkbox" :checked="selectedReports.includes('ranking')" @change="toggleReport('ranking')">
-        <span class="label-text">Classement des Opportunités</span>
-        <span class="label-desc">Top des meilleures configurations par score</span>
+        <input type="checkbox" :checked="selectedReports.includes('global_analysis')" @change="toggleReport('global_analysis')">
+        <div>
+           <span class="label-text">📊 Rapport Global d'Analyse</span>
+           <span class="label-desc">Analyse complète combinant volatilité, corrélation, heatmap et points d'entrée</span>
+        </div>
       </label>
     </div>
 

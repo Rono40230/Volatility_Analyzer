@@ -1,81 +1,31 @@
-<script setup lang="ts">
-import { ref } from 'vue'
-import BacktestConfigPanel from '../components/BacktestConfigPanel.vue'
-import BacktestResultsPanel from '../components/BacktestResultsPanel.vue'
-import { BacktestType } from '../stores/backtest'
-
-const activeTab = ref<BacktestType>(BacktestType.Event)
-</script>
-
 <template>
   <div class="backtest-view">
-    <div class="tabs-header">
-      <button 
-        :class="['tab-btn', { active: activeTab === BacktestType.Event }]"
-        @click="activeTab = BacktestType.Event"
-      >
-        📅 Par Événement
-      </button>
-      <button 
-        :class="['tab-btn', { active: activeTab === BacktestType.Time }]"
-        @click="activeTab = BacktestType.Time"
-      >
-        ⏰ Par Horaire
-      </button>
-    </div>
-
-    <BacktestConfigPanel :backtest-type="activeTab" />
-    
-    <div class="results-container">
-      <BacktestResultsPanel />
+    <div class="placeholder">
+      <h2>🔧 Backtest</h2>
+      <p>Module de backtest en cours de construction.</p>
     </div>
   </div>
 </template>
 
+<script setup lang="ts">
+// Placeholder view to avoid build break when imported in App.vue.
+</script>
+
 <style scoped>
 .backtest-view {
-  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  overflow: hidden;
+  color: #e6edf3;
 }
-
-.tabs-header {
-  display: flex;
-  gap: 1rem;
-  border-bottom: 1px solid #2d3748;
-  padding-bottom: 0.5rem;
+.placeholder {
+  text-align: center;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 24px 32px;
 }
-
-.tab-btn {
-  background: transparent;
-  border: none;
-  color: #a0aec0;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 600;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-
-.tab-btn:hover {
-  color: #e2e8f0;
-  background: #2d3748;
-}
-
-.tab-btn.active {
-  color: #4299e1;
-  background: rgba(66, 153, 225, 0.1);
-}
-
-.results-container {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
+.placeholder h2 { margin: 0 0 8px; }
+.placeholder p { margin: 0; color: #8b949e; }
 </style>
-

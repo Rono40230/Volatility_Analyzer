@@ -2,7 +2,6 @@
 // Calcule les moyennes historiques de peak_duration, half_life et trade_exp
 
 use crate::models::Stats15Min;
-use crate::services::StraddleParameterService;
 
 /// Agrégateur de statistiques par quarter
 pub(super) struct QuarterlyAggregator;
@@ -10,7 +9,7 @@ pub(super) struct QuarterlyAggregator;
 impl QuarterlyAggregator {
     /// Calcule les moyennes historiques pour chaque quarter (96 = 24h × 4 quarters)
     /// Prend tous les stats_15min (toute la période) et retourne les moyennes par quarter
-    pub(super) fn aggregate(stats_15min: &[Stats15Min], pip_value: f64, symbol: &str) -> Vec<Stats15Min> {
+    pub(super) fn aggregate(stats_15min: &[Stats15Min], _pip_value: f64, _symbol: &str) -> Vec<Stats15Min> {
         // Groupe les stats par (hour, quarter)
         let mut quarterly_groups: std::collections::HashMap<(u8, u8), Vec<&Stats15Min>> =
             std::collections::HashMap::new();
@@ -54,7 +53,6 @@ impl QuarterlyAggregator {
                             peak_duration_mean: None,
                             volatility_half_life_mean: None,
                             recommended_trade_expiration_mean: None,
-                            straddle_parameters: None,
                             volatility_profile: None,
                             optimal_entry_minute: None,
                         });
@@ -130,17 +128,6 @@ impl QuarterlyAggregator {
                         let total_candle_count: usize =
                             instances.iter().map(|s| s.candle_count).sum();
 
-                        // Calcul des paramètres Straddle moyens (Harmonisation Straddle simultané V2)
-                        let straddle_params = StraddleParameterService::calculate_parameters(
-                            atr_mean_avg,
-                            noise_ratio_mean_avg,
-                            pip_value,
-                            symbol,
-                            volatility_half_life_mean,
-                            Some(p95_wick_avg),
-                            Some(hour as u32),
-                        );
-
                         // Agrégation du profil de volatilité (moyenne minute par minute)
                         let mut aggregated_profile = vec![0.0; 15];
                         let mut profile_count = 0;
@@ -198,7 +185,6 @@ impl QuarterlyAggregator {
                             peak_duration_mean,
                             volatility_half_life_mean,
                             recommended_trade_expiration_mean,
-                            straddle_parameters: Some(straddle_params),
                             volatility_profile: final_profile,
                             optimal_entry_minute,
                         });
@@ -227,7 +213,6 @@ impl QuarterlyAggregator {
                         peak_duration_mean: None,
                         volatility_half_life_mean: None,
                         recommended_trade_expiration_mean: None,
-                        straddle_parameters: None,
                         volatility_profile: None,
                         optimal_entry_minute: None,
                     });

@@ -3,9 +3,8 @@
 
 use super::global_analyzer_event_analysis;
 use super::global_analyzer_helpers::*;
-use super::global_analyzer_straddle_calc;
 use super::global_analyzer_types::*;
-use crate::models::{BestPair, GlobalStats, GoldenHour, OptimalTimeWindow, StraddleSuccessRate};
+use crate::models::{BestPair, GlobalStats, GoldenHour, OptimalTimeWindow};
 use std::collections::HashMap;
 
 pub fn compute_global_stats(results: &[WeightedArchiveData]) -> GlobalStats {
@@ -82,7 +81,7 @@ pub fn compute_global_stats(results: &[WeightedArchiveData]) -> GlobalStats {
 }
 
 pub fn compute_best_pairs(results: &[WeightedArchiveData]) -> Vec<BestPair> {
-    let mut pair_stats: HashMap<String, (f64, f64, f64)> = HashMap::new();
+    let mut pair_stats: HashMap<String, (f64, f64, f64, usize)> = HashMap::new();
 
     for r in results {
         let vol = r
@@ -93,15 +92,16 @@ pub fn compute_best_pairs(results: &[WeightedArchiveData]) -> Vec<BestPair> {
             .unwrap_or(0.0);
         let entry = pair_stats
             .entry(r.data.symbol.clone())
-            .or_insert((0.0, 0.0, 0.0));
+            .or_insert((0.0, 0.0, 0.0, 0));
         entry.0 += vol * r.weight;
         entry.1 += r.data.confidence_score * r.weight;
         entry.2 += r.weight;
+        entry.3 += 1;
     }
 
     let mut best_pairs: Vec<BestPair> = pair_stats
         .into_iter()
-        .map(|(symbol, (weighted_vol, weighted_conf, total_weight))| {
+        .map(|(symbol, (weighted_vol, weighted_conf, total_weight, count))| {
             let avg_vol = if total_weight > 0.0 {
                 weighted_vol / total_weight
             } else {
@@ -117,7 +117,7 @@ pub fn compute_best_pairs(results: &[WeightedArchiveData]) -> Vec<BestPair> {
                 score: avg_vol * avg_conf * 100.0,
                 avg_volatility: avg_vol,
                 win_rate: avg_conf,
-                analysis_count: total_weight as usize,
+                analysis_count: count,
             }
         })
         .collect();
@@ -186,29 +186,18 @@ pub fn compute_tradable_events(
     global_analyzer_event_analysis::compute_tradable_events(archives)
 }
 
-pub fn compute_pair_straddle_rates(
-    archives: &[crate::models::Archive],
-) -> Vec<StraddleSuccessRate> {
-    global_analyzer_straddle_calc::compute_pair_straddle_rates(archives)
-}
-
 pub fn compute_optimal_time_windows(archives: &[crate::models::Archive]) -> Vec<OptimalTimeWindow> {
     global_analyzer_event_analysis::compute_optimal_time_windows(archives)
 }
 
 /// Recommandation dynamique basée sur volatilité et confiance moyennes
-/// - Volatilité haute + confiance haute → "Straddle Agressif"
-/// - Volatilité haute + confiance basse → "Straddle Prudent"
-/// - Volatilité basse + confiance haute → "Scalp Prudent"
-/// - Volatilité basse + confiance basse → "Attendre / Pas de trade"
 fn compute_recommendation(avg_volatility: f64, avg_confidence: f64) -> String {
-    // Seuils calibrés : volatilité en unité brute (pips), confiance 0-100
     let high_vol = avg_volatility > 0.5;
     let high_conf = avg_confidence > 60.0;
     match (high_vol, high_conf) {
-        (true, true) => "Straddle Agressif".to_string(),
-        (true, false) => "Straddle Prudent".to_string(),
-        (false, true) => "Scalp Prudent".to_string(),
+        (true, true) => "Forte volatilité + Haute confiance".to_string(),
+        (true, false) => "Forte volatilité + Prudence".to_string(),
+        (false, true) => "Faible volatilité + Haute confiance".to_string(),
         (false, false) => "Attendre / Pas de trade".to_string(),
     }
 }

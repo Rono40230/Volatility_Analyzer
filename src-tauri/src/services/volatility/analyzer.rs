@@ -37,29 +37,15 @@ impl VolatilityAnalyzer {
             ));
         }
 
-        // Calculer période et timeframe avec format français
+        // Calculer période au format ISO 8601 (YYYY-MM-DD)
         let period_start = self
             .candles
             .first()
             .map(|c| {
-                let day = c.datetime.day();
-                let month = match c.datetime.month() {
-                    1 => "janvier",
-                    2 => "février",
-                    3 => "mars",
-                    4 => "avril",
-                    5 => "mai",
-                    6 => "juin",
-                    7 => "juillet",
-                    8 => "août",
-                    9 => "septembre",
-                    10 => "octobre",
-                    11 => "novembre",
-                    12 => "décembre",
-                    _ => "?",
-                };
                 let year = c.datetime.year();
-                format!("{} {} {}", day, month, year)
+                let month = c.datetime.month();
+                let day = c.datetime.day();
+                format!("{:04}-{:02}-{:02}", year, month, day)
             })
             .unwrap_or_else(|| "N/A".to_string());
 
@@ -67,24 +53,10 @@ impl VolatilityAnalyzer {
             .candles
             .last()
             .map(|c| {
-                let day = c.datetime.day();
-                let month = match c.datetime.month() {
-                    1 => "janvier",
-                    2 => "février",
-                    3 => "mars",
-                    4 => "avril",
-                    5 => "mai",
-                    6 => "juin",
-                    7 => "juillet",
-                    8 => "août",
-                    9 => "septembre",
-                    10 => "octobre",
-                    11 => "novembre",
-                    12 => "décembre",
-                    _ => "?",
-                };
                 let year = c.datetime.year();
-                format!("{} {} {}", day, month, year)
+                let month = c.datetime.month();
+                let day = c.datetime.day();
+                format!("{:04}-{:02}-{:02}", year, month, day)
             })
             .unwrap_or_else(|| "N/A".to_string());
 

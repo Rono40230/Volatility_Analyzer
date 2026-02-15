@@ -1,4 +1,4 @@
-use crate::models::archive::{Archive, ArchiveLight, NewArchive};
+use crate::models::archive::{Archive, ArchiveLight, NewArchive, ArchivedPairEvent};
 use crate::services::ArchiveService;
 use tauri::State;
 
@@ -66,4 +66,11 @@ pub async fn delete_all_archives(
     archive_service: State<'_, ArchiveService>,
 ) -> Result<usize, String> {
     archive_service.delete_all_archives()
+}
+
+#[tauri::command]
+pub async fn get_archived_pairs_events(
+    archive_service: State<'_, ArchiveService>,
+) -> Result<Vec<ArchivedPairEvent>, String> {
+    archive_service.get_archived_pairs_events()
 }

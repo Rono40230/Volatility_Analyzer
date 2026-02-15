@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import UnitDisplay from '../UnitDisplay.vue'
 import { useArchiveStatistics } from '../../composables/useArchiveStatistics'
 const { eventStatistics } = useArchiveStatistics()
 interface TimingEvent {
@@ -84,7 +83,7 @@ const avgPlacement = computed(() => {
         <div class="col-placement">{{ event.placementSeconds }}sec</div>
         <div class="col-duration">{{ event.exitMinutes }}min</div>
         <div class="col-gain">
-          +<UnitDisplay :value="event.estimatedGain" :unit="event.unit || 'pts'" :decimals="1" />
+          +{{ event.estimatedGain.toFixed(1) }} {{ event.unit }}
         </div>
         <div class="col-score">
           <span v-if="event.tradabilityScore >= 80" class="score-good">{{ Math.round(event.tradabilityScore) }}</span>

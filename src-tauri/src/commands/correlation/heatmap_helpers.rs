@@ -7,6 +7,7 @@ use std::collections::HashMap;
 #[derive(Debug, Clone)]
 pub struct VolatilityResult {
     pub value: f64,
+    pub percentage: f64,
     pub has_data: bool,
     /// Nombre d'occurrences (événements avec données) utilisées pour le calcul
     pub sample_count: i32,
@@ -28,6 +29,8 @@ pub struct HeatmapData {
     pub pairs: Vec<String>,
     pub event_types: Vec<EventTypeInfo>,
     pub data: HashMap<String, HashMap<String, f64>>,
+    /// Pourcentage de volatilité par cellule (event_type → pair → %)
+    pub volatility_percentages: HashMap<String, HashMap<String, f64>>,
     /// Nombre d'occurrences par cellule (event_type → pair → count)
     pub counts: HashMap<String, HashMap<String, i32>>,
 }
@@ -54,12 +57,14 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
     if events.is_empty() {
         return Ok(VolatilityResult {
             value: 0.0,
+            percentage: 0.0,
             has_data: false,
             sample_count: 0,
         });
     }
 
     let mut total_score = 0.0;
+    let mut total_percentage = 0.0;
     let mut valid_count = 0;
     let mut has_data_found = false;
 
@@ -76,22 +81,26 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
             candle_index,
             pair,
             event_datetime,
-            90, // Élargi à 90 min pour capturer les candles H1 qui commencent avant
+            90,
             7,
             super::utils::get_pip_value(pair),
         )
         .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
+            event_volatility_percentage: 0.0,
             baseline_volatility: 0.0,
-            straddle_score: 0.0,
-            directionality: 0.0,
-            whipsaw_risk: 0.0,
+            baseline_volatility_percentage: 0.0,
         });
 
-        let score = metrics.straddle_score;
+        let score = metrics.event_volatility;
+        let percentage = metrics.event_volatility_percentage;
+
+        eprintln!("[DEBUG] Event {} for {}: score={:.4}, pct={:.4}, has_score={}", 
+                  event_datetime.format("%Y-%m-%d %H:%M"), pair, score, percentage, score > 0.0);
 
         if score > 0.0 {
             total_score += score;
+            total_percentage += percentage;
             valid_count += 1;
         }
     }
@@ -101,9 +110,15 @@ pub fn calculer_volatilite_moyenne_evenement_paire_optimise(
     } else {
         total_score / valid_count as f64
     };
+    let avg_percentage = if valid_count == 0 {
+        0.0
+    } else {
+        total_percentage / valid_count as f64
+    };
 
     Ok(VolatilityResult {
         value: avg_score,
+        percentage: avg_percentage,
         has_data: has_data_found,
         sample_count: valid_count,
     })

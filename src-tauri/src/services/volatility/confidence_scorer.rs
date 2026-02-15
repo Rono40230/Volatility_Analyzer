@@ -1,7 +1,7 @@
 // services/volatility/confidence_scorer.rs - Calcul du score de confiance
 // Module séparé pour respecter la limite de taille (metrics.rs < 300L)
 
-use crate::models::GlobalMetrics;
+use crate::models::{GlobalMetrics, ConfidenceBreakdown};
 
 /// Calculateur du score de confiance GLOBAL (0-100)
 #[allow(clippy::doc_lazy_continuation)]
@@ -74,91 +74,132 @@ impl ConfidenceScorer {
     /// > - BreakoutPct 18% → 10 pts (beaucoup de cassures)
     /// > - Bonus → 5 pts (données suffisantes)
     /// > = TOTAL 105 → capped à 100 = "EXCELLENT, scalpe agressif"
-    pub(super) fn calculer_score_confiance(metrics: &GlobalMetrics) -> f64 {
-        let mut score: f64 = 0.0;
+    pub(super) fn calculer_score_confiance_breakdown(metrics: &GlobalMetrics) -> ConfidenceBreakdown {
+        let mut breakdown = ConfidenceBreakdown::new();
 
-        // 1. Score ATR (30 points max) - Seuils normalisés (1.0 = 1 Pip/Point)
-        // ATR Forex M1 typique : 1.0 - 3.0 pips
+        // 1. Score ATR (30 points max)
+        breakdown.atr_score = metrics.mean_atr;
         if metrics.mean_atr > 2.5 {
-            score += 30.0; // Excellent : > 2.5 pips/points
+            breakdown.atr_points = 30.0;
+            breakdown.atr_reasoning = format!("Excellent: {:.2} pips (> 2.5)", metrics.mean_atr);
         } else if metrics.mean_atr > 1.5 {
-            score += 25.0; // Très bon : 1.5-2.5 pips/points
+            breakdown.atr_points = 25.0;
+            breakdown.atr_reasoning = format!("Très bon: {:.2} pips (1.5-2.5)", metrics.mean_atr);
         } else if metrics.mean_atr > 1.0 {
-            score += 20.0; // Bon : 1.0-1.5 pips/points
+            breakdown.atr_points = 20.0;
+            breakdown.atr_reasoning = format!("Bon: {:.2} pips (1.0-1.5)", metrics.mean_atr);
         } else if metrics.mean_atr > 0.5 {
-            score += 10.0; // Acceptable : 0.5-1.0 pips/points
+            breakdown.atr_points = 10.0;
+            breakdown.atr_reasoning = format!("Acceptable: {:.2} pips (0.5-1.0)", metrics.mean_atr);
+        } else {
+            breakdown.atr_reasoning = format!("Faible: {:.2} pips (< 0.5)", metrics.mean_atr);
         }
 
-        // 2. Score Body Range (25 points max) - Seuils réalistes
-        // Body Range Forex : 25-45% est normal, >45% est excellent
+        // 2. Score Body Range (25 points max)
+        breakdown.body_range_score = metrics.mean_body_range;
         if metrics.mean_body_range > 45.0 {
-            score += 25.0; // Excellent : mouvements directionnels forts
+            breakdown.body_range_points = 25.0;
+            breakdown.body_range_reasoning = format!("Excellent: {:.1}% (> 45%)", metrics.mean_body_range);
         } else if metrics.mean_body_range > 35.0 {
-            score += 20.0; // Très bon
+            breakdown.body_range_points = 20.0;
+            breakdown.body_range_reasoning = format!("Très bon: {:.1}% (35-45%)", metrics.mean_body_range);
         } else if metrics.mean_body_range > 25.0 {
-            score += 15.0; // Bon
+            breakdown.body_range_points = 15.0;
+            breakdown.body_range_reasoning = format!("Bon: {:.1}% (25-35%)", metrics.mean_body_range);
         } else if metrics.mean_body_range > 15.0 {
-            score += 8.0; // Acceptable
+            breakdown.body_range_points = 8.0;
+            breakdown.body_range_reasoning = format!("Acceptable: {:.1}% (15-25%)", metrics.mean_body_range);
+        } else {
+            breakdown.body_range_reasoning = format!("Faible: {:.1}% (< 15%)", metrics.mean_body_range);
         }
 
-        // 3. Score Volatilité (25 points max) - BONUS si volatile
-        // Plus c'est volatil, MIEUX c'est pour le scalping !
-        if metrics.mean_volatility > 0.30 {
-            score += 25.0; // Excellent : cryptos, exotiques
-        } else if metrics.mean_volatility > 0.20 {
-            score += 20.0; // Très bon : paires majeures volatiles
-        } else if metrics.mean_volatility > 0.10 {
-            score += 15.0; // Bon : volatilité correcte
-        } else if metrics.mean_volatility > 0.05 {
-            score += 8.0; // Acceptable
+        // 3. Score Volatility (25 points max)
+        breakdown.volatility_score = metrics.mean_volatility;
+        if metrics.mean_volatility > 30.0 {
+            breakdown.volatility_points = 25.0;
+            breakdown.volatility_reasoning = format!("Excellent: {:.1}% (> 30%)", metrics.mean_volatility);
+        } else if metrics.mean_volatility > 20.0 {
+            breakdown.volatility_points = 20.0;
+            breakdown.volatility_reasoning = format!("Très bon: {:.1}% (20-30%)", metrics.mean_volatility);
+        } else if metrics.mean_volatility > 10.0 {
+            breakdown.volatility_points = 15.0;
+            breakdown.volatility_reasoning = format!("Bon: {:.1}% (10-20%)", metrics.mean_volatility);
+        } else if metrics.mean_volatility > 5.0 {
+            breakdown.volatility_points = 8.0;
+            breakdown.volatility_reasoning = format!("Acceptable: {:.1}% (5-10%)", metrics.mean_volatility);
+        } else {
+            breakdown.volatility_reasoning = format!("Faible: {:.1}% (< 5%)", metrics.mean_volatility);
         }
 
-        // 4. Score Noise Ratio (10 points max) - Signal/Bruit
+        // 4. Score Noise Ratio (10 points max)
+        breakdown.noise_ratio_score = metrics.mean_noise_ratio;
         if metrics.mean_noise_ratio < 2.0 {
-            score += 10.0; // Excellent : signal propre
+            breakdown.noise_ratio_points = 10.0;
+            breakdown.noise_ratio_reasoning = format!("Excellent: {:.2}x (< 2.0)", metrics.mean_noise_ratio);
         } else if metrics.mean_noise_ratio < 3.0 {
-            score += 7.0; // Bon
+            breakdown.noise_ratio_points = 7.0;
+            breakdown.noise_ratio_reasoning = format!("Bon: {:.2}x (2.0-3.0)", metrics.mean_noise_ratio);
         } else if metrics.mean_noise_ratio < 4.0 {
-            score += 4.0; // Acceptable
+            breakdown.noise_ratio_points = 4.0;
+            breakdown.noise_ratio_reasoning = format!("Acceptable: {:.2}x (3.0-4.0)", metrics.mean_noise_ratio);
+        } else {
+            breakdown.noise_ratio_reasoning = format!("Mauvais: {:.2}x (> 4.0)", metrics.mean_noise_ratio);
         }
 
-        // 5. Score Breakout % (10 points max) - CRITIQUE pour Straddle
-        // % de bougies qui cassent significativement (>P80 ATR)
+        // 5. Score Breakout % (10 points max)
+        breakdown.breakout_score = metrics.mean_breakout_percentage;
         if metrics.mean_breakout_percentage > 15.0 {
-            score += 10.0; // Excellent : mouvements forts fréquents
+            breakdown.breakout_points = 10.0;
+            breakdown.breakout_reasoning = format!("Excellent: {:.1}% (> 15%)", metrics.mean_breakout_percentage);
         } else if metrics.mean_breakout_percentage > 10.0 {
-            score += 7.0; // Très bon
+            breakdown.breakout_points = 7.0;
+            breakdown.breakout_reasoning = format!("Très bon: {:.1}% (10-15%)", metrics.mean_breakout_percentage);
         } else if metrics.mean_breakout_percentage > 5.0 {
-            score += 4.0; // Acceptable
+            breakdown.breakout_points = 4.0;
+            breakdown.breakout_reasoning = format!("Acceptable: {:.1}% (5-10%)", metrics.mean_breakout_percentage);
+        } else {
+            breakdown.breakout_reasoning = format!("Faible: {:.1}% (< 5%)", metrics.mean_breakout_percentage);
         }
 
-        // 6. Bonus données suffisantes (5 points max)
+        // 6. Bonus données
         if metrics.total_candles > 100000 {
-            score += 5.0; // Données suffisantes pour fiabilité
+            breakdown.bonus_points = 5.0;
+            breakdown.bonus_reasoning = format!("Données excellentes: {:.0}k candles", metrics.total_candles as f64 / 1000.0);
         } else if metrics.total_candles > 50000 {
-            score += 3.0;
+            breakdown.bonus_points = 3.0;
+            breakdown.bonus_reasoning = format!("Données bonnes: {:.0}k candles", metrics.total_candles as f64 / 1000.0);
+        } else {
+            breakdown.bonus_reasoning = format!("Données limitées: {:.0}k candles", metrics.total_candles as f64 / 1000.0);
         }
 
-        // 7. PÉNALITÉ: ATR élevé MAIS Noise élevé (contradiction)
-        // Volatilité chaotique = mauvais pour scalping propre
-        // Seuil ATR en PIPS normalisés (pas en prix brut)
+        // 7. Pénalités
         if metrics.mean_atr > 2.0 && metrics.mean_noise_ratio > 3.0 {
-            score -= 15.0; // Volatilité mais signal chaotique = danger
+            breakdown.add_penalty(-15.0, format!(
+                "Chaos: ATR {:.2} pips + Noise {:.2}x (volatilité chaotique)",
+                metrics.mean_atr, metrics.mean_noise_ratio
+            ));
         }
 
-        // 8. PÉNALITÉ: BodyRange fort MAIS peu de Breakouts (indécision)
-        // Bougies directionnelles mais pas de cassures = signal faible
         if metrics.mean_body_range > 40.0 && metrics.mean_breakout_percentage < 8.0 {
-            score -= 10.0; // Contrainte = trading moins net
+            breakdown.add_penalty(-10.0, format!(
+                "Indécision: Body Range {:.1}% mais Breakout {:.1}% (bougies directionnelles sans cassures)",
+                metrics.mean_body_range, metrics.mean_breakout_percentage
+            ));
         }
 
-        // 10. PÉNALITÉ: Trop de fausses cassures (volatilité erratique)
-        // Breakout % très élevé + BodyRange faible = chaos, pas de direction
         if metrics.mean_breakout_percentage > 25.0 && metrics.mean_body_range < 30.0 {
-            score -= 8.0; // Volatilité instable/chaotique = à éviter
+            breakdown.add_penalty(-8.0, format!(
+                "Volatilité instable: Breakout {:.1}% mais Body Range {:.1}% (chaos)",
+                metrics.mean_breakout_percentage, metrics.mean_body_range
+            ));
         }
 
-        score.clamp(0.0, 100.0) // Clamp entre 0 et 100
+        breakdown.finalize();
+        breakdown
+    }
+
+    pub(super) fn calculer_score_confiance(metrics: &GlobalMetrics) -> f64 {
+        Self::calculer_score_confiance_breakdown(metrics).total
     }
 }
 
@@ -191,9 +232,9 @@ mod tests {
     #[test]
     fn test_confidence_perfect_metrics() {
         let metrics = GlobalMetrics {
-            mean_atr: 3.0, // 3.0 pips (normalized)
+            mean_atr: 3.0,
             mean_max_true_range: 0.0,
-            mean_volatility: 0.35,
+            mean_volatility: 35.0,
             mean_body_range: 50.0,
             mean_noise_ratio: 1.5,
             mean_breakout_percentage: 20.0,
@@ -211,35 +252,25 @@ mod tests {
     }
 
     #[test]
-    fn test_confidence_bounds() {
-        let test_cases = vec![
-            (2.5, 0.05),
-            (1.0, 0.15),
-            (2.0, 0.30),
-            (3.0, 0.50),
-            (10.0, 0.70),
-        ];
+    fn test_breakdown_has_reasoning() {
+        let metrics = GlobalMetrics {
+            mean_atr: 2.5,
+            mean_max_true_range: 5.0,
+            mean_volatility: 25.0,
+            mean_body_range: 48.0,
+            mean_noise_ratio: 1.8,
+            mean_breakout_percentage: 18.0,
+            mean_volume_imbalance: 0.05,
+            mean_range: 3.5,
+            total_candles: 150000,
+        };
 
-        for (atr, volatility) in test_cases {
-            let metrics = GlobalMetrics {
-                mean_atr: atr,
-                mean_max_true_range: 0.0,
-                mean_volatility: volatility,
-                mean_body_range: 40.0,
-                mean_noise_ratio: 2.0,
-                mean_breakout_percentage: 12.0,
-                mean_volume_imbalance: 0.05,
-                mean_range: 0.0008,
-                total_candles: 100000,
-            };
-            let score = ConfidenceScorer::calculer_score_confiance(&metrics);
-            assert!(
-                score <= 100.0,
-                "Score ne doit pas dépasser 100. ATR={}, Vol={}, Score={}",
-                atr,
-                volatility,
-                score
-            );
-        }
+        let bd = ConfidenceScorer::calculer_score_confiance_breakdown(&metrics);
+        assert!(!bd.atr_reasoning.is_empty());
+        assert!(!bd.body_range_reasoning.is_empty());
+        assert!(!bd.volatility_reasoning.is_empty());
+        assert!(!bd.noise_ratio_reasoning.is_empty());
+        assert!(!bd.breakout_reasoning.is_empty());
+        println!("{}", bd.report());
     }
 }

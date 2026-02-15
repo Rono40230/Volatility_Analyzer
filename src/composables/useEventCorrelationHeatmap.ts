@@ -9,20 +9,40 @@ export interface HeatmapData {
   pairs: string[]
   event_types: Array<{ name: string; count: number; has_data?: boolean }>
   data: Record<string, Record<string, number>>
+  volatility_percentages?: Record<string, Record<string, number>>
   counts?: Record<string, Record<string, number>>
+}
+
+export interface ArchivedCell {
+  pair: string
+  event_type: string
 }
 
 export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: HeatmapData) {
   const loadingHeatmap = ref(false)
   const analysisStore = useAnalysisStore()
+  const archivedCells = ref<Set<string>>(new Set()) // Format: "PAIR|EVENTTYPE"
 
-  const heatmapData = computed(() => {
+  const heatmapData = computed<HeatmapData | null>(() => {
     if (isArchiveMode) return archiveData || null
     return analysisStore.persistentHeatmapData
   })
 
   const minVolatilityThreshold = ref(0)
   const maxEventsToDisplay = ref(50)
+
+  async function loadArchivedCells() {
+    try {
+      const archived = await invoke<ArchivedCell[]>('get_archived_pairs_events')
+      archivedCells.value = new Set(archived.map(item => `${item.pair}|${item.event_type}`))
+    } catch (error) {
+      console.error('Failed to load archived cells:', error)
+    }
+  }
+
+  function isArchived(eventType: string, pair: string): boolean {
+    return archivedCells.value.has(`${pair}|${eventType}`)
+  }
 
   async function loadHeatmapData(pairs: string[], calendarId: number | null = null) {
     if (!pairs || pairs.length === 0) return
@@ -46,6 +66,16 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
   function getHeatmapValue(eventType: string, pair: string): number {
     if (!heatmapData.value?.data[eventType]) return 0
     return heatmapData.value.data[eventType][pair] || 0
+  }
+
+  function getHeatmapPercentage(eventType: string, pair: string): number {
+    if (!heatmapData.value?.volatility_percentages?.[eventType]) {
+      console.debug(`[getHeatmapPercentage] No data for ${eventType} / ${pair}`, heatmapData.value?.volatility_percentages)
+      return 0
+    }
+    const val = heatmapData.value.volatility_percentages![eventType][pair] || 0
+    console.debug(`[getHeatmapPercentage] ${eventType}/${pair} = ${val}%`)
+    return val
   }
 
   function getHeatmapCount(eventType: string, pair: string): number {
@@ -133,8 +163,11 @@ export function useEventCorrelationHeatmap(isArchiveMode = false, archiveData?: 
     loadHeatmapData,
     forceReloadHeatmap,
     getHeatmapValue,
+    getHeatmapPercentage,
     getHeatmapCount,
     getHeatmapClass,
-    getFormattedEventName
+    getFormattedEventName,
+    loadArchivedCells,
+    isArchived
   }
 }

@@ -74,12 +74,14 @@ pub struct PairEvent {
     pub name: String,
     pub count: usize,
     #[serde(default)]
+    #[allow(dead_code)]
     pub volatility_total: f64,
     #[serde(default)]
     pub volatility_before: f64,
     #[serde(default)]
     pub volatility_after: f64,
     #[serde(default)]
+    #[allow(dead_code)]
     pub body_pct: f64,
 }
 

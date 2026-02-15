@@ -53,7 +53,6 @@ impl GlobalAnalyzer {
             golden_hours: compute_golden_hours(&weighted_data),
             event_impacts: compute_event_impacts(&filtered_archives),
             tradable_events: compute_tradable_events(&filtered_archives),
-            pair_straddle_rates: compute_pair_straddle_rates(&filtered_archives),
             optimal_time_windows: compute_optimal_time_windows(&filtered_archives),
             generated_at: chrono::Local::now().to_string(),
         })

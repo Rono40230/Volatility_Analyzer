@@ -93,6 +93,17 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    volatility_profiles (id) {
+        id -> Integer,
+        asset_type -> Text,
+        half_life_minutes -> Double,
+        recommended_multiplier -> Double,
+        data_source -> Text,
+        updated_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(predicted_events -> calendar_events (event_id));
 diesel::joinable!(calendar_events -> calendar_imports (calendar_import_id));
 
@@ -103,4 +114,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     predicted_events,
     event_metrics,
     event_movement_quality,
+    volatility_profiles,
 );

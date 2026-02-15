@@ -1,7 +1,10 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { ArchivedBacktestData } from './dataFetcher'
-import { formaterPointsAvecPips } from '../pipConverter'
+
+function fmtPips(value: number): string {
+  return `${value.toFixed(1)} pips`
+}
 
 export async function generateBacktestReport(doc: jsPDF, dataList: ArchivedBacktestData[], startY: number = 20) {
   doc.setFontSize(16)
@@ -32,12 +35,12 @@ export async function generateBacktestReport(doc: jsPDF, dataList: ArchivedBackt
     // Paramètres utilisés
     doc.setFontSize(9)
     doc.setTextColor(100)
-    const slStr = formaterPointsAvecPips(res.symbol, cfg.stop_loss_pips)
+    const slStr = fmtPips(cfg.stop_loss_pips)
     const legacyOffset = (cfg as { offset_pips?: number }).offset_pips
     const tpStr = cfg.tp_rr != null
       ? `${cfg.tp_rr}R`
       : legacyOffset != null
-        ? formaterPointsAvecPips(res.symbol, legacyOffset * 2)
+        ? fmtPips(legacyOffset * 2)
         : 'n/a'
     const tsStr = cfg.trailing_atr_coef != null && cfg.atr_period != null
       ? `ATR${cfg.atr_period} x ${cfg.trailing_atr_coef}`
@@ -52,9 +55,9 @@ export async function generateBacktestReport(doc: jsPDF, dataList: ArchivedBackt
       ['Win Rate', `${res.win_rate_percent.toFixed(1)}%`],
       ['Profit Factor', res.profit_factor.toFixed(2)],
       ['Total Trades', res.total_trades.toString()],
-      ['Total Pips', formaterPointsAvecPips(res.symbol, res.total_pips)],
-      ['Max Drawdown', formaterPointsAvecPips(res.symbol, res.max_drawdown_pips)],
-      ['Avg Pips/Trade', formaterPointsAvecPips(res.symbol, res.average_pips_per_trade)]
+      ['Total Pips', fmtPips(res.total_pips)],
+      ['Max Drawdown', fmtPips(res.max_drawdown_pips)],
+      ['Avg Pips/Trade', fmtPips(res.average_pips_per_trade)]
     ]
 
     autoTable(doc, {
@@ -78,7 +81,7 @@ export async function generateBacktestReport(doc: jsPDF, dataList: ArchivedBackt
     const lastTrades = res.trades.slice(-5).reverse().map((t: any) => [
       new Date(t.event_date).toLocaleDateString(),
       t.outcome,
-      formaterPointsAvecPips(res.symbol, t.pips_net),
+      fmtPips(t.pips_net),
       `${t.duration_minutes}m`
     ])
 

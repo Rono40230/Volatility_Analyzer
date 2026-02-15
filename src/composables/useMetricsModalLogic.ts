@@ -1,7 +1,6 @@
 import { ref, watch, onMounted } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
 import { useMetricsAnalysisData } from './useMetricsAnalysisData'
-import { useStraddleAnalysis } from './useStraddleAnalysis'
 
 interface ModalProps {
   isOpen: boolean
@@ -12,7 +11,6 @@ interface ModalProps {
 
 export function useMetricsModalLogic(props: ModalProps) {
   const { updateAnalysis, updateAnalysisForQuarter } = useMetricsAnalysisData()
-  const { analyzeStraddleMetrics } = useStraddleAnalysis()
   
   const showArchiveModal = ref(false)
   const archivePeriodStart = ref('')
@@ -25,8 +23,6 @@ export function useMetricsModalLogic(props: ModalProps) {
     try {
       if (props.preSelectedHour !== undefined && props.preSelectedQuarter !== undefined) {
         await updateAnalysisForQuarter(props.analysisResult, props.preSelectedHour, props.preSelectedQuarter)
-        const symbol = props.analysisResult.symbol || 'EURUSD'
-        await analyzeStraddleMetrics(symbol, props.preSelectedHour, props.preSelectedQuarter)
       } else {
         await updateAnalysis(props.analysisResult)
       }
@@ -41,8 +37,6 @@ export function useMetricsModalLogic(props: ModalProps) {
     if (newSelection.hour !== undefined && newSelection.quarter !== undefined && props.analysisResult) {
       try {
         await updateAnalysisForQuarter(props.analysisResult, newSelection.hour, newSelection.quarter)
-        const symbol = props.analysisResult.symbol || 'EURUSD'
-        await analyzeStraddleMetrics(symbol, newSelection.hour, newSelection.quarter)
       } catch (error) {
         // Error handling
       }

@@ -1,7 +1,12 @@
 // models/trading_recommendation.rs - Enums et logique pour recommandations de trading
+//
+// DEPRECATED (Phase 2): Remplacé par EntryAnalysisResult qui utilise le profit net réel
+// après spread au lieu de scores heuristiques. Conservé temporairement pour compatibilité.
+// Sera supprimé en Phase 3.
 use serde::{Deserialize, Serialize};
 
 /// Recommandation de trading pour stratégie STRADDLE (News Trading)
+/// DEPRECATED: utiliser EntryAnalysisResult (Phase 2) à la place
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TradingRecommendation {
     /// Setup idéal - Offset standard, forte probabilité de breakout

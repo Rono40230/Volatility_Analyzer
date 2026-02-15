@@ -24,16 +24,6 @@ export interface TradableEventGlobal {
   affected_pairs: string[]
 }
 
-export interface PairStraddleRateGlobal {
-  pair: string
-  straddle_score: number
-  directional_move_rate: number
-  non_event_rate: number
-  avg_volatility: number
-  total_events: number
-  top_events: string[]
-}
-
 export interface OptimalTimeWindowGlobal {
   event_type: string
   consistency_score: number
@@ -51,7 +41,6 @@ export interface GlobalAnalysisResult {
   best_pairs: BestPairGlobal[]
   golden_hours: GoldenHourGlobal[]
   tradable_events: TradableEventGlobal[]
-  pair_straddle_rates: PairStraddleRateGlobal[]
   optimal_time_windows: OptimalTimeWindowGlobal[]
   generated_at: string
 }

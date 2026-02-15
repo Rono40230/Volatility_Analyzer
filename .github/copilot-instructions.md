@@ -1,6 +1,6 @@
 # 🤖 Copilot Instructions - Analyses Historiques
 
-**Context**: Volatility Analyzer for Forex Straddle Trading (Tauri 2.0 + Vue 3 + Rust).
+**Context**: Volatility Analyzer for Forex, index, crypto and métaux (Tauri 2.0 + Vue 3 + Rust).
 
 ## 🏗️ Architecture
 - **Frontend**: Vue 3 (Composition API `<script setup>`), TypeScript, Pinia.
@@ -27,7 +27,7 @@
     -   `cargo clippy -- -D warnings`
 
 ## 📊 Domain: Straddle Strategy
--   **Goal**: Optimize **Offset**, **TP/SL**, **Duration** based on historical volatility.
+-   **Goal**: Optimize **Entry**, **TP/SL**, **Duration** based on historical volatility.
 -   **Golden Rule**: If a metric doesn't help parameterize a Straddle, **don't implement it**.
 -   **Key Metrics**: ATR, Noise Ratio (>3.0 is bad), Event Impact, Volatility Decay.
 

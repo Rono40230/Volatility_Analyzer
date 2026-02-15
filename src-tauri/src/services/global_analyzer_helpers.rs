@@ -18,9 +18,11 @@ pub fn is_outlier(value: f64, values: &[f64]) -> bool {
     if values.len() < 3 {
         return false;
     }
-    let mean: f64 = values.iter().sum::<f64>() / values.len() as f64;
+    let n = values.len() as f64;
+    let mean: f64 = values.iter().sum::<f64>() / n;
+    // Bessel's correction : diviser par (n-1) pour variance échantillon
     let variance: f64 =
-        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
+        values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / (n - 1.0);
     let std_dev = variance.sqrt();
     (value - mean).abs() > 3.0 * std_dev
 }

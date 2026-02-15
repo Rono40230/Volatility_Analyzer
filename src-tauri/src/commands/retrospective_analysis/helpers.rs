@@ -43,9 +43,8 @@ pub async fn load_events_by_type(
         .map_err(|e| format!("Load failed: {}", e))
 }
 
-/// Calcule le True Range d'une bougie.
-/// Si prev_close est fourni, utilise la formule standard TR = max(H-L, |H-prevC|, |L-prevC|).
-/// Sinon, fallback sur le range simple H-L.
+/// DÉPRÉCIÉ : utiliser crate::services::atr::calculate_true_range() à la place
+#[allow(dead_code)]
 pub fn calculer_atr(high: f64, low: f64, _close: f64) -> f64 {
     // Fallback sans prev_close : range simple
     high - low

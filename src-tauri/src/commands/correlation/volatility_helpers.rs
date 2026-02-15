@@ -6,18 +6,15 @@
 // utiliser des BTreeMap pour recherche O(log n)
 
 use crate::services::candle_index::CandleIndex;
-use crate::services::straddle_scoring::StraddleScoreCalculator;
 use chrono::{Duration, NaiveDateTime, TimeZone, Timelike, Utc};
 
 #[derive(Debug)]
 pub struct VolatilityMetrics {
     pub event_volatility: f64,
+    pub event_volatility_percentage: f64,
     pub baseline_volatility: f64,
-    pub straddle_score: f64,
     #[allow(dead_code)]
-    pub directionality: f64,
-    #[allow(dead_code)]
-    pub whipsaw_risk: f64,
+    pub baseline_volatility_percentage: f64,
 }
 
 /// Version OPTIMISÉE: utilise CandleIndex pour requêtes rapides
@@ -51,27 +48,16 @@ pub fn calculer_volatilites_optimise(
 
     let mut event_volatility_sum = 0.0;
     let mut event_count = 0;
-
-    let mut candles_before = Vec::new();
-    let mut candles_after = Vec::new();
+    let mut event_price_sum = 0.0;
 
     for candle in &event_candles {
         if candle.datetime >= event_window_start && candle.datetime <= event_window_end {
-            let pips = (candle.high - candle.low) / pip_value; // ✅ CORRECTION: division au lieu de multiplication
+            let pips = (candle.high - candle.low) / pip_value;
             event_volatility_sum += pips;
+            event_price_sum += candle.close;
             event_count += 1;
-
-            if candle.datetime < event_dt {
-                candles_before.push(candle.clone());
-            } else {
-                candles_after.push(candle.clone());
-            }
         }
     }
-
-    // Calcul du Straddle Score
-    let score_metrics =
-        StraddleScoreCalculator::calculer(&candles_before, &candles_after, pip_value);
 
     // OPTIMISATION 2: Récupérer candles pour la BASELINE
     // Utiliser la méthode spécialisée du CandleIndex qui filtre par:
@@ -84,27 +70,49 @@ pub fn calculer_volatilites_optimise(
 
     let mut baseline_volatility_sum = 0.0;
     let mut baseline_count = 0;
+    let mut baseline_price_sum = 0.0;
 
     for (_, high, low) in &baseline_candles {
-        let pips = (high - low) / pip_value; // ✅ CORRECTION: division au lieu de multiplication
+        let pips = (high - low) / pip_value;
         baseline_volatility_sum += pips;
+        // Utiliser moyenne entre high et low comme proxy du prix (close non disponible)
+        baseline_price_sum += (high + low) / 2.0;
         baseline_count += 1;
     }
 
+    let event_volatility_avg = if event_count == 0 {
+        0.0
+    } else {
+        event_volatility_sum / event_count as f64
+    };
+    let event_volatility_pct = if event_count == 0 || event_price_sum == 0.0 {
+        0.0
+    } else {
+        let avg_price = event_price_sum / event_count as f64;
+        // Convertir ATR (en pips) en prix réel, puis diviser par prix moyen
+        let event_volatility_in_price = event_volatility_avg * pip_value;
+        (event_volatility_in_price / avg_price) * 100.0
+    };
+
+    let baseline_volatility_avg = if baseline_count == 0 {
+        0.0
+    } else {
+        baseline_volatility_sum / baseline_count as f64
+    };
+    let baseline_volatility_pct = if baseline_count == 0 || baseline_price_sum == 0.0 {
+        0.0
+    } else {
+        let avg_price = baseline_price_sum / baseline_count as f64;
+        // Convertir ATR (en pips) en prix réel, puis diviser par prix moyen
+        let baseline_volatility_in_price = baseline_volatility_avg * pip_value;
+        (baseline_volatility_in_price / avg_price) * 100.0
+    };
+
     Ok(VolatilityMetrics {
-        event_volatility: if event_count == 0 {
-            0.0
-        } else {
-            event_volatility_sum / event_count as f64
-        },
-        baseline_volatility: if baseline_count == 0 {
-            0.0
-        } else {
-            baseline_volatility_sum / baseline_count as f64
-        },
-        straddle_score: score_metrics.total_score,
-        directionality: score_metrics.directionality_score,
-        whipsaw_risk: score_metrics.whipsaw_risk,
+        event_volatility: event_volatility_avg,
+        event_volatility_percentage: event_volatility_pct,
+        baseline_volatility: baseline_volatility_avg,
+        baseline_volatility_percentage: baseline_volatility_pct,
     })
 }
 
@@ -149,12 +157,8 @@ mod tests {
         let metrics = VolatilityMetrics {
             event_volatility: 100.0,
             baseline_volatility: 50.0,
-            straddle_score: 75.0,
-            directionality: 80.0,
-            whipsaw_risk: 10.0,
         };
         assert_eq!(metrics.event_volatility, 100.0);
         assert_eq!(metrics.baseline_volatility, 50.0);
-        assert_eq!(metrics.straddle_score, 75.0);
     }
 }

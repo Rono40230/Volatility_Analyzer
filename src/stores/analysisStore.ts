@@ -2,12 +2,15 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 // Fonctions utilitaires pour persistance localStorage
+const HEATMAP_CACHE_VERSION = 3 // Incrémenter pour invalider le cache existant
+
 function sauvegarderHeatmapStockage(data: HeatmapData, pairs: string[], calendarId: number | null) {
   const heatmapCache = {
     data,
     pairs,
     calendarId,
     timestamp: Date.now(),
+    version: HEATMAP_CACHE_VERSION,
   }
   localStorage.setItem('heatmapCache', JSON.stringify(heatmapCache))
   localStorage.setItem('heatmapCalendarId', String(calendarId || 0))
@@ -18,6 +21,11 @@ function chargerHeatmapStockage(): { data: HeatmapData; pairs: string[]; calenda
     const cached = localStorage.getItem('heatmapCache')
     if (!cached) return null
     const parsed = JSON.parse(cached)
+    // Invalider si version obsolète
+    if (parsed.version !== HEATMAP_CACHE_VERSION) {
+      localStorage.removeItem('heatmapCache')
+      return null
+    }
     return {
       data: parsed.data,
       pairs: parsed.pairs,

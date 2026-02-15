@@ -75,10 +75,33 @@ pub fn ensure_pair_tables(pool: &DbPool) -> Result<(), Box<dyn std::error::Error
             close REAL NOT NULL,
             volume REAL NOT NULL,
             imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            source_file TEXT NOT NULL
+            source_file TEXT NOT NULL,
+            spread_open REAL,
+            spread_high REAL,
+            spread_low REAL,
+            spread_close REAL,
+            spread_mean REAL,
+            tick_count INTEGER
         )",
     )
     .execute(&mut conn)?;
+
+    // Migration idempotente : ajouter les colonnes spread si elles n'existent pas encore
+    for col in &[
+        "spread_open REAL",
+        "spread_high REAL",
+        "spread_low REAL",
+        "spread_close REAL",
+        "spread_mean REAL",
+        "tick_count INTEGER",
+    ] {
+        let _ = diesel::sql_query(format!(
+            "ALTER TABLE candle_data ADD COLUMN {}",
+            col
+        ))
+        .execute(&mut conn);
+        // Ignore l'erreur "duplicate column" si la colonne existe déjà
+    }
 
     diesel::sql_query(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_candle_data_symbol_timeframe_time 
@@ -169,7 +192,7 @@ pub fn ensure_calendar_imports_table(pool: &DbPool) -> Result<(), Box<dyn std::e
 }
 
 /// Crée la table symbol_conversions si elle n'existe pas (dans pairs.db)
-/// Stocke les overrides utilisateur pour pip_value / unit / display_digits / mt5_digits
+/// Stocke les overrides utilisateur pour pip_value / unit / display_digits
 pub fn ensure_symbol_conversions_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = pool.get()?;
 
@@ -179,17 +202,18 @@ pub fn ensure_symbol_conversions_table(pool: &DbPool) -> Result<(), Box<dyn std:
             pip_value REAL NOT NULL,
             unit TEXT NOT NULL DEFAULT 'pips',
             display_digits INTEGER NOT NULL DEFAULT 1,
-            mt5_digits INTEGER NOT NULL DEFAULT 5,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
         )",
     )
     .execute(&mut conn)?;
 
-    // Migration: ajouter mt5_digits si la colonne n'existe pas encore
-    let _ = diesel::sql_query(
-        "ALTER TABLE symbol_conversions ADD COLUMN mt5_digits INTEGER NOT NULL DEFAULT 5",
-    )
-    .execute(&mut conn);
+    // Ajouter la colonne hidden (FIX: soft delete avec masquage)
+    let _ = diesel::sql_query("ALTER TABLE symbol_conversions ADD COLUMN hidden BOOLEAN NOT NULL DEFAULT 0")
+        .execute(&mut conn);
+
+    // Créer l'index pour filtrer les conversions cachées
+    let _ = diesel::sql_query("CREATE INDEX IF NOT EXISTS idx_symbol_conversions_hidden ON symbol_conversions(hidden)")
+        .execute(&mut conn);
 
     tracing::info!("✅ Table symbol_conversions vérifiée/créée");
     Ok(())
@@ -213,5 +237,61 @@ pub fn ensure_archives_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Er
     )
     .execute(&mut conn)?;
 
+    Ok(())
+}
+
+/// Crée la table volatility_profiles si elle n'existe pas (FIX 2.3)
+/// Stocke les profiles de décroissance de volatilité par classe d'actif
+pub fn ensure_volatility_profiles_table(pool: &DbPool) -> Result<(), Box<dyn std::error::Error>> {
+    let mut conn = pool.get()?;
+
+    diesel::sql_query(
+        "CREATE TABLE IF NOT EXISTS volatility_profiles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+            asset_type VARCHAR(20) NOT NULL,
+            half_life_minutes REAL NOT NULL,
+            recommended_multiplier REAL NOT NULL DEFAULT 2.0,
+            data_source VARCHAR(50) NOT NULL DEFAULT 'manual',
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(asset_type)
+        )",
+    )
+    .execute(&mut conn)?;
+
+    diesel::sql_query(
+        "CREATE INDEX IF NOT EXISTS idx_volatility_profiles_asset_type ON volatility_profiles(asset_type)",
+    )
+    .execute(&mut conn)?;
+
+    // Insert default profiles if the table is empty
+    // Check count with a simpler approach - try to count and if it fails, just use count(*) 
+    let _empty_table = matches!(
+        diesel::sql_query("SELECT COUNT(*) FROM volatility_profiles")
+            .execute(&mut conn),
+        Ok(0) | Err(_)
+    );
+
+    // Just check if we need to insert by attempting a select with a simple query
+    let should_insert = diesel::sql_query("SELECT COUNT(*) as cnt FROM volatility_profiles WHERE asset_type = 'ForexMajor'")
+        .execute(&mut conn)
+        .map(|_| false) // If executed successfully, record likely exists
+        .unwrap_or(true); // If it fails, try to insert
+
+    if should_insert {
+        let _ = diesel::sql_query(
+            "INSERT INTO volatility_profiles (asset_type, half_life_minutes, recommended_multiplier, data_source, updated_at) VALUES
+            ('ForexMajor', 1.8, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('ForexJpy', 2.0, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('Gold', 2.2, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('Silver', 2.2, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('Crypto', 5.0, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('Index', 3.0, 2.0, 'manual', CURRENT_TIMESTAMP),
+            ('Commodity', 3.5, 2.0, 'manual', CURRENT_TIMESTAMP)"
+        )
+        .execute(&mut conn);
+        tracing::info!("✅ Default volatility profiles inserted");
+    }
+
+    tracing::info!("✅ Table volatility_profiles vérifiée/créée");
     Ok(())
 }

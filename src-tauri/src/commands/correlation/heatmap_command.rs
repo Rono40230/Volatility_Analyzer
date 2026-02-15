@@ -89,12 +89,13 @@ pub async fn get_correlation_heatmap(
             period_end,
             pairs,
             event_types: vec![],
-            data: std::collections::HashMap::new(),
-            counts: std::collections::HashMap::new(),
+            data: std::collections::HashMap::new(),            volatility_percentages: std::collections::HashMap::new(),            counts: std::collections::HashMap::new(),
         });
     }
 
     let mut data: std::collections::HashMap<String, std::collections::HashMap<String, f64>> =
+        std::collections::HashMap::new();
+    let mut volatility_percentages: std::collections::HashMap<String, std::collections::HashMap<String, f64>> =
         std::collections::HashMap::new();
     let mut counts: std::collections::HashMap<String, std::collections::HashMap<String, i32>> =
         std::collections::HashMap::new();
@@ -136,6 +137,12 @@ pub async fn get_correlation_heatmap(
             } else {
                 -1.0 // Indicateur de "Pas de données"
             };
+            let avg_pct_rounded = if vol_result.has_data {
+                let pct = (vol_result.percentage * 10.0).round() / 10.0;
+                if pct < 0.1 && pct > 0.0 { 0.1 } else { pct }
+            } else {
+                -1.0
+            };
 
             // Marquer has_data au moins une fois si vrai
             if vol_result.has_data {
@@ -145,6 +152,10 @@ pub async fn get_correlation_heatmap(
             data.entry(event_type.name.clone())
                 .or_default()
                 .insert(pair.clone(), avg_vol_rounded);
+
+            volatility_percentages.entry(event_type.name.clone())
+                .or_default()
+                .insert(pair.clone(), avg_pct_rounded);
 
             counts.entry(event_type.name.clone())
                 .or_default()
@@ -159,6 +170,7 @@ pub async fn get_correlation_heatmap(
         pairs,
         event_types,
         data,
+        volatility_percentages,
         counts,
     })
 }

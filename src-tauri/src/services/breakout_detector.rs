@@ -14,7 +14,7 @@ pub fn calculer_pourcentage_breakout(candles: &[Candle]) -> f64 {
     }
 
     let mut breakout_count = 0;
-    let total_candles = candles.len();
+    let total_candles = candles.len() - 2; // Les 2 premières bougies servent de référence, pas évaluées
 
     // Pour chaque bougie, vérifier si c'est un breakout
     for i in 2..candles.len() {
@@ -112,10 +112,91 @@ pub struct BreakoutQuality {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::{DateTime, Utc};
+
+    fn make_candle(open: f64, high: f64, low: f64, close: f64, offset: i64) -> Candle {
+        Candle {
+            symbol: "EURUSD".to_string(),
+            datetime: DateTime::<Utc>::from_timestamp_millis(
+                1609459200000 + (offset * 60000),
+            )
+            .expect("valid ts"),
+            open,
+            high,
+            low,
+            close,
+            volume: 100.0,
+            ..Default::default()
+        }
+    }
 
     #[test]
     fn test_empty_candles() {
         let percentage = calculer_pourcentage_breakout(&[]);
         assert_eq!(percentage, 0.0);
+    }
+
+    #[test]
+    fn test_less_than_3_candles_returns_zero() {
+        let candles = vec![
+            make_candle(1.1000, 1.1020, 1.0990, 1.1010, 0),
+            make_candle(1.1010, 1.1030, 1.0995, 1.1020, 1),
+        ];
+        assert_eq!(calculer_pourcentage_breakout(&candles), 0.0);
+    }
+
+    #[test]
+    fn test_no_breakout() {
+        // 3 bougies qui restent dans le range → 0%
+        let candles = vec![
+            make_candle(1.1000, 1.1020, 1.0990, 1.1010, 0),
+            make_candle(1.1010, 1.1015, 1.0995, 1.1005, 1),
+            make_candle(1.1005, 1.1015, 1.0995, 1.1010, 2), // close=1.1010 < recent_high=1.1020
+        ];
+        assert_eq!(calculer_pourcentage_breakout(&candles), 0.0);
+    }
+
+    #[test]
+    fn test_bullish_breakout_detected() {
+        // La 3e bougie casse le recent_high avec body > 50% du range
+        let candles = vec![
+            make_candle(1.1000, 1.1010, 1.0990, 1.1005, 0), // prev2
+            make_candle(1.1005, 1.1015, 1.0995, 1.1010, 1), // prev1, recent_high=1.1015
+            // Bougie 3 : close=1.1040 > recent_high=1.1015, body=0.003, range=0.004, ratio=75%
+            make_candle(1.1010, 1.1045, 1.1005, 1.1040, 2),
+        ];
+        let pct = calculer_pourcentage_breakout(&candles);
+        // 1 bougie evaluée, 1 breakout → 100%
+        assert!((pct - 100.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_denominator_is_len_minus_2() {
+        // 5 bougies → 3 évaluées (index 2,3,4) → dénominateur = 3
+        let candles = vec![
+            make_candle(1.1000, 1.1010, 1.0990, 1.1005, 0),
+            make_candle(1.1005, 1.1015, 1.0995, 1.1010, 1),
+            // index 2 : breakout haussier (close > 1.1015, body dominant)
+            make_candle(1.1010, 1.1045, 1.1005, 1.1040, 2),
+            // index 3 : pas de breakout (reste plat)
+            make_candle(1.1040, 1.1050, 1.1030, 1.1040, 3),
+            // index 4 : pas de breakout
+            make_candle(1.1040, 1.1048, 1.1035, 1.1042, 4),
+        ];
+        let pct = calculer_pourcentage_breakout(&candles);
+        // 1 breakout / 3 évaluées = 33.33%
+        assert!((pct - 100.0 / 3.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_bearish_breakout_detected() {
+        let candles = vec![
+            make_candle(1.1000, 1.1010, 1.0990, 1.1005, 0),
+            make_candle(1.1005, 1.1015, 1.0995, 1.1010, 1), // recent_low = 1.0990
+            // close=1.0960 < recent_low=1.0990, body=0.003, range=0.005, ratio=60% > 50%
+            make_candle(1.0990, 1.0990, 1.0955, 1.0960, 2),
+        ];
+        let pct = calculer_pourcentage_breakout(&candles);
+        assert!((pct - 100.0).abs() < 1e-10);
     }
 }

@@ -33,9 +33,9 @@
           <PairAnalysisBlock />
         </section>
 
-        <!-- Section: Timing & Setup Straddle -->
+        <!-- Section: Timing & Volatilité -->
         <section class="content-section">
-          <h3 class="section-title">⏱️ Timing & Setup Straddle</h3>
+          <h3 class="section-title">⏱️ Timing & Volatilité</h3>
           <TimingAnalysisBlock />
         </section>
       </div>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineEmits, defineProps, watch } from 'vue'
+import { watch } from 'vue'
 import GlobalStatsBlock from './analysis/GlobalStatsBlock.vue'
 import EventAnalysisBlock from './analysis/EventAnalysisBlock.vue'
 import PairAnalysisBlock from './analysis/PairAnalysisBlock.vue'

@@ -1,6 +1,5 @@
 // commands/mod.rs - Exports des commandes Tauri
 pub mod archive_commands;
-pub mod backtest;
 pub mod calendar_commands;
 pub mod calendar_db_helper;
 pub mod calendar_import_commands;
@@ -12,9 +11,12 @@ pub mod cleanup_commands;
 pub mod cleanup_preview_commands;
 pub mod config_commands;
 pub mod correlation;
+pub mod candle_db_writer;
 pub mod csv_cleaner_commands;
 pub mod deletion_commands;
+pub mod dukascopy_commands;
 pub mod economic_commands;
+pub mod entry_point_commands;
 pub mod entry_window_analysis_commands;
 pub mod event_metrics;
 pub mod export_pdf_commands;
@@ -27,13 +29,13 @@ pub mod pair_data;
 // pair_importer supprimé (Phase 3.2) : code mort, remplacé par pair_data/processor.rs
 pub mod planning;
 pub mod retrospective_analysis;
+pub mod tick_import_commands;
 
 pub mod session_commands;
 pub mod volatility;
 pub mod volatility_duration_commands;
 
 pub use archive_commands::*;
-pub use backtest::*;
 pub use calendar_import_commands::*;
 pub use candle_index_commands::{
     get_candle_index_stats, get_candles_for_hour, get_candles_for_quarter, get_pair_candles,
@@ -53,6 +55,8 @@ pub use economic_commands::{
     analyze_event_correlation, get_calendar_import_info, get_events_for_period,
     import_and_convert_calendar, load_economic_events_from_csv,
 };
+// Phase 2: entry point analysis (profit net après spread réel)
+// pub use entry_point_commands::analyze_entry_points; // enregistré directement dans lib.rs
 pub use entry_window_analysis_commands::analyze_entry_window;
 pub use event_metrics::{
     calculer_metriques_evenement, clear_candles, get_available_symbols, load_candles_for_metrics,
@@ -67,16 +71,15 @@ pub use metadata::{
 };
 pub use movement_analysis_commands::{analyze_movement_quality, get_movement_qualities};
 pub use pair_data::{import_pair_data, get_symbol_properties};
-pub use pair_data::conversion_commands::{get_all_conversions, save_conversion, delete_conversion};
+pub use pair_data::conversion_commands::{get_all_conversions, save_conversion, delete_conversion, restore_conversion, invalidate_analysis_cache};
 pub use planning::projection::project_stats_on_calendar;
 // Phase 7: Retrospective analysis commands (fully integrated)
 pub use retrospective_analysis::{analyze_decay_profile, analyze_peak_delay, get_event_types};
 pub use session_commands::*;
 pub use volatility::{
-    analyze_quarter_entry_timing, analyze_slice_metrics, analyze_straddle_metrics, analyze_symbol,
-    analyze_volatility_duration_for_slice, calculer_offset_optimal, calculer_frequence_whipsaw,
-    calculer_taux_reussite, get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
+    analyze_quarter_entry_timing, analyze_slice_metrics, analyze_symbol,
+    analyze_volatility_duration_for_slice,
+    get_best_hours, get_cached_candles_for_hour, get_hourly_stats,
     get_quarter_events, load_candles_for_hour, load_symbols, ping,
-    check_pair_correlations,
 };
 pub use volatility_duration_commands::analyze_volatility_duration;

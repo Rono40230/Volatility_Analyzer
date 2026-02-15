@@ -1,6 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { Archive } from '../../stores/archiveStore'
-import type { ArchivedAnalysisData } from '../../composables/useMetricsModalLoad'
 
 interface CalendarMetadata {
   id: number

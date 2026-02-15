@@ -1,4 +1,5 @@
-import type { SliceAnalysis } from '../../utils/straddleAnalysis'
+import type { SliceAnalysis } from '../../utils/volatilityScore'
+import { pipsToDisplayValue } from '../../utils/assetUnit'
 
 interface GlobalMetrics {
   mean_atr?: number
@@ -35,15 +36,17 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
   const stats = analysis.slice.stats
   const globals: GlobalMetrics = analysisData?.globalMetrics || {}
   const unit = (analysisData?.unit as string) || 'pts'
+  const symbol = (analysisData?.symbol as string) || ''
   const isCrypto = unit === '$'
   const suffix = isCrypto ? '' : unit
   const prefix = isCrypto ? '$' : ''
+  const toDisplay = (v: number) => symbol ? pipsToDisplayValue(v, symbol) : v
 
   return [
     {
       label: 'ATR Moyen',
-      value15: stats.atr_mean,
-      valueGlobal: globals.mean_atr ?? 0,
+      value15: toDisplay(stats.atr_mean),
+      valueGlobal: toDisplay(globals.mean_atr ?? 0),
       goodThreshold: 50,
       excellentThreshold: 100,
       suffix,
@@ -56,8 +59,8 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
     },
     {
       label: 'Max Spike',
-      value15: stats.max_true_range ?? 0,
-      valueGlobal: globals.mean_max_true_range ?? 0,
+      value15: toDisplay(stats.max_true_range ?? 0),
+      valueGlobal: toDisplay(globals.mean_max_true_range ?? 0),
       goodThreshold: 50,
       excellentThreshold: 100,
       suffix,
@@ -105,7 +108,7 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       definition: 'Force directionnelle combinee (body + breakout). Indique la conviction du mouvement.',
       usage: 'Elevee = tendance nette, meilleure probabilite de poursuite. Faible = indecision.',
       scoring: '🟢 Excellent > 20% | 🔵 Bon 15-20% | 🟡 Acceptable 5-15% | 🔴 Faible < 5%',
-      realUseCases: 'Ex: 22% -> straddle directionnel agressif.\nEx: 4% -> reduire taille ou passer.'
+      realUseCases: 'Ex: 0.22 (22%) -> straddle directionnel agressif.\nEx: 0.04 (4%) -> reduire taille ou passer.'
     },
     {
       label: 'Noise Ratio',
@@ -113,12 +116,12 @@ export function buildMetricsConfig(analysis: SliceAnalysis, analysisData: Analys
       valueGlobal: globals.mean_noise_ratio ?? 0,
       goodThreshold: 2.0,
       excellentThreshold: 1.5,
-      suffix: '%',
+      suffix: 'x',
       decimals: 2,
       definition: 'Ratio bruit/signal (meches vs body). Bas = mouvement propre, haut = erratique.',
       usage: 'Plus bas est meilleur. Un ratio eleve implique plus de faux signaux et SL plus larges.',
-      scoring: '🟢 Excellent < 1.5 | 🔵 Bon 1.5-2.0 | 🟡 Acceptable 2.0-3.0 | 🔴 Faible > 3.0',
-      realUseCases: 'Ex: 1.7 -> execution standard.\nEx: 3.4 -> augmenter SL de 20-30% ou eviter.'
+      scoring: '🟢 Excellent < 1.5x | 🔵 Bon 1.5-2.0x | 🟡 Acceptable 2.0-3.0x | 🔴 Faible > 3.0x',
+      realUseCases: 'Ex: 1.7x -> execution standard.\nEx: 3.4x -> augmenter SL de 20-30% ou eviter.'
     },
     {
       label: 'Breakout %',

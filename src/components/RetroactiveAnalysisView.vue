@@ -33,12 +33,6 @@
       :pair="store.selectedPair"
       :event-datetime="store.graphData?.event_datetime"
       :timezone-offset="store.graphData?.timezone_offset"
-      :meilleur-moment="store.graphData?.meilleur_moment ?? 0"
-      :timeout="store.graphData?.timeout ?? 60"
-      :offset-simultaneous="store.graphData?.offset_simultaneous ?? 0"
-      :stop-loss-simultaneous="store.graphData?.stop_loss_simultaneous ?? 0"
-      :trailing-stop-simultaneous="store.graphData?.trailing_stop_simultaneous ?? 0"
-      :stop-loss-recovery-simultaneous="store.graphData?.stop_loss_recovery_simultaneous ?? 0"
       :point-value="store.graphData?.point_value"
       :avg-deviation="store.graphData?.avg_deviation"
       :surprise-event-count="store.graphData?.surprise_event_count"
@@ -278,12 +272,6 @@ function openArchiveModal() {
     eventType: store.selectedEventType,
     eventLabel: getEventLabel(store.selectedEventType),
     eventDatetime: store.graphData.event_datetime,
-    meilleurMoment: store.graphData.meilleur_moment,
-    timeout: store.graphData.timeout,
-    stopLossSimultaneous: store.graphData.stop_loss_simultaneous,
-    trailingStopSimultaneous: store.graphData.trailing_stop_simultaneous,
-    offsetSimultaneous: store.graphData.offset_simultaneous,
-    stopLossRecoverySimultaneous: store.graphData.stop_loss_recovery_simultaneous,
     pointValue: store.graphData.point_value
   })
   showArchiveModal.value = true

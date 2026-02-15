@@ -24,6 +24,10 @@ Thumbs.db
 # Build artifacts
 src-tauri/target/
 src-tauri/gen/
+analyses-historiques-volatility
+*.rpm
+src-tauri/TEMP_PREVIEW
+ff_test.csv
 
 # Data files (trop volumineux pour Git)
 data/csv/*.csv

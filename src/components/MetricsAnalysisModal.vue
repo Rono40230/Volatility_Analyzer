@@ -28,25 +28,7 @@
             :symbol="analysisData?.symbol"
             :volatility-duration="volatilityDuration"
             :movement-qualities="movementQualities"
-            :whipsaw-analysis="whipsawAnalysis"
-            :confidence="confidence"
-          >
-            <BidiParametersSection
-              :slice-analyses="sliceAnalyses"
-              :entry-window-analysis="entryWindowAnalysis"
-              :analysis="analysis"
-              :analysis-data="analysisData"
-              :volatility-duration="volatilityDuration"
-              :trading-plan="tradingPlan"
-              :whipsaw-analysis="whipsawAnalysis"
-              :offset-optimal="offsetOptimal"
-              :confidence="confidence"
-              :spread="spreadCost"
-              :symbol="analysisData?.symbol || 'EURUSD'"
-              :point-value="props.analysisResult?.point_value"
-              :recurring-events="recurringEvents"
-            />
-          </BestSliceCard>
+          />
         </div>
         <div
           v-if="!sliceAnalyses || sliceAnalyses.length === 0"
@@ -97,7 +79,6 @@ import type { AnalysisResult } from '../stores/volatility'
 import { useMetricsModalLoad, type ArchivedAnalysisData } from '../composables/useMetricsModalLoad'
 import ArchiveModal from './ArchiveModal.vue'
 import BestSliceCard from './metrics/BestSliceCard.vue'
-import BidiParametersSection from './metrics/BidiParametersSection.vue'
 
 interface Props {
   isOpen: boolean
@@ -114,7 +95,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{ close: [] }>()
 
 const isOpenRef = toRef(props, 'isOpen')
-const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents, offsetOptimal, whipsawAnalysis, confidence, spreadCost } = useMetricsModalLoad(props, isOpenRef)
+const { analysisData, sliceAnalyses, movementQualities, volatilityDuration, tradingPlan, entryWindowAnalysis, recurringEvents } = useMetricsModalLoad(props, isOpenRef)
 
 const showArchiveModal = ref(false)
 const archivePeriodStart = ref('')
@@ -141,9 +122,6 @@ function openArchiveModal() {
     volatilityDuration: volatilityDuration.value, 
     tradingPlan: tradingPlan.value, 
     entryWindowAnalysis: entryWindowAnalysis.value, 
-    offsetOptimal: offsetOptimal.value, 
-    whipsawAnalysis: whipsawAnalysis.value,
-    confidence: confidence.value,
     recurringEvents: recurringEvents.value
   })
   showArchiveModal.value = true

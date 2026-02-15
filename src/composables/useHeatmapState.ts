@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onBeforeUnmount, onDeactivated } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useAnalysisStore } from '../stores/analysisStore'
+import { useConversionStore } from '../stores/conversionStore'
 import { useDataRefresh } from './useDataRefresh'
 
 interface HeatmapStateProps {
@@ -10,6 +11,7 @@ interface HeatmapStateProps {
 
 export function useHeatmapState(props: HeatmapStateProps) {
   const analysisStore = useAnalysisStore()
+  const conversionStore = useConversionStore()
   const viewMode = ref<'heatmap' | 'retrospective'>('heatmap')
   const availablePairs = ref<string[]>([])
   const selectedCalendarId = ref<number | null>(null)
@@ -67,8 +69,13 @@ export function useHeatmapState(props: HeatmapStateProps) {
 
   async function chargerPairesDisponibles() {
     try {
+      // Charger le store des conversions pour accéder à l'info 'hidden'
+      await conversionStore.loadConversions()
       const data = await invoke<Array<{ symbol: string; file_path: string }>>('load_symbols')
-      availablePairs.value = data.map(item => item.symbol)
+      // Filtrer les paires cachées (supprimées par l'utilisateur)
+      availablePairs.value = data
+        .map(item => item.symbol)
+        .filter(symbol => !conversionStore.isSymbolHidden(symbol))
     } catch {
       availablePairs.value = ['EURUSD', 'GBPUSD', 'USDJPY', 'XAUUSD', 'BTCUSD']
     }

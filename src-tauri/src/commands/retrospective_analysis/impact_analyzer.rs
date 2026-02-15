@@ -1,4 +1,3 @@
-use super::straddle_simultane_calculator::StraddleSimultaneCalculator;
 use super::impact_data_processor::ImpactDataProcessor;
 use crate::services::pair_data::get_point_value;
 use tracing::warn;
@@ -45,20 +44,7 @@ impl ImpactAnalyzer {
             .map(|dt| dt.format("%Y-%m-%dT%H:%M:%SZ").to_string())
             .unwrap_or_else(|| "Unknown".into());
 
-        // === CALCUL DES PARAMÈTRES STRADDLE SIMULTANÉ ===
         let point_value = get_point_value(pair);
-
-        let params_simultanes = StraddleSimultaneCalculator::calculer_depuis_impact(
-            &data.atr_timeline_before,
-            &data.atr_timeline_after,
-            data.noise_during,
-            data.volatility_increase,
-            data.event_count,
-            point_value,
-            data.p95_wick,
-            data.p95_range,
-            pair,
-        );
 
         Ok(super::types::EventImpactResult {
             atr_timeline_before: data.atr_timeline_before,
@@ -76,12 +62,6 @@ impl ImpactAnalyzer {
             pair: pair.into(),
             event_datetime,
             timezone_offset: "UTC+0".into(),
-            meilleur_moment: params_simultanes.meilleur_moment,
-            timeout: params_simultanes.timeout,
-            stop_loss_simultaneous: params_simultanes.stop_loss_simultaneous,
-            trailing_stop_simultaneous: params_simultanes.trailing_stop_simultaneous,
-            offset_simultaneous: params_simultanes.offset_simultaneous,
-            stop_loss_recovery_simultaneous: params_simultanes.stop_loss_recovery_simultaneous,
             point_value,
         })
     }

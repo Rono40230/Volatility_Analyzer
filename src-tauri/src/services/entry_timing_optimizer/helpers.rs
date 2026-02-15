@@ -127,6 +127,7 @@ mod tests {
             low: base_price - range_pips,
             close: base_price + (range_pips / 2.0),
             volume: 1000.0,
+            ..Default::default()
         }
     }
 

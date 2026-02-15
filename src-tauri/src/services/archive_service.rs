@@ -1,5 +1,5 @@
 use crate::db::DbPool;
-use crate::models::archive::{Archive, ArchiveLight, NewArchive};
+use crate::models::archive::{Archive, ArchiveLight, NewArchive, ArchivedPairEvent};
 use crate::schema::archives;
 use diesel::prelude::*;
 use diesel::RunQueryDsl;
@@ -70,7 +70,7 @@ impl ArchiveService {
 
         diesel::sql_query(
             "SELECT id, title, archive_type, period_start, period_end, comment, created_at, \
-             COALESCE(json_extract(data_json, '$.pair'), json_extract(data_json, '$.analysisResult.symbol'), '') as pair, \
+             COALESCE(json_extract(data_json, '$.pair'), json_extract(data_json, '$.symbol'), json_extract(data_json, '$.analysisResult.symbol'), '') as pair, \
              COALESCE(json_extract(data_json, '$.eventLabel'), json_extract(data_json, '$.eventType'), json_extract(data_json, '$.pair'), '') as event_label \
              FROM archives ORDER BY created_at DESC"
         )
@@ -113,5 +113,26 @@ impl ArchiveService {
                 error!("Error deleting all archives: {}", e);
                 e.to_string()
             })
+    }
+
+    /// Retourne les paires avec événements qui ont des archives
+    pub fn get_archived_pairs_events(&self) -> Result<Vec<ArchivedPairEvent>, String> {
+        let mut conn = self.pool.get().map_err(|e| e.to_string())?;
+
+        let results = diesel::sql_query(
+            "SELECT DISTINCT \
+             json_extract(data_json, '$.pair') as pair, \
+             json_extract(data_json, '$.eventType') as event_type \
+             FROM archives \
+             WHERE pair IS NOT NULL AND pair != '' \
+             AND event_type IS NOT NULL AND event_type != ''"
+        )
+        .load::<ArchivedPairEvent>(&mut conn)
+        .map_err(|e| {
+            error!("Error getting archived pairs/events: {}", e);
+            e.to_string()
+        })?;
+
+        Ok(results)
     }
 }

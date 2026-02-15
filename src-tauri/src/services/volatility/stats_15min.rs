@@ -3,7 +3,7 @@
 
 use super::utils::{max, mean};
 use crate::models::{AssetProperties, Candle, Result, Stats15Min};
-use crate::services::{MetricsCalculator, StraddleParameterService, VolatilityDurationAnalyzer};
+use crate::services::{MetricsCalculator, VolatilityDurationAnalyzer};
 use chrono::Timelike;
 use std::collections::HashMap;
 use tracing::debug;
@@ -71,7 +71,6 @@ impl<'a> Stats15MinCalculator<'a> {
                         peak_duration_mean: None,
                         volatility_half_life_mean: None,
                         recommended_trade_expiration_mean: None,
-                        straddle_parameters: None,
                         volatility_profile: None,
                         optimal_entry_minute: None,
                     });
@@ -118,7 +117,6 @@ impl<'a> Stats15MinCalculator<'a> {
                 peak_duration_mean: None,
                 volatility_half_life_mean: None,
                 recommended_trade_expiration_mean: None,
-                straddle_parameters: None,
                 volatility_profile: None,
                 optimal_entry_minute: None,
             });
@@ -165,16 +163,50 @@ impl<'a> Stats15MinCalculator<'a> {
 
         // Calculate breakout percentage first
         let breakout_count = tr_dist.is_breakout.iter().filter(|&&b| b).count();
-        let breakout_percentage =
-            (breakout_count as f64 / tr_dist.is_breakout.len() as f64) * 100.0;
+        let breakout_percentage = if tr_dist.is_breakout.is_empty() {
+            0.0
+        } else {
+            (breakout_count as f64 / tr_dist.is_breakout.len() as f64) * 100.0
+        };
 
-        // Direction Strength: Force directionnelle = (|directionalite| * cassures) / 10000
-        // Note: Both values are percentages (0-100), so divide by 10000 to get result in 0-100 range
-        let direction_strength = (body_range_mean.abs() * breakout_percentage) / 10000.0;
+        // Direction Strength: Force directionnelle [Ratio, 0-1]
+        // = (Body Range % / 100) × (Breakout % / 100)
+        // Exemple: 45% body × 18% breakout = 0.45 × 0.18 = 0.081 [ratio]
+        // Sémantique: Score combiné de pureté directionnelle (0=aucun, 1=parfait)
+        // Frontend affiche en % en multipliant par 100: 0.081 → 8.1%
+        let direction_strength = (body_range_mean / 100.0) * (breakout_percentage / 100.0);
 
-        // TÂCHE 4: Analyse réelle de décroissance de volatilité
+        // Calcul du profil de volatilité minute par minute (0-14) AVANT l'analyse de durée
+        let mut minute_ranges: Vec<Vec<f64>> = vec![Vec::new(); 15];
+        for candle in candles {
+            let minute_idx = (candle.datetime.minute() % 15) as usize;
+            if minute_idx < 15 {
+                let raw_range = candle.high - candle.low;
+                let normalized_range = asset_props.normalize(raw_range);
+                minute_ranges[minute_idx].push(normalized_range);
+            }
+        }
+        let volatility_profile: Vec<f64> = minute_ranges
+            .iter()
+            .map(|ranges| {
+                if ranges.is_empty() {
+                    0.0
+                } else {
+                    ranges.iter().sum::<f64>() / ranges.len() as f64
+                }
+            })
+            .collect();
+
+        // TÂCHE 4: Analyse de durée de volatilité depuis le profil agrégé cross-jours
+        // Utilise le profil minute-par-minute (pas les bougies brutes) pour éviter
+        // les artefacts de gaps inter-jours dans le calcul ATR
         let (peak_duration, half_life, trade_exp) =
-            match VolatilityDurationAnalyzer::analyser_depuis_bougies(hour, quarter, candles) {
+            match VolatilityDurationAnalyzer::analyser_depuis_profil(
+                hour,
+                quarter,
+                &volatility_profile,
+                candle_count as u16,
+            ) {
                 Ok(vd) => {
                     debug!(
                         "✅ TÂCHE 4 OK: {}:{} peak={} half_life={} trade_exp={}",
@@ -195,39 +227,6 @@ impl<'a> Stats15MinCalculator<'a> {
                     (None, None, None)
                 }
             };
-
-        // Calcul des paramètres Straddle (Harmonisation Straddle simultané V2)
-        let straddle_params = StraddleParameterService::calculate_parameters(
-            atr_mean,
-            noise_ratio_mean,
-            asset_props.pip_value,
-            symbol,
-            half_life,
-            Some(p95_wick),
-            Some(hour as u32),
-        );
-
-        // Calcul du profil de volatilité minute par minute (0-14) pour le graphique
-        let mut minute_ranges: Vec<Vec<f64>> = vec![Vec::new(); 15];
-        for candle in candles {
-            let minute_idx = (candle.datetime.minute() % 15) as usize;
-            if minute_idx < 15 {
-                let raw_range = candle.high - candle.low;
-                let normalized_range = asset_props.normalize(raw_range);
-                minute_ranges[minute_idx].push(normalized_range);
-            }
-        }
-
-        let volatility_profile: Vec<f64> = minute_ranges
-            .iter()
-            .map(|ranges| {
-                if ranges.is_empty() {
-                    0.0
-                } else {
-                    ranges.iter().sum::<f64>() / ranges.len() as f64
-                }
-            })
-            .collect();
 
         // Détermination de la minute optimale (début de l'accélération ou pic)
         // On cherche le pic de volatilité moyenne
@@ -259,7 +258,6 @@ impl<'a> Stats15MinCalculator<'a> {
             peak_duration_mean: peak_duration,
             volatility_half_life_mean: half_life,
             recommended_trade_expiration_mean: trade_exp,
-            straddle_parameters: Some(straddle_params),
             volatility_profile: Some(volatility_profile),
             optimal_entry_minute,
         })

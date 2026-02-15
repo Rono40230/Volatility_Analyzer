@@ -55,12 +55,6 @@ impl ProjectionEngine {
                     currency: event.symbol.clone(),
                     impact: event.impact.clone(),
                     pair: "N/A".to_string(),
-                    offset: 0.0,
-                    tp: 0.0,
-                    sl: 0.0,
-                    offset_simultaneous: 0.0,
-                    tp_simultaneous: 0.0,
-                    sl_simultaneous: 0.0,
                     confidence_score: 0.0,
                     source: "None".to_string(),
                     has_history,
@@ -130,26 +124,6 @@ impl ProjectionEngine {
                         if score > best_score {
                             best_score = score;
                             
-                            // Extract params (support both legacy straddle_params and new root-level format)
-                            let (offset, tp, sl) = if let Some(params) = data.get("straddle_params") {
-                                (
-                                    params.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                    params.get("tp").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                    params.get("sl").and_then(|v| v.as_f64()).unwrap_or(0.0)
-                                )
-                            } else {
-                                (
-                                    data.get("offset").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                    data.get("trailingStop").and_then(|v| v.as_f64()).unwrap_or(0.0),
-                                    data.get("stopLoss").and_then(|v| v.as_f64()).unwrap_or(0.0)
-                                )
-                            };
-
-                            // Extract simultaneous params
-                            let offset_simultaneous = data.get("offsetSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                            let tp_simultaneous = data.get("trailingStopSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                            let sl_simultaneous = data.get("stopLossSimultaneous").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                            
                             best_match = Some(ProjectedEvent {
                                 id: event.id.to_string(),
                                 time: event.event_time.to_string(),
@@ -157,12 +131,6 @@ impl ProjectionEngine {
                                 currency: event.symbol.clone(),
                                 impact: event.impact.clone(),
                                 pair: pair.to_string(),
-                                offset,
-                                tp,
-                                sl,
-                                offset_simultaneous,
-                                tp_simultaneous,
-                                sl_simultaneous,
                                 confidence_score: score,
                                 source: "Archive".to_string(),
                                 has_history: false, // Will be updated in caller

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Analyses-Historiques
+Comment=Analyseur de volatilité Forex avec Tauri 2.0
+Exec=env GTK_IM_MODULE=fcitx /usr/bin/analyses-historiques-gui %U
+Icon=analyses-historiques
+Categories=Office;Finance;Utility;
+Terminal=false
+StartupNotify=true
+Version=1.0

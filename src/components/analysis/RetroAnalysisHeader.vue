@@ -8,16 +8,6 @@
           {{ advice.text }}
         </span>
       </div>
-      <div class="stats-row" v-if="avgDeviation > 0">
-        <span class="stat-item">
-          <span class="stat-label">Écart Moyen:</span>
-          <span class="stat-value">{{ avgDeviation.toFixed(2) }}</span>
-        </span>
-        <span class="stat-item">
-          <span class="stat-label">Surprises:</span>
-          <span class="stat-value">{{ surpriseEventCount }}</span>
-        </span>
-      </div>
     </div>
     <button v-if="!isArchiveMode" class="btn-archive" @click="$emit('archive')">💾 Archiver</button>
   </div>
@@ -33,8 +23,6 @@ interface Props {
   volatilityIncreasePercent: number
   noiseRatioAfter: number
   isArchiveMode?: boolean
-  avgDeviation?: number
-  surpriseEventCount?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,9 +31,7 @@ const props = withDefaults(defineProps<Props>(), {
   pair: '',
   volatilityIncreasePercent: 0,
   noiseRatioAfter: 0,
-  isArchiveMode: false,
-  avgDeviation: 0,
-  surpriseEventCount: 0
+  isArchiveMode: false
 })
 
 defineEmits<{ archive: [] }>()
@@ -92,7 +78,7 @@ const advice = computed(() => {
   border-radius: 8px;
   padding: 8px 20px;
   margin-bottom: 10px;
-  height: 60px;
+  min-height: 60px;
 }
 
 .header-content {
@@ -114,24 +100,6 @@ const advice = computed(() => {
 
 .separator {
   color: #8b949e;
-}
-
-.stats-row {
-  display: flex;
-  gap: 15px;
-  margin-top: 4px;
-  font-size: 0.9em;
-  color: #8b949e;
-}
-
-.stat-item {
-  display: flex;
-  gap: 6px;
-}
-
-.stat-value {
-  color: #e6edf3;
-  font-weight: 500;
 }
 
 .conclusion-success {

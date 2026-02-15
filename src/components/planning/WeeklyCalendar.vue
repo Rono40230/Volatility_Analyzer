@@ -14,12 +14,6 @@ interface ProjectedEvent {
   currency: string
   impact: 'High' | 'Medium' | 'Low'
   pair: string
-  offset: number
-  tp: number
-  sl: number
-  offset_simultaneous: number
-  tp_simultaneous: number
-  sl_simultaneous: number
   confidence_score: number
   source: string
   has_history: boolean

@@ -1,5 +1,4 @@
 /// Analyseurs simples pour peak delay et decay profile
-use super::helpers::calculer_atr;
 use crate::services::VolatilityDurationAnalyzer;
 use chrono::{Duration, Timelike};
 
@@ -26,7 +25,7 @@ impl PeakDelayAnalyzer {
             if !candles.is_empty() {
                 let atr_values: Vec<f64> = candles
                     .iter()
-                    .map(|c| calculer_atr(c.high, c.low, c.close))
+                    .map(|c| crate::services::atr::calculate_true_range(c.high, c.low, None))
                     .collect();
                 if let Ok(pd) = VolatilityDurationAnalyzer::calculer_delai_pic(
                     &atr_values,
@@ -65,7 +64,7 @@ impl DecayProfileAnalyzer {
             if !candles.is_empty() {
                 let atr_values: Vec<f64> = candles
                     .iter()
-                    .map(|c| calculer_atr(c.high, c.low, c.close))
+                    .map(|c| crate::services::atr::calculate_true_range(c.high, c.low, None))
                     .collect();
                 if let Ok((rate, _)) =
                     VolatilityDurationAnalyzer::calculer_profil_decroissance(&atr_values)

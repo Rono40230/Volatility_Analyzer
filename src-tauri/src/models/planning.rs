@@ -8,12 +8,6 @@ pub struct ProjectedEvent {
     pub currency: String,
     pub impact: String,
     pub pair: String, // The pair this projection is for
-    pub offset: f64,
-    pub tp: f64,
-    pub sl: f64,
-    pub offset_simultaneous: f64,
-    pub tp_simultaneous: f64,
-    pub sl_simultaneous: f64,
     pub confidence_score: f64,
     pub source: String,
     pub has_history: bool,

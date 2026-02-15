@@ -28,7 +28,6 @@ mod tests {
             recommended_trade_expiration_mean: None,
             max_true_range: 0.0,
             p95_wick: 0.0,
-            straddle_parameters: None,
             volatility_profile: None,
             optimal_entry_minute: None,
         };
@@ -66,7 +65,6 @@ mod tests {
             recommended_trade_expiration_mean: None,
             max_true_range: 0.0,
             p95_wick: 0.0,
-            straddle_parameters: None,
             volatility_profile: None,
             optimal_entry_minute: None,
         };
@@ -100,7 +98,6 @@ mod tests {
             recommended_trade_expiration_mean: None,
             max_true_range: 0.0,
             p95_wick: 0.0,
-            straddle_parameters: None,
             volatility_profile: None,
             optimal_entry_minute: None,
         };

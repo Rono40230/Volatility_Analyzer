@@ -1,7 +1,10 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { ArchivedAnalysisData } from '../../../composables/useMetricsModalLoad'
-import { formaterPointsAvecPips } from '../../pipConverter'
+
+function fmtPips(value: number): string {
+  return `${value.toFixed(1)} pips`
+}
 
 export async function generateRankingReport(doc: jsPDF, dataList: ArchivedAnalysisData[], startY: number = 20) {
   doc.setFontSize(16)
@@ -34,7 +37,7 @@ export async function generateRankingReport(doc: jsPDF, dataList: ArchivedAnalys
     opp.symbol,
     opp.time,
     opp.score.toFixed(1),
-    formaterPointsAvecPips(opp.symbol, opp.volatility),
+    fmtPips(opp.volatility),
     opp.noise.toFixed(2),
     `${opp.breakout.toFixed(1)}%`
   ])

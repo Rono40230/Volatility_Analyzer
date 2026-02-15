@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { openUrl } from '@tauri-apps/plugin-opener'
 import WeeklyCalendar from '../components/planning/WeeklyCalendar.vue'
 import AnalysisModal from '../components/planning/AnalysisModal.vue'
 
@@ -51,12 +52,22 @@ async function syncCalendar() {
   syncing.value = true
   error.value = null
   try {
-    await invoke('sync_forex_factory_week')
-    // Force reload of calendar
-    calendarKey.value++
+    // Appel direct au backend (comme avant)
+    // Le backend va tenter de télécharger ff_calendar_thisweek.csv via reqwest
+    const message = await invoke('sync_forex_factory_week') as string;
+    
+    // Si succès, on recharge
+    syncing.value = false
+    calendarKey.value++ // Force refresh
+    
+    // Notification (simple alert ou log pour l'instant, ou via error box si besoin d'info)
+    console.log("Sync result:", message);
+    
+    // Optionnel: informer l'utilisateur si le message contient des dates
+    // Pour l'instant on considère que pas d'erreur = succès affiché par le refresh
   } catch (e) {
+    // Erreur (ex: 429 Cloudflare ou Network)
     error.value = 'Erreur de synchronisation: ' + e
-  } finally {
     syncing.value = false
   }
 }

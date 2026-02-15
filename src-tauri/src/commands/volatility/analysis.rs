@@ -1,10 +1,16 @@
 use crate::commands::calendar_commands::CalendarState;
 use crate::models::{AnalysisResult, VolatilityError};
+use crate::services::cache_service::CacheService;
 use crate::services::{CsvLoader, VolatilityAnalyzer};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 use tracing::{error, info};
+
+/// État global pour le cache des résultats d'analyse (TTL 5 min, max 50 symboles)
+pub struct AnalysisCacheState {
+    pub cache: CacheService<AnalysisResult>,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CommandError {
@@ -91,13 +97,30 @@ pub async fn load_symbols(
 pub async fn analyze_symbol(
     symbol: String,
     calendar_id: i32,
+    date_start: Option<String>,
+    date_end: Option<String>,
     calendar_state: State<'_, CalendarState>,
     pair_state: State<'_, super::super::pair_data::PairDataState>,
+    analysis_cache: State<'_, AnalysisCacheState>,
 ) -> Result<AnalysisResult, CommandError> {
     info!(
-        "Command: analyze_symbol({}, calendar_id={})",
-        symbol, calendar_id
+        "Command: analyze_symbol({}, calendar_id={}, date_start={:?}, date_end={:?})",
+        symbol, calendar_id, date_start, date_end
     );
+
+    // Construire une clé de cache unique incluant les dates
+    let cache_key = if date_start.is_some() || date_end.is_some() {
+        format!("{}:{}:{}:{}", symbol, calendar_id, date_start.as_deref().unwrap_or(""), date_end.as_deref().unwrap_or(""))
+    } else {
+        format!("{}:{}", symbol, calendar_id)
+    };
+
+    // Vérifier le cache d'abord
+    if let Some(cached) = analysis_cache.cache.get(&cache_key) {
+        info!("Cache hit for {} (calendar_id={})", symbol, calendar_id);
+        return Ok(cached);
+    }
+    info!("Cache miss for {} — computing full analysis", symbol);
 
     // Extraire les pools (rapide) avant spawn_blocking
     let pair_pool = {
@@ -119,13 +142,35 @@ pub async fn analyze_symbol(
     let result = tokio::task::spawn_blocking(move || -> Result<AnalysisResult, VolatilityError> {
         let mut candles = Vec::new();
 
+        // Parser les dates optionnelles
+        let start = if let Some(ds) = date_start {
+            // Attendu format: "YYYY-MM-DD"
+            DateTime::parse_from_rfc3339(&format!("{}T00:00:00Z", ds))
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| {
+                    info!("Failed to parse date_start: {}, using epoch", ds);
+                    DateTime::<Utc>::from_timestamp(0, 0).unwrap()
+                })
+        } else {
+            DateTime::<Utc>::from_timestamp(0, 0).unwrap()
+        };
+
+        let end = if let Some(de) = date_end {
+            // Attendu format: "YYYY-MM-DD"
+            DateTime::parse_from_rfc3339(&format!("{}T23:59:59Z", de))
+                .map(|dt| dt.with_timezone(&Utc))
+                .unwrap_or_else(|_| {
+                    info!("Failed to parse date_end: {}, using now", de);
+                    Utc::now()
+                })
+        } else {
+            Utc::now()
+        };
+
+        info!("Date range for analysis: {} to {}", start, end);
+
         if let Some(pool) = pair_pool.as_ref() {
             let db_loader = crate::services::DatabaseLoader::new(pool.clone());
-            let start = DateTime::<Utc>::from_timestamp(0, 0)
-                .ok_or_else(|| VolatilityError::InsufficientData(
-                    "Invalid Unix timestamp 0 for date range".to_string(),
-                ))?;
-            let end = Utc::now();
             match db_loader.load_candles_by_pair(&symbol_clone, "M1", start, end) {
                 Ok(loaded) => {
                     info!(
@@ -146,18 +191,23 @@ pub async fn analyze_symbol(
 
         if candles.is_empty() {
             let loader = CsvLoader::new();
-            candles = loader.load_candles(&symbol_clone).map_err(|e| {
+            let mut all_candles = loader.load_candles(&symbol_clone).map_err(|e| {
                 error!(
                     "Failed to load candles for {} from both DB and CSV: {}",
                     symbol_clone, e
                 );
                 e
             })?;
+            
+            // Filtrer par date si nécessaire
+            all_candles.retain(|c| c.datetime >= start && c.datetime <= end);
+            
             info!(
-                "Loaded {} candles for {} from CsvLoader",
-                candles.len(),
+                "Loaded {} candles for {} from CsvLoader (filtered to date range)",
+                all_candles.len(),
                 symbol_clone
             );
+            candles = all_candles;
         }
 
         info!("Total candles loaded for {}: {}", symbol_clone, candles.len());
@@ -176,6 +226,9 @@ pub async fn analyze_symbol(
         "Analysis complete for {}: confidence={:.1}",
         symbol, result.confidence_score
     );
+
+    // Stocker le résultat dans le cache
+    analysis_cache.cache.set(cache_key, result.clone());
 
     Ok(result)
 }

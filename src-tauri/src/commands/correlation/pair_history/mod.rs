@@ -88,10 +88,9 @@ pub async fn get_pair_event_history(
         )
         .unwrap_or(super::volatility_helpers::VolatilityMetrics {
             event_volatility: 0.0,
+            event_volatility_percentage: 0.0,
             baseline_volatility: 0.0,
-            straddle_score: 0.0,
-            directionality: 0.0,
-            whipsaw_risk: 0.0,
+            baseline_volatility_percentage: 0.0,
         });
 
         let event_volatility = metrics.event_volatility;

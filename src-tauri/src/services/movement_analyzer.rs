@@ -234,6 +234,7 @@ mod tests {
             low: price - low_delta,
             close: price,
             volume: 100.0,
+            ..Default::default()
         }
     }
 

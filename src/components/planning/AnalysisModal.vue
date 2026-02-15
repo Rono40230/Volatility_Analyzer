@@ -21,7 +21,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import RetroactiveAnalysisView from '../RetroactiveAnalysisView.vue'
 
 const props = defineProps<{

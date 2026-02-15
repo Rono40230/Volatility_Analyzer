@@ -5,13 +5,12 @@
         <tr>
           <th>Tranche</th>
           <th>ATR Moyen</th>
-          <th>Max Spike</th>
           <th>Volatilité %</th>
           <th>Body Range %</th>
           <th>Direction Strength</th>
           <th>Noise Ratio</th>
           <th>Breakouts %</th>
-          <th title="Minutes volatilité > 80% pic">
+          <th title="Minutes volatilité > 70% pic">
             Peak (min)
           </th>
           <th title="Minutes pour -50% volatilité">
@@ -20,7 +19,7 @@
           <th title="Durée optimale fermeture trade">
             Trade Exp (min)
           </th>
-          <th>Analyser</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody>
@@ -37,28 +36,15 @@
             >⭐</span>
             {{ formatQuarterLabel(hour, quarter.quarter) }}
           </td>
-          <td>
-            <UnitDisplay
-              :value="quarter.atr_mean"
-              :unit="unit"
-              :symbol="symbol"
-            />
-          </td>
-          <td>
-            <UnitDisplay
-              :value="quarter.max_true_range ?? 0"
-              :unit="unit"
-              :symbol="symbol"
-            />
-          </td>
-          <td>{{ (quarter.volatility_mean * 100).toFixed(2) }}%</td>
-          <td>
+          <td :class="metricClass('atr', quarter.atr_mean)">{{ formatVal(quarter.atr_mean) }} {{ unit || 'pips' }}</td>
+          <td :class="metricClass('volatility', quarter.volatility_mean)">{{ (quarter.volatility_mean * 100).toFixed(2) }}%</td>
+          <td :class="metricClass('bodyrange', quarter.body_range_mean)">
             {{ Math.abs(quarter.body_range_mean).toFixed(2) }}%
             <span style="font-size: 0.8em; opacity: 0.7;">{{ quarter.body_range_mean >= 0 ? '↗' : '↘' }}</span>
           </td>
-          <td>{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
-          <td>{{ quarter.noise_ratio_mean.toFixed(2) }}%</td>
-          <td>{{ quarter.breakout_percentage.toFixed(2) }}%</td>
+          <td :class="metricClass('volumeimbalance', Math.abs(quarter.volume_imbalance_mean))">{{ (quarter.volume_imbalance_mean * 100).toFixed(2) }}%</td>
+          <td :class="metricClass('noiseratio', quarter.noise_ratio_mean)">{{ quarter.noise_ratio_mean.toFixed(2) }}x</td>
+          <td :class="metricClass('breakout', quarter.breakout_percentage)">{{ quarter.breakout_percentage.toFixed(2) }}%</td>
           <td
             class="duration-cell"
             :title="`Peak duration moyen: ${quarter.peak_duration_mean ?? 'N/A'} min`"
@@ -86,9 +72,9 @@
             <button
               class="analyze-btn"
               :disabled="quarter.candle_count === 0"
-              @click="emit('analyze-quarter', hour, quarter.quarter)"
+              @click="emit('entry-point-analyze', hour, quarter.quarter)"
             >
-              Analyser
+              📊 Analyser
             </button>
           </td>
         </tr>
@@ -99,7 +85,7 @@
 
 <script setup lang="ts">
 import type { Stats15Min } from '../stores/volatility'
-import UnitDisplay from './UnitDisplay.vue'
+import { pipsToDisplayValue } from '../utils/assetUnit'
 
 const props = defineProps<{
   hour: number
@@ -110,8 +96,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'analyze-quarter': [hour: number, quarter: number]
+  'entry-point-analyze': [hour: number, quarter: number]
 }>()
+
+function formatVal(pipsValue: number): string {
+  const display = props.symbol ? pipsToDisplayValue(pipsValue, props.symbol) : pipsValue
+  return display.toFixed(1)
+}
 
 function formatQuarterLabel(hour: number, quarter: number): string {
   const startMin = quarter * 15
@@ -129,6 +120,33 @@ function isBestSlice(quarter: number): boolean {
 
 function isTradeExpTooLong(slice: Stats15Min): boolean {
   return (slice.recommended_trade_expiration_minutes ?? 0) > 150
+}
+
+function metricClass(metric: string, value: number): string {
+  let quality: string
+  switch (metric) {
+    case 'atr':
+      quality = value > 50 ? 'excellent' : value > 20 ? 'good' : value > 10 ? 'acceptable' : 'poor'
+      break
+    case 'volatility':
+      quality = value >= 0.30 ? 'excellent' : value >= 0.15 ? 'good' : value >= 0.05 ? 'acceptable' : 'poor'
+      break
+    case 'bodyrange':
+      quality = Math.abs(value) > 45 ? 'excellent' : Math.abs(value) > 35 ? 'good' : Math.abs(value) > 15 ? 'acceptable' : 'poor'
+      break
+    case 'noiseratio':
+      quality = value < 2.0 ? 'excellent' : value < 3.0 ? 'good' : value < 4.0 ? 'acceptable' : 'poor'
+      break
+    case 'volumeimbalance':
+      quality = value > 0.5 ? 'excellent' : value > 0.3 ? 'good' : value > 0.1 ? 'acceptable' : 'poor'
+      break
+    case 'breakout':
+      quality = value >= 20 ? 'excellent' : value >= 10 ? 'good' : value >= 5 ? 'acceptable' : 'poor'
+      break
+    default:
+      return ''
+  }
+  return `metric-${quality}`
 }
 </script>
 
@@ -149,4 +167,8 @@ function isTradeExpTooLong(slice: Stats15Min): boolean {
 .analyze-btn { background: #1f6feb; border: none; color: #ffffff; padding: 6px 10px; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: background 0.2s; }
 .analyze-btn:hover:not(:disabled) { background: #388bfd; }
 .analyze-btn:disabled { background: #4b5563; cursor: not-allowed; opacity: 0.7; }
+.metric-excellent { color: #10b981; font-weight: 600; }
+.metric-good { color: #3b82f6; }
+.metric-acceptable { color: #f59e0b; }
+.metric-poor { color: #ef4444; font-weight: 600; }
 </style>

@@ -162,20 +162,32 @@ fn calculate_metrics_from_candles(
     } else {
         0.0
     };
+    // atr_mean [Pips/Points, normalized]
 
     let range_mean = range_sum / count as f64;
+    // range_mean [Pips/Points, normalized]
+    
     let body_range_mean = body_range_sum / count as f64;
+    // body_range_mean [%] - percentage of range that is body (0-100)
+    
     let noise_ratio_mean = noise_ratio_sum / count as f64;
+    // noise_ratio_mean [Ratio] - wicks/body ratio (1-10 typical, lower is better)
+    
     let volume_imbalance_mean = volume_imbalance_sum / count as f64;
+    // volume_imbalance_mean [%] - actually directional strength, not true volume imbalance
+    
     let shadow_ratio_mean = shadow_ratio_sum / count as f64;
+    // shadow_ratio_mean [Ratio] - wicks/range ratio
 
-    // Volatilité % (ATR / Close moyen)
+    // Volatilité [%] = (ATR / Close average) × 100
+    // Result: 0-100 percentage (5% typical forex, 15-30%+ crypto)
     let avg_close: f64 = candles.iter().map(|c| c.close).sum::<f64>() / count as f64;
     let volatility_mean = if avg_close > 0.0 {
         (atr_mean / avg_close) * 100.0
     } else {
         0.0
     };
+    // volatility_mean [%]
 
     // Breakout % (using real detection)
     use crate::services::breakout_detector::calculer_pourcentage_breakout;

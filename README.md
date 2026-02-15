@@ -4,7 +4,7 @@
 
 **Analyses Historiques** est un outil d'aide à la décision conçu spécifiquement pour le **News Trading** (trading d'annonces économiques) sur le Forex et les Indices.
 
-Son objectif unique est de **paramétrer scientifiquement** une stratégie de type **Straddle** (achat et vente simultanés) en analysant le comportement passé des marchés. Au lieu de deviner des paramètres au hasard (Stop Loss, Take Profit, distance d'entrée), l'application analyse des années d'historique pour vous donner les valeurs optimales basées sur la volatilité réelle.
+Son objectif unique est de repérer les forts mouvements de volatilité propices au scalping en straddle (2 jambes ouvertes symétriquement au même point d'entrée)
 
 Elle répond à la question fondamentale : *"Comment cet actif réagit-il habituellement à cet événement économique précis ?"*
 
@@ -19,16 +19,9 @@ L'application permet de répondre précisément aux questions suivantes avant ch
     *   *Est-ce que c'est propre ?* (Ratio de bruit faible, peu de mèches)
     *   *Est-ce que c'est dangereux ?* (Risque de "Whipsaw" / faux départ)
 
-2.  **Comment paramétrer mon robot (Straddle) ?**
-    *   *À quelle distance placer mes ordres ?* (Offset optimal)
-    *   *Où mettre mon Stop Loss pour ne pas être sorti par le bruit ?*
-    *   *Combien de temps garder la position ?* (Durée de l'impulsion)
-
-3.  **Quelle est la meilleure paire ?**
+2.  **Quelle est la meilleure paire ?**
     *   *Sur quel actif l'impact est-il le plus fort et le plus directionnel ?* (Comparaison EURUSD vs GBPUSD vs GOLD...)
 
-4.  **Quelle est la performance attendue ?**
-    *   *Si j'avais tradé cet événement les 5 dernières années avec ces paramètres, quel aurait été mon résultat ?* (Backtest)
 
 ---
 
@@ -37,7 +30,7 @@ L'application permet de répondre précisément aux questions suivantes avant ch
 L'application ne traite pas le Bitcoin comme l'Euro-Dollar. Elle intègre une intelligence financière pour adapter les calculs à chaque classe d'actif :
 
 ### 1. Détection Automatique des Classes d'Actifs
-L'application reconnaît automatiquement le type d'actif importé et adapte l'unité de mesure (Pips vs Points) :
+L'application reconnaît automatiquement le type d'actif importé :
 *   **Forex Majeur** (ex: EURUSD) : Calcul en Pips (0.0001).
 *   **Forex JPY & Exotiques** (ex: USDJPY, USDHUF) : Calcul adapté (0.01).
 *   **Or & Métaux** (ex: XAUUSD) : Calcul standardisé (0.1$ = 1 pip).

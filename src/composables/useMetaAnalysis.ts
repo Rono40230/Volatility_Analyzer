@@ -30,9 +30,6 @@ export function useMetaAnalysis() {
             pair: data.pair || 'Inconnu',
             volatilityIncrease: data.volatilityIncreasePercent || 0,
             noiseRatio: data.noiseRatioDuring || 0,
-            offset: data.offsetSimultaneous || 0,
-            stopLoss: data.stopLossRecoverySimultaneous || 0,
-            timeout: data.timeout || 0,
             eventCount: data.eventCount || 0
           }
         } catch (e) {
@@ -113,9 +110,8 @@ export function useMetaAnalysis() {
       const items = data.filter(d => d.eventType === event)
       return {
         event,
-        avgOffset: items.reduce((sum, d) => sum + d.offset, 0) / items.length,
-        avgSL: items.reduce((sum, d) => sum + d.stopLoss, 0) / items.length,
-        avgTimeout: items.reduce((sum, d) => sum + d.timeout, 0) / items.length
+        avgVolatility: items.reduce((sum, d) => sum + d.volatilityIncrease, 0) / items.length,
+        avgNoise: items.reduce((sum, d) => sum + d.noiseRatio, 0) / items.length
       }
     })
   })

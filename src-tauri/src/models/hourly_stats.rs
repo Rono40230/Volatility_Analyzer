@@ -31,18 +31,19 @@ pub struct HourlyStats {
 
 impl HourlyStats {
     /// Calcule un score de qualité global (0-100)
-    pub fn quality_score(&self) -> f64 {
+    /// `atr_factor` = `AssetProperties::atr_scaling_factor()` (1.0 pour ForexMajor)
+    pub fn quality_score_scaled(&self, atr_factor: f64) -> f64 {
         if self.candle_count == 0 {
             return 0.0;
         }
         let mut score: f64 = 0.0;
-        score += if self.atr_mean > ATR_EXCELLENT {
+        score += if self.atr_mean > scaled_atr_excellent(atr_factor) {
             30.0
-        } else if self.atr_mean > ATR_GOOD {
+        } else if self.atr_mean > scaled_atr_good(atr_factor) {
             25.0
-        } else if self.atr_mean > ATR_FAIR {
+        } else if self.atr_mean > scaled_atr_fair(atr_factor) {
             20.0
-        } else if self.atr_mean > ATR_POOR {
+        } else if self.atr_mean > scaled_atr_poor(atr_factor) {
             10.0
         } else {
             0.0
@@ -88,6 +89,11 @@ impl HourlyStats {
             0.0
         };
         score.min(100.0)
+    }
+
+    /// Calcule un score de qualité avec seuils Forex Major (rétrocompatibilité)
+    pub fn quality_score(&self) -> f64 {
+        self.quality_score_scaled(1.0)
     }
 
     #[allow(dead_code)]

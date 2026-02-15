@@ -6,6 +6,14 @@
       :noise-ratio-after="noiseRatioAfter"
       :volatility-increase-percent="volatilityIncreasePercent"
       :event-count="eventCount"
+      :volatility-score-before="volatilityScoreBefore"
+      :volatility-score-after="volatilityScoreAfter"
+      :atr-percent-before="atrPercentBefore"
+      :atr-percent-after="atrPercentAfter"
+      :context-volatility-percent="contextVolatilityPercent"
+      :avg-deviation="avgDeviation"
+      :surprise-event-count="surpriseEventCount"
+      :point-value="pointValue"
     />
 
     <!-- Graphique 2 courbes comparatives -->
@@ -30,9 +38,6 @@
 
 
 
-        <line v-if="props.meilleurMoment > 0" :x1="bestMomentX" y1="50" :x2="bestMomentX" y2="380" stroke="#10b981" stroke-width="2" stroke-dasharray="6,3" opacity="0.7" />
-        <text v-if="props.meilleurMoment > 0" :x="bestMomentX" y="45" font-size="11" text-anchor="middle" fill="#10b981" font-weight="600">Entrée (T0 - {{ props.meilleurMoment }} mn)</text>
-
         <!-- Marqueurs X: AVANT (-30 à 0) -->
         <template v-for="minute in [-30, -20, -10, 0]" :key="`tick-before-${minute}`">
           <line :x1="getXPositionBefore(minute)" :y1="yAxisBaseline + 5" :x2="getXPositionBefore(minute)" :y2="yAxisBaseline + 12" stroke="#4a5568" stroke-width="1.5" />
@@ -48,13 +53,13 @@
         <template v-if="atrTimelineBefore && atrTimelineBefore.length > 1">
           <path :d="curvePathBefore" fill="url(#beforeGradient)" stroke="none" />
           <polyline :points="beforePointsString" fill="none" stroke="#58a6ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
-          <text x="130" y="100" font-size="13" fill="#58a6ff" font-weight="bold">ATR Avant: {{ formatValue(atrTimelineBefore[Math.floor(atrTimelineBefore.length / 2)]) }}</text>
+          <text x="130" y="100" font-size="13" fill="#58a6ff" font-weight="bold">ATR Avant: {{ formatPercent(atrPercentBefore) }}</text>
         </template>
 
         <template v-if="atrTimelineAfter && atrTimelineAfter.length > 1">
           <path :d="curvePathAfter" fill="url(#afterGradient)" stroke="none" />
           <polyline :points="afterPointsString" fill="none" stroke="#f85149" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" />
-          <text x="600" y="100" font-size="13" fill="#f85149" font-weight="bold">ATR Après: {{ formatValue(atrTimelineAfter[Math.floor(atrTimelineAfter.length / 2)]) }}</text>
+          <text x="600" y="100" font-size="13" fill="#f85149" font-weight="bold">ATR Après: {{ formatPercent(atrPercentAfter) }}</text>
         </template>
       </svg>
     </div>
@@ -62,6 +67,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRetroGraphDataPoints } from '../../composables/useRetroGraphDataPoints'
 import RetroAnalysisGraphMetrics from './RetroAnalysisGraphMetrics.vue'
 
@@ -81,8 +87,10 @@ interface Props {
   timezoneOffset?: string
   isArchiveMode?: boolean
   eventLabel?: string
-  meilleurMoment?: number
   pointValue?: number
+  contextVolatilityPercent?: number
+  avgDeviation?: number
+  surpriseEventCount?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -101,22 +109,49 @@ const props = withDefaults(defineProps<Props>(), {
   timezoneOffset: 'UTC+0',
   isArchiveMode: false,
   eventLabel: '',
-  meilleurMoment: 0,
-  pointValue: 1.0
+  pointValue: 1.0,
+  contextVolatilityPercent: 0,
+  avgDeviation: 0,
+  surpriseEventCount: 0
 })
+
+const average = (values?: number[]) => {
+  if (!values?.length) return 0
+  const total = values.reduce((sum, value) => sum + value, 0)
+  return total / values.length
+}
+
+const atrToPercent = (atrValue: number) => {
+  const pipValue = props.pointValue || 1
+  if (!atrValue || pipValue <= 0) return 0
+  return atrValue / pipValue / 100
+}
+
+const clamp = (value: number, min = 0, max = 100) => Math.min(max, Math.max(min, value))
+
+const computeVolatilityScore = (atrPercent: number, noiseRatio: number) => {
+  if (atrPercent <= 0) return 0
+  const ATR_TARGET = 1.5 // % where score hits ceiling
+  const atrComponent = Math.min(atrPercent / ATR_TARGET, 1) * 85
+  const noiseFactor = Math.max(0, 1 - Math.min(noiseRatio / 3.5, 1)) * 15
+  return Math.round(clamp(atrComponent + noiseFactor))
+}
+
+const atrMeanBefore = computed(() => average(props.atrTimelineBefore))
+const atrMeanAfter = computed(() => average(props.atrTimelineAfter))
+const atrPercentBefore = computed(() => atrToPercent(atrMeanBefore.value))
+const atrPercentAfter = computed(() => atrToPercent(atrMeanAfter.value))
+const volatilityScoreBefore = computed(() => computeVolatilityScore(atrPercentBefore.value, props.noiseRatioBefore))
+const volatilityScoreAfter = computed(() => computeVolatilityScore(atrPercentAfter.value, props.noiseRatioAfter))
+
+const formatPercent = (value: number) => `${value.toFixed(2)}%`
 
 const {
   svgMargins,
   yAxisBaseline,
-  minAtrLabel,
-  maxAtrLabel,
-  midAtrLabel,
   getTimeLabel,
   getXPositionBefore,
   getXPositionAfter,
-  ceilValue,
-  formatValue,
-  bestMomentX,
   beforePointsString,
   afterPointsString,
   curvePathBefore,
@@ -124,7 +159,6 @@ const {
 } = useRetroGraphDataPoints({
   atrTimelineBefore: props.atrTimelineBefore,
   atrTimelineAfter: props.atrTimelineAfter,
-  meilleurMoment: props.meilleurMoment,
   eventDatetime: props.eventDatetime,
   pointValue: props.pointValue
 })

@@ -1,5 +1,6 @@
 // models/stats_15min.rs - Statistiques par 15 minutes (pour scalping)
-use crate::models::{EventInHour, StraddleParameters};
+use crate::models::EventInHour;
+use crate::models::hourly_stats_thresholds::*;
 use serde::{Deserialize, Serialize};
 
 /// Statistiques de volatilité pour une tranche de 15 minutes spécifique
@@ -34,9 +35,6 @@ pub struct Stats15Min {
     pub volatility_half_life_mean: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub recommended_trade_expiration_mean: Option<u16>,
-    // Paramètres Straddle calculés (Harmonisation Straddle simultané V2)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub straddle_parameters: Option<StraddleParameters>,
     // Profil de volatilité minute par minute (0-14) pour le graphique
     #[serde(skip_serializing_if = "Option::is_none")]
     pub volatility_profile: Option<Vec<f64>>,
@@ -65,65 +63,73 @@ impl Stats15Min {
     }
 
     /// Calcule un score de qualité global (0-100) pour scalping 15min
+    /// `atr_factor` = `AssetProperties::atr_scaling_factor()` (1.0 pour ForexMajor)
     #[allow(dead_code)]
-    pub fn quality_score(&self) -> f64 {
+    pub fn quality_score_scaled(&self, atr_factor: f64) -> f64 {
         if self.candle_count == 0 {
             return 0.0;
         }
         let mut score: f64 = 0.0;
 
-        // ATR adapté Forex M15 (Pips) (30 pts)
-        if self.atr_mean > 2.5 {
+        // ATR adapté M15 : seuils H1 / 4 environ, puis × factor
+        let m15_factor = atr_factor * 0.25; // M15 ATR ≈ H1 ATR / 4
+        if self.atr_mean > scaled_atr_excellent(m15_factor) {
             score += 30.0;
-        } else if self.atr_mean > 1.5 {
+        } else if self.atr_mean > scaled_atr_good(m15_factor) {
             score += 25.0;
-        } else if self.atr_mean > 1.0 {
+        } else if self.atr_mean > scaled_atr_fair(m15_factor) {
             score += 20.0;
-        } else if self.atr_mean > 0.5 {
+        } else if self.atr_mean > scaled_atr_poor(m15_factor) {
             score += 10.0;
         }
 
-        // Body Range réaliste (25 pts)
-        if self.body_range_mean > 45.0 {
+        // Body Range réaliste (25 pts) — universel
+        if self.body_range_mean > BODY_RANGE_EXCELLENT {
             score += 25.0;
-        } else if self.body_range_mean > 35.0 {
+        } else if self.body_range_mean > BODY_RANGE_GOOD {
             score += 20.0;
-        } else if self.body_range_mean > 25.0 {
+        } else if self.body_range_mean > BODY_RANGE_FAIR {
             score += 15.0;
-        } else if self.body_range_mean > 15.0 {
+        } else if self.body_range_mean > BODY_RANGE_POOR {
             score += 8.0;
         }
 
-        // Volatilité (bonus) (20 pts)
-        if self.volatility_mean > 0.30 {
+        // Volatilité (bonus) (20 pts) — universel
+        if self.volatility_mean > VOL_EXCELLENT {
             score += 20.0;
-        } else if self.volatility_mean > 0.20 {
+        } else if self.volatility_mean > VOL_GOOD {
             score += 16.0;
-        } else if self.volatility_mean > 0.10 {
+        } else if self.volatility_mean > VOL_FAIR {
             score += 12.0;
-        } else if self.volatility_mean > 0.05 {
+        } else if self.volatility_mean > VOL_POOR {
             score += 6.0;
         }
 
-        // Noise Ratio (15 pts)
-        if self.noise_ratio_mean < 2.0 {
+        // Noise Ratio (15 pts) — universel
+        if self.noise_ratio_mean < NOISE_EXCELLENT {
             score += 15.0;
-        } else if self.noise_ratio_mean < 3.0 {
+        } else if self.noise_ratio_mean < NOISE_GOOD {
             score += 10.0;
-        } else if self.noise_ratio_mean < 4.0 {
+        } else if self.noise_ratio_mean < NOISE_FAIR {
             score += 5.0;
         }
 
-        // Breakout % - CRITIQUE pour Straddle (10 pts)
-        if self.breakout_percentage > 15.0 {
+        // Breakout % - CRITIQUE pour Straddle (10 pts) — universel
+        if self.breakout_percentage > BREAKOUT_EXCELLENT {
             score += 10.0;
-        } else if self.breakout_percentage > 10.0 {
+        } else if self.breakout_percentage > BREAKOUT_GOOD {
             score += 7.0;
-        } else if self.breakout_percentage > 5.0 {
+        } else if self.breakout_percentage > BREAKOUT_FAIR {
             score += 4.0;
         }
 
         score.min(100.0)
+    }
+
+    /// Score avec seuils Forex Major (rétrocompatibilité)
+    #[allow(dead_code)]
+    pub fn quality_score(&self) -> f64 {
+        self.quality_score_scaled(1.0)
     }
 
     /// Retourne le rating textuel basé sur le score

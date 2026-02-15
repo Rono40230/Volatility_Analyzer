@@ -3,7 +3,7 @@ use chrono::{DateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Validate)]
 pub struct Candle {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i32>,
@@ -19,6 +19,25 @@ pub struct Candle {
     pub close: f64,
     #[validate(range(min = 0.0))]
     pub volume: f64,
+    // --- Champs spread (Option pour rétrocompatibilité M1 classiques) ---
+    /// Spread au premier tick de la minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spread_open: Option<f64>,
+    /// Spread max de la minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spread_high: Option<f64>,
+    /// Spread min de la minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spread_low: Option<f64>,
+    /// Spread au dernier tick de la minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spread_close: Option<f64>,
+    /// Spread moyen pondéré par le temps sur la minute
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub spread_mean: Option<f64>,
+    /// Nombre de ticks dans la minute (proxy liquidité)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tick_count: Option<i32>,
 }
 
 impl Candle {
@@ -56,6 +75,12 @@ impl Candle {
             low,
             close,
             volume,
+            spread_open: None,
+            spread_high: None,
+            spread_low: None,
+            spread_close: None,
+            spread_mean: None,
+            tick_count: None,
         };
         
         candle.validate().map_err(|e| {
@@ -85,11 +110,19 @@ impl Candle {
         (((self.close - self.open).abs()) / range) * 100.0
     }
 
+    /// Ratio mèche haute / mèche basse.
+    /// - `> 1.0` : mèche haute dominante (pression vendeuse)
+    /// - `< 1.0` : mèche basse dominante (hammer)
+    /// - `f64::INFINITY` : pas de mèche basse (upper wick only = forte pression vendeuse)
+    /// - `0.0` : pas de mèche haute (hammer pur)
     pub fn shadow_ratio(&self) -> f64 {
         let upper_wick = self.high - self.open.max(self.close);
         let lower_wick = self.open.min(self.close) - self.low;
         if lower_wick == 0.0 {
-            return 1.0;
+            if upper_wick == 0.0 {
+                return 1.0; // Doji parfait symétrique
+            }
+            return f64::INFINITY; // Pas de mèche basse
         }
         upper_wick / lower_wick
     }

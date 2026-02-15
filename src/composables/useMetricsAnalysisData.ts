@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { AnalysisResult } from '../stores/volatility'
-import type { SliceAnalysis } from '../utils/straddleAnalysis'
+import type { SliceAnalysis } from '../utils/volatilityScore'
 import {
   formatSliceTime,
   loadMovementQuality,

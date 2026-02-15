@@ -26,6 +26,8 @@
               </option>
             </select>
           </div>
+        </div>
+        <div class="header-actions">
           <button 
             class="btn-delete-all" 
             @click="showDeleteAllConfirmModal = true" 
@@ -35,7 +37,6 @@
             🗑️ Supprimer toutes les archives
           </button>
         </div>
-        <!-- Bouton IAnalyse supprimé -->
       </div>
     </div>
 
@@ -52,6 +53,16 @@
     <VolatilityMetaModal 
       :is-open="showVolatilityMetaModal"
       @close="showVolatilityMetaModal = false"
+    />
+
+    <CorrelationVolatilityMetaModal 
+      :is-open="showCorrelationVolatilityMetaModal"
+      @close="showCorrelationVolatilityMetaModal = false"
+    />
+
+    <EntryMetaModal 
+      :is-open="showEntryMetaModal"
+      @close="showEntryMetaModal = false"
     />
 
     <ExportModal 
@@ -255,6 +266,42 @@
       @close="closeViewer"
     />
 
+    <!-- Viewer Analyse Point d'Entrée -->
+    <div
+      v-else-if="showViewer && selectedArchive?.archive_type === 'Analyse Point d\'Entrée'"
+      class="viewer-overlay"
+      @click.self="closeViewer"
+    >
+      <div class="viewer-content viewer-large">
+        <div class="viewer-header">
+          <h2>{{ selectedArchive?.title }}</h2>
+          <button class="close-btn" @click="closeViewer">✕</button>
+        </div>
+        <div v-if="viewerData?.entryAnalysis" class="viewer-body scrollable">
+          <div class="entry-archive-layout">
+            <div class="entry-archive-col">
+              <EntryCard :result="viewerData.entryAnalysis" />
+              <MovementProfileChart
+                :details="viewerData.entryAnalysis.minute_details"
+                :peak-minute="viewerData.entryAnalysis.peak_minute"
+                :decay-speed="viewerData.entryAnalysis.decay_speed"
+              />
+            </div>
+            <div class="entry-archive-col">
+              <MinuteBreakdown
+                :details="viewerData.entryAnalysis.minute_details"
+                :optimal-offset="viewerData.entryAnalysis.optimal_offset_minutes"
+                :quarter-start-minute="(viewerData.hour ?? 0) * 60 + (viewerData.quarter ?? 0) * 15"
+                :symbol="viewerData.symbol ?? ''"
+              />
+              <EntrySummary :result="viewerData.entryAnalysis" />
+            </div>
+          </div>
+        </div>
+        <div v-else class="viewer-body"><p style="color: #8b949e; text-align: center; padding: 40px;">Données d'analyse introuvables dans cette archive.</p></div>
+      </div>
+    </div>
+
     <div
       v-else-if="showViewer"
       class="viewer-overlay"
@@ -262,7 +309,7 @@
     >
       <div
         class="viewer-content"
-        :class="{ 'viewer-large': selectedArchive?.archive_type === 'Heatmap' || selectedArchive?.archive_type === 'HEATMAP' || selectedArchive?.archive_type === 'Backtest' }"
+        :class="{ 'viewer-large': selectedArchive?.archive_type === 'Heatmap' || selectedArchive?.archive_type === 'HEATMAP' }"
       >
         <div class="viewer-header">
           <h2>{{ selectedArchive?.title }}</h2>
@@ -280,11 +327,6 @@
             :is-archive-mode="true"
           />
 
-          <BacktestResultsPanel
-            v-else-if="selectedArchive?.archive_type === 'Backtest'"
-            :archived-data="viewerData"
-          />
-           
           <div
             v-else
             class="unsupported-type"
@@ -299,14 +341,21 @@
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import { save as saveFile } from '@tauri-apps/plugin-dialog'
 import { useArchiveStore, type Archive, type ArchiveLight } from '../stores/archiveStore'
 import MetricsAnalysisModal from '../components/MetricsAnalysisModal.vue'
 import RetroactiveAnalysisResultsViewer from '../components/RetroactiveAnalysisResultsViewer.vue'
 import EventCorrelationHeatmap from '../components/EventCorrelationHeatmap.vue'
-import BacktestResultsPanel from '../components/BacktestResultsPanel.vue'
+import EntryCard from '../components/EntryCard.vue'
+import MinuteBreakdown from '../components/MinuteBreakdown.vue'
+import MovementProfileChart from '../components/MovementProfileChart.vue'
+import EntrySummary from '../components/EntrySummary.vue'
 import MetaAnalysisModal from '../components/MetaAnalysisModal.vue'
 import HeatmapMetaModal from '../components/HeatmapMetaModal.vue'
 import VolatilityMetaModal from '../components/VolatilityMetaModal.vue'
+import CorrelationVolatilityMetaModal from '../components/CorrelationVolatilityMetaModal.vue'
+import EntryMetaModal from '../components/EntryMetaModal.vue' 
 import ExportModal from '../components/ExportModal.vue'
 
 const archiveStore = useArchiveStore()
@@ -315,6 +364,8 @@ const showViewer = ref(false)
 const showMetaAnalysisModal = ref(false)
 const showHeatmapMetaModal = ref(false)
 const showVolatilityMetaModal = ref(false)
+const showCorrelationVolatilityMetaModal = ref(false)
+const showEntryMetaModal = ref(false)
 const showExportModal = ref(false)
 const viewerData = ref<any>(null)
 const showDeleteConfirmModal = ref(false)
@@ -324,6 +375,7 @@ const selectedPair = ref<string>('all')
 const expandedTypes = ref<Set<string>>(new Set())
 
 onMounted(async () => {
+
   await archiveStore.loadArchives()
   // Expand the first section by default if archives exist
   if (archiveStore.archives.length > 0) {
@@ -372,15 +424,21 @@ function basculerExpansionType(type: string) {
   }
 }
 
-function getMetaAnalysisType(type: string): 'retro' | 'heatmap' | 'volatility' | null {
-  if (type === 'RETRO_ANALYSIS' || type === 'Métriques Rétrospectives' || type === 'Correlation de la volatilité Paire/Evenement') {
+function getMetaAnalysisType(type: string): 'retro' | 'heatmap' | 'entry' | 'volatility' | 'correlation' | null {
+  if (type === 'RETRO_ANALYSIS' || type === 'Métriques Rétrospectives') {
     return 'retro'
   }
   if (type === 'Heatmap' || type === 'HEATMAP') {
     return 'heatmap'
   }
+  if (type === 'Analyse Point d\'Entrée') {
+    return 'entry'
+  }
   if (type === 'Volatilité brute' || type === 'Volatilité brute Paire/Période' || type === 'METRICS') {
     return 'volatility'
+  }
+  if (type === 'Correlation de la volatilité Paire/Evenement') {
+    return 'correlation'
   }
   return null
 }
@@ -391,8 +449,12 @@ function openMetaAnalysis(type: string) {
     showMetaAnalysisModal.value = true
   } else if (metaType === 'heatmap') {
     showHeatmapMetaModal.value = true
+  } else if (metaType === 'entry') {
+    showEntryMetaModal.value = true
   } else if (metaType === 'volatility') {
     showVolatilityMetaModal.value = true
+  } else if (metaType === 'correlation') {
+    showCorrelationVolatilityMetaModal.value = true
   }
 }
 
@@ -409,7 +471,6 @@ const availablePairs = computed(() => {
 
 function obtenirClasseType(type: string): string {
   const mapping: Record<string, string> = {
-    'Backtest': 'type-backtest',
     'Volatilité brute': 'type-metrics',
     'Volatilité brute Paire/Période': 'type-metrics',
     'Métriques Rétrospectives': 'type-default',
@@ -517,13 +578,17 @@ function cancelDelete() {
   showDeleteConfirmModal.value = false
   archiveToDelete.value = null
 }
+
 </script>
 
 <style scoped>
 .archives-container {
   padding: 30px;
   background: #0d1117;
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .archives-header {
@@ -542,6 +607,12 @@ function cancelDelete() {
   align-items: flex-end;
   gap: 30px;
   flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .header-pair-filter {
@@ -592,6 +663,13 @@ function cancelDelete() {
   text-align: center;
   padding: 60px 20px;
   color: #e2e8f0;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .spinner {
@@ -615,6 +693,13 @@ function cancelDelete() {
   background: #161b22;
   border-radius: 12px;
   border: 1px solid #30363d;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .empty-icon {
@@ -871,11 +956,6 @@ function cancelDelete() {
   color: white;
 }
 
-.type-backtest {
-  background: #8b5cf6;
-  color: white;
-}
-
 .backtest-summary {
   margin-top: 8px;
   background: #0d1117;
@@ -960,6 +1040,23 @@ function cancelDelete() {
   max-width: none;
   height: 95vh;
   max-height: none;
+}
+
+.entry-archive-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 16px;
+}
+
+.entry-archive-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .entry-archive-layout { grid-template-columns: 1fr; }
 }
 
 .viewer-header {
@@ -1190,6 +1287,33 @@ function cancelDelete() {
   background: #f85149;
   color: white;
   transform: scale(1.05);
+}
+
+.btn-export-comparative {
+  background: #1f6feb;
+  border: 1px solid #4a9eff;
+  color: #e0e0e0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1em;
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+.btn-export-comparative:hover:not(:disabled) {
+  background: #388bfd;
+  border-color: #6cb6ff;
+  transform: scale(1.05);
+}
+
+.btn-export-comparative:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .delete-all-modal {

@@ -51,6 +51,7 @@ pub fn calculate_atr_sma(candles: &[Candle], period: usize) -> f64 {
 /// ATR par moyenne mobile exponentielle (EMA) sur `period` candles.
 /// Initialise le EMA avec la SMA des `period` premières valeurs,
 /// puis applique le lissage exponentiel.
+#[allow(dead_code)]
 pub fn calculate_atr_ema(candles: &[Candle], period: usize) -> f64 {
     let tr_values = calculate_true_range_series(candles);
     if tr_values.is_empty() {
@@ -88,6 +89,7 @@ mod tests {
             low,
             close,
             volume: 100.0,
+            ..Default::default()
         }
     }
 
@@ -132,5 +134,47 @@ mod tests {
     fn test_empty_candles() {
         assert_eq!(calculate_atr_sma(&[], 14), 0.0);
         assert_eq!(calculate_atr_ema(&[], 14), 0.0);
+    }
+
+    #[test]
+    fn test_true_range_with_gap_down() {
+        // Gap down : prev_close=1.1080, current H=1.1050, L=1.1020
+        // TR = max(0.003, |1.1050-1.1080|=0.003, |1.1020-1.1080|=0.006) = 0.006
+        let tr = calculate_true_range(1.1050, 1.1020, Some(1.1080));
+        assert!((tr - 0.006).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_true_range_series_exact_values() {
+        let candles = vec![
+            make_candle(1.1000, 1.1030, 1.0990, 1.1010, 0), // TR1 = H-L = 0.004 (no prev)
+            make_candle(1.1010, 1.1050, 1.1000, 1.1040, 1), // prev=1.1010, TR = max(0.005, |1.1050-1.1010|=0.004, |1.1000-1.1010|=0.001) = 0.005
+            make_candle(1.1040, 1.1060, 1.1020, 1.1050, 2), // prev=1.1040, TR = max(0.004, |1.1060-1.1040|=0.002, |1.1020-1.1040|=0.002) = 0.004
+        ];
+        let series = calculate_true_range_series(&candles);
+        assert_eq!(series.len(), 3);
+        assert!((series[0] - 0.0040).abs() < 1e-10);
+        assert!((series[1] - 0.0050).abs() < 1e-10);
+        assert!((series[2] - 0.0040).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_atr_sma_exact_value() {
+        let candles = vec![
+            make_candle(1.1000, 1.1030, 1.0990, 1.1010, 0), // TR=0.004
+            make_candle(1.1010, 1.1050, 1.1000, 1.1040, 1), // TR=0.005
+            make_candle(1.1040, 1.1060, 1.1020, 1.1050, 2), // TR=0.004
+        ];
+        let atr = calculate_atr_sma(&candles, 3);
+        // SMA(3) = (0.004 + 0.005 + 0.004) / 3 = 0.01300 / 3 ≈ 0.004333
+        assert!((atr - 0.013 / 3.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_single_candle_atr() {
+        let candles = vec![make_candle(1.1000, 1.1050, 1.0990, 1.1010, 0)];
+        let atr = calculate_atr_sma(&candles, 14);
+        // Seule bougie : TR = H-L = 0.006, ATR = 0.006
+        assert!((atr - 0.006).abs() < 1e-10);
     }
 }

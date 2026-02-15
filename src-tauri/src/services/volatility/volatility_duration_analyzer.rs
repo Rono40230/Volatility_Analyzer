@@ -65,6 +65,57 @@ impl VolatilityDurationAnalyzer {
         ))
     }
 
+    /// Analyse la durée de volatilité depuis le profil minute-par-minute (15 valeurs moyennes).
+    /// Plus fiable que analyser_depuis_bougies car le profil est agrégé cross-jours
+    /// sans les artefacts de gaps inter-jours dans le calcul ATR.
+    pub fn analyser_depuis_profil(
+        hour: u8,
+        quarter: u8,
+        profile: &[f64],
+        sample_size: u16,
+    ) -> Result<VolatilityDuration, VolatilityError> {
+        if profile.is_empty() || profile.iter().all(|&v| v <= 0.0) {
+            return Err(VolatilityError::InsufficientData(
+                "Profil de volatilité vide ou nul".to_string(),
+            ));
+        }
+        let peak_val = profile.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        if peak_val <= 0.0 {
+            return Err(VolatilityError::MetricCalculationError(
+                "Peak du profil invalide".to_string(),
+            ));
+        }
+
+        // Peak duration: minutes avec volatilité > 70% du pic
+        let peak_threshold = peak_val * 0.7;
+        let peak_duration = profile
+            .iter()
+            .filter(|&&v| v > peak_threshold)
+            .count()
+            .max(1) as u16;
+
+        // Half-life: minutes après le pic avant de descendre sous 50% du peak
+        let peak_index = profile
+            .iter()
+            .position(|&v| (v - peak_val).abs() < 1e-10)
+            .unwrap_or(0);
+        let half_threshold = peak_val * 0.5;
+        let post_peak = &profile[peak_index..];
+        let half_life = post_peak
+            .iter()
+            .position(|&v| v < half_threshold)
+            .unwrap_or(post_peak.len())
+            .max(1) as u16;
+
+        Ok(VolatilityDuration::new(
+            hour,
+            quarter,
+            peak_duration,
+            half_life,
+            sample_size,
+        ))
+    }
+
     fn calculer_valeurs_atr(candles: &[&Candle]) -> Result<Vec<f64>, VolatilityError> {
         if candles.len() < 4 {
             return Err(VolatilityError::InsufficientData(
@@ -183,6 +234,7 @@ mod tests {
             low,
             close,
             volume: 1000.0,
+            ..Default::default()
         }
     }
 
@@ -252,5 +304,38 @@ mod tests {
         assert!(result.is_ok());
         let (_, decay_speed) = result.expect("Should have decay profile");
         assert_eq!(decay_speed, "SLOW");
+    }
+
+    #[test]
+    fn test_analyser_depuis_profil_typical() {
+        // Profil avec pic au milieu puis décroissance
+        let profile = vec![
+            2.0, 2.5, 3.0, 4.5, 5.0, 4.8, 4.0, 3.5, 3.0, 2.5, 2.0, 1.8, 1.5, 1.3, 1.0,
+        ];
+        let result = VolatilityDurationAnalyzer::analyser_depuis_profil(14, 0, &profile, 100);
+        assert!(result.is_ok());
+        let vd = result.unwrap();
+        assert!(vd.peak_duration_minutes >= 3, "Peak should be >= 3 min, got {}", vd.peak_duration_minutes);
+        assert!(vd.volatility_half_life_minutes >= 2, "Half-life should be >= 2, got {}", vd.volatility_half_life_minutes);
+        assert!(vd.recommended_trade_expiration_minutes >= vd.peak_duration_minutes);
+    }
+
+    #[test]
+    fn test_analyser_depuis_profil_flat() {
+        // Profil plat → la plupart des minutes > 70% du pic
+        let profile = vec![
+            3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.4, 3.3, 3.2, 3.1, 3.0, 3.0, 2.9, 2.9, 2.8,
+        ];
+        let result = VolatilityDurationAnalyzer::analyser_depuis_profil(10, 2, &profile, 50);
+        assert!(result.is_ok());
+        let vd = result.unwrap();
+        // Profil plat → peak_duration élevé (la plupart des minutes > 70% du pic)
+        assert!(vd.peak_duration_minutes >= 10, "Flat profile: peak should be >= 10, got {}", vd.peak_duration_minutes);
+    }
+
+    #[test]
+    fn test_analyser_depuis_profil_empty() {
+        let profile: Vec<f64> = vec![];
+        assert!(VolatilityDurationAnalyzer::analyser_depuis_profil(14, 0, &profile, 0).is_err());
     }
 }

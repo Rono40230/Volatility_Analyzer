@@ -83,7 +83,7 @@ label { color: #8b949e; font-weight: 600; font-size: 0.95em; white-space: nowrap
 .pair-select { padding: 10px 14px; border: 2px solid #30363d; border-radius: 8px; background: #ffffff; color: #000000; cursor: pointer; transition: all 0.3s; }
 .pair-select:hover:not(:disabled) { border-color: #58a6ff; }
 .pair-select:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
-.event-type-select { min-width: 360px; width: 420px; }
+.event-type-select { min-width: 600px; width: 700px; }
 .error-small { color: #f85149; font-size: 0.85em; margin-top: 5px; }
 .warning-small { color: #fbbf24; font-size: 0.85em; margin-top: 5px; }
 

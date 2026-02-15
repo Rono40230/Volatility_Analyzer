@@ -162,8 +162,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'BSI Manufacturing Index': {
     fr: 'Indice manufacturier BSI',
-    country: 'US',
-    flag: '🇺🇸'
+    country: 'JP',
+    flag: '🇯🇵'
   },
   'Bank Lending y/y': {
     fr: 'Prêts bancaires',
@@ -252,13 +252,13 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Caixin Manufacturing PMI': {
     fr: 'Indice des directeurs d’achat manufacturier Caixin',
-    country: 'JP',
-    flag: '🇯🇵'
+    country: 'CN',
+    flag: '🇨🇳'
   },
   'Caixin Services PMI': {
     fr: 'Indice des directeurs d’achat des services Caixin',
-    country: 'JP',
-    flag: '🇯🇵'
+    country: 'CN',
+    flag: '🇨🇳'
   },
   'Capacity Utilization Rate': {
     fr: 'Taux d’utilisation des capacités',
@@ -267,8 +267,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Capital Spending q/y': {
     fr: 'Dépenses en capital',
-    country: 'CA',
-    flag: '🇨🇦'
+    country: 'JP',
+    flag: '🇯🇵'
   },
   'Case-Shiller Home Price Index': {
     fr: 'Indice des prix immobiliers Case-Shiller',
@@ -277,8 +277,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Cash Rate': {
     fr: 'Taux au comptant',
-    country: 'JP',
-    flag: '🇯🇵'
+    country: 'AU',
+    flag: '🇦🇺'
   },
   'Challenger Job Cuts y/y': {
     fr: 'Réductions d’emplois Challenger',
@@ -402,8 +402,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Construction Work Done q/q': {
     fr: 'Travaux de construction effectués',
-    country: 'GB',
-    flag: '🇬🇧'
+    country: 'AU',
+    flag: '🇦🇺'
   },
   'Consumer Confidence': {
     fr: 'Confiance des consommateurs',
@@ -472,8 +472,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Credit Card Spending y/y': {
     fr: 'Dépenses par carte de crédit',
-    country: 'CA',
-    flag: '🇨🇦'
+    country: 'NZ',
+    flag: '🇳🇿'
   },
   'Credit Suisse Economic Expectations': {
     fr: 'Attentes économiques Credit Suisse',
@@ -492,8 +492,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Daylight Saving Time Shift': {
     fr: 'Passage à l’heure d’été/hiver',
-    country: 'CH',
-    flag: '🇨🇭'
+    country: 'OTHER',
+    flag: '🌍'
   },
   'Durable Goods Orders m/m': {
     fr: 'Commandes de biens durables',
@@ -2157,8 +2157,8 @@ export const eventTranslations: Record<string, EventTranslation> = {
   },
   'Westpac Consumer Sentiment': {
     fr: 'Sentiment des consommateurs Westpac',
-    country: 'GB',
-    flag: '🇬🇧'
+    country: 'AU',
+    flag: '🇦🇺'
   },
   'Wholesale Inventories m/m': {
     fr: 'Stocks de grossistes',
@@ -2189,3 +2189,6 @@ export function obtenirTraductionEvenement(eventName: string): EventTranslation 
     flag: '🌍'
   };
 }
+
+/** Alias anglais pour compatibilité avec les imports existants */
+export const getEventTranslation = obtenirTraductionEvenement;

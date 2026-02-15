@@ -1,3 +1,9 @@
+// models/trading_costs.rs - Profils de coûts de trading par classe d'actif
+//
+// DEPRECATED (Phase 3): Fallback temporaire pour M1 sans données tick.
+// Remplacé progressivement par le spread réel mesuré dans les candles enrichies
+// (champs spread_mean dans Candle). Sera supprimé quand toutes les paires
+// auront des données tick importées.
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,6 +22,7 @@ pub struct TradingCostProfile {
 }
 
 impl TradingCostProfile {
+    #[allow(dead_code)] // DEPRECATED: fallback pour M1 sans tick data
     pub fn get_profile(symbol: &str) -> Self {
         let s = symbol.to_uppercase();
         
@@ -25,6 +32,15 @@ impl TradingCostProfile {
         } else if s.contains("GBP") || s.contains("AUD") {
             // Majors volatiles (GBPUSD, AUDUSD) — spread ×3, slippage entrée ×2.5
             Self { spread_min: 2.0, spread_max: 6.0, spread_avg: 4.0, slippage: 2.0, spread_multiplier_event: 3.0, entry_slippage_multiplier: 2.5 }
+        } else if s.contains("NZD") {
+            // NZD pairs (NZDUSD, NZDJPY) — spread plus large que les majors
+            Self { spread_min: 2.5, spread_max: 6.0, spread_avg: 4.5, slippage: 2.0, spread_multiplier_event: 3.0, entry_slippage_multiplier: 2.5 }
+        } else if s.contains("CAD") {
+            // CAD pairs (USDCAD, CADJPY) — liquidité correcte
+            Self { spread_min: 2.0, spread_max: 5.0, spread_avg: 3.5, slippage: 1.5, spread_multiplier_event: 3.0, entry_slippage_multiplier: 2.0 }
+        } else if s.contains("CHF") {
+            // CHF pairs (USDCHF, EURCHF) — liquidité moyenne, risque SNB
+            Self { spread_min: 1.5, spread_max: 5.0, spread_avg: 3.0, slippage: 1.5, spread_multiplier_event: 3.5, entry_slippage_multiplier: 2.5 }
         } else if s.contains("XAU") || s.contains("GOLD") {
             // Or (Gold) — spread ×4, slippage entrée ×3
             Self { spread_min: 3.0, spread_max: 6.0, spread_avg: 4.0, slippage: 2.0, spread_multiplier_event: 4.0, entry_slippage_multiplier: 3.0 }
@@ -45,12 +61,14 @@ impl TradingCostProfile {
 
     /// Retourne le spread effectif pendant une fenêtre événementielle.
     /// Applique le multiplicateur au spread moyen.
+    #[allow(dead_code)]
     pub fn spread_during_event(&self) -> f64 {
         self.spread_avg * self.spread_multiplier_event
     }
 
     /// Retourne le coût total par trade pendant un événement.
     /// Spread événementiel + slippage asymétrique (entrée majorée + sortie normale).
+    #[allow(dead_code)]
     pub fn cost_per_trade_event(&self) -> f64 {
         let entry_slippage = self.slippage * self.entry_slippage_multiplier;
         let exit_slippage = self.slippage; // Sortie = slippage normal

@@ -3,9 +3,9 @@
 
 mod commands;
 mod db;
-mod models;
+pub mod models;
 mod schema;
-mod services;
+pub mod services;
 
 use commands::retrospective_analysis::analyze_volatility_profile;
 use commands::*;
@@ -106,6 +106,12 @@ pub fn run() {
         std::process::exit(1);
     }
 
+    // Crée la table volatility_profiles (FIX 2.3)
+    if let Err(e) = db::ensure_volatility_profiles_table(&calendar_pool) {
+        tracing::error!("❌ ERREUR: Impossible de créer la table volatility_profiles: {}", e);
+        std::process::exit(1);
+    }
+
     tracing::info!("✅ Table calendar_imports vérifiée/créée");
 
     let calendar_state = calendar_commands::CalendarState {
@@ -175,7 +181,18 @@ pub fn run() {
     let archive_service = services::ArchiveService::new(calendar_pool.clone());
     tracing::info!("✅ ArchiveService créé");
 
+    // Initialise le service de profils de volatilité (FIX 2.3)
+    let volatility_profile_service = services::VolatilityProfileService::new(calendar_pool.clone());
+    tracing::info!("✅ VolatilityProfileService créé");
+
+    // Cache des résultats d'analyse (TTL 5 min, max 50 symboles)
+    let analysis_cache = commands::volatility::AnalysisCacheState {
+        cache: services::cache_service::CacheService::with_max_entries(300, 50),
+    };
+    tracing::info!("✅ AnalysisCacheState créé (TTL=300s, max=50)");
+
     let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|_app| Ok(()))
@@ -184,6 +201,8 @@ pub fn run() {
         .manage(candles_state)
         .manage(candle_index_state)
         .manage(archive_service)
+        .manage(volatility_profile_service)
+        .manage(analysis_cache)
         .invoke_handler(tauri::generate_handler![
             // Volatility commands (Phase 1)
             ping,
@@ -191,17 +210,12 @@ pub fn run() {
             analyze_symbol,
             get_hourly_stats,
             get_best_hours,
-            calculer_offset_optimal,
-            calculer_taux_reussite,
-            calculer_frequence_whipsaw,
             analyze_slice_metrics, // NEW: Analyse métriques d'un créneau 15min
-            analyze_straddle_metrics, // NEW: Analyse complète avec VRAIES données
             analyze_volatility_duration_for_slice, // NEW: Durée de volatilité réelle
             analyze_quarter_entry_timing, // NEW: Meilleur moment d'entrée par minute
             load_candles_for_hour, // NEW: Charger 60 candles pour une heure
             get_cached_candles_for_hour, // NEW: Récupérer candles en cache
             get_quarter_events, // NEW: Récupérer événements récurrents pour un quarter
-            check_pair_correlations, // Corrélation inter-paires
             // Calendar commands (Phase 2 MVP)
             load_economic_events_from_csv,
             import_and_convert_calendar, // Nouveau: import automatisé
@@ -217,7 +231,9 @@ pub fn run() {
             get_symbol_properties, // NEW: Récupérer point_value et pip_value
             get_all_conversions,   // NEW: Toutes les conversions (hardcodé + DB)
             save_conversion,       // NEW: Sauvegarder une conversion personnalisée
-            delete_conversion,     // NEW: Supprimer une conversion (retour au hardcodé)
+            delete_conversion,     // NEW: Masquer une conversion
+            restore_conversion,    // NEW: Restaurer une conversion masquée
+            invalidate_analysis_cache, // NEW: Invalider cache après changements conversions
             clean_csv_files,        // Nouveau: nettoyage CSV européens
             import_and_clean_files, // Nouveau: import unifié (clean + import)
             // Session analysis commands (Phase 5)
@@ -278,6 +294,7 @@ pub fn run() {
             get_archive,
             delete_archive,
             delete_all_archives,
+            get_archived_pairs_events,
             // Global Analysis (Phase IA)
             analyze_all_archives,
             get_available_pairs,
@@ -288,14 +305,25 @@ pub fn run() {
             get_event_types,
             // PDF export commands
             exporter_formules_pdf,
-            // Backtest commands
-            run_backtest,
-            run_backtest_time,
-            get_recommended_backtest_config,
+            // Entry point analysis (Phase 2 — profit net après spread réel)
+            commands::entry_point_commands::analyze_entry_points,
+            // Tick import commands (Phase 1 — données enrichies spread)
+            commands::tick_import_commands::import_tick_file,
+            // Dukascopy download commands (auto-download tick data)
+            commands::dukascopy_commands::get_dukascopy_instruments,
+            commands::dukascopy_commands::download_dukascopy_data,
             // Planning commands
             project_stats_on_calendar,
             sync_forex_factory_week,
-        ]);
+            commands::calendar_import_commands::process_forex_factory_csv,
+            commands::calendar_import_commands::check_download_folder_for_forex_factory,
+            commands::calendar_import_commands::clean_old_calendar_files_from_downloads,
+            // PDF export commands
+            commands::export_pdf_commands::export_comparative_analysis_pdf,
+        ])
+        .setup(|_app| {
+            Ok(())
+        });
 
     tracing::info!("✅ Tauri Builder configuré");
     tracing::info!("📋 Commandes enregistrées: analyze_symbol, import_pair_data, import_and_clean_files, delete_pair_from_db, delete_calendar_from_db, et autres");

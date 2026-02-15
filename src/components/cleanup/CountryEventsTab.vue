@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, computed } from 'vue'
+import { computed } from 'vue'
 
 interface CurrencySummary { symbol: string; country_name: string; count: number }
 

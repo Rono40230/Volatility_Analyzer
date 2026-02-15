@@ -17,6 +17,12 @@ pub struct CandleIndex {
     db_loader: Option<DatabaseLoader>,
 }
 
+impl Default for CandleIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CandleIndex {
     /// Crée un nouvel index vide sans DatabaseLoader
     pub fn new() -> Self {

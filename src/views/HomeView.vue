@@ -89,18 +89,6 @@ function openModal(modal: 'formulas' | 'export') {
         <p>Étude de l'impact des événements passés</p>
       </div>
 
-      <!-- Backtest -->
-      <div class="tool-card" @click="navigate('backtest')">
-        <div class="card-icon backtest-icon">
-          <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" fill="none" class="animated-icon">
-            <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="graph-line"/>
-            <path d="M22 22H2" stroke-width="2" class="axis-line"/>
-          </svg>
-        </div>
-        <h3>Backtest</h3>
-        <p>Tester des stratégies sur l'historique</p>
-      </div>
-
       <!-- Planning -->
       <div class="tool-card" @click="navigate('planning')">
         <div class="card-icon plan-icon">
@@ -215,7 +203,7 @@ function openModal(modal: 'formulas' | 'export') {
 
 .tools-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 24px;
   width: 100%;
   max-width: 1200px;

@@ -32,6 +32,17 @@ impl MetricsAggregator {
 
         let count = stats_with_data.len() as f64;
 
+        // FIX 2.1: Unit Declarations for GlobalMetrics
+        // ⬇️ ALL UNITS EXPLICITLY DOCUMENTED ⬇️
+        // mean_atr: [Pips/Points] - normalized via symbol_properties.rs
+        // mean_max_true_range: [Pips/Points] - 95th percentile of TR
+        // mean_volatility: [%] - (ATR/Close) × 100, range 0-100
+        // mean_body_range: [%] - body/range ratio, range 0-100
+        // mean_noise_ratio: [Ratio] - wicks/body ratio, range 1-10
+        // mean_volume_imbalance: [Ratio, 0-1] - FIX 2.1: NOW (body%/100) × (breakout%/100), clean math
+        // mean_breakout_percentage: [%] - frequency of ATR breakouts, range 0-100
+        // mean_range: [Pips/Points] - normalized high-low average
+        
         GlobalMetrics {
             mean_atr: stats_with_data.iter().map(|h| h.atr_mean).sum::<f64>() / count,
             mean_max_true_range: stats_with_data

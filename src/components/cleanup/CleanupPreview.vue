@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import CleanupPreviewTable from './CleanupPreviewTable.vue'
 import type { CalendarEvent, CurrencySummary } from '../../types/cleanup'

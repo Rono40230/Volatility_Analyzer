@@ -67,16 +67,10 @@ impl DatabaseLoader {
         DatabaseLoader { db_pool: pool }
     }
 
-    /// Ouvre une connexion rusqlite à partir du pool Diesel.
-    /// Extrait l'URL de la BD depuis la configuration du pool manager.
-    /// Les PRAGMAs (WAL, busy_timeout) sont gérés au niveau du pool (ConnectionOptions).
+    /// Ouvre une connexion rusqlite vers pairs.db.
+    /// Note : le pool Diesel est conservé pour compatibilité avec d'autres modules mais
+    /// toutes les requêtes candle passent par rusqlite (plus performant pour les SELECT massifs).
     fn get_rusqlite_conn(&self) -> Result<rusqlite::Connection, LoaderError> {
-        // Obtenir une connexion Diesel pour vérifier que le pool est actif
-        let _diesel_conn = self.db_pool.get().map_err(|e| {
-            error!("Pool connection error: {}", e);
-            LoaderError::Connection(format!("Pool unavailable: {}", e))
-        })?;
-
         // Utiliser le chemin standard de la BD paires
         let db_path = dirs::data_local_dir()
             .map(|d| d.join("volatility-analyzer").join("pairs.db"))
@@ -87,7 +81,6 @@ impl DatabaseLoader {
             LoaderError::Connection(e.to_string())
         })?;
 
-        // PRAGMAs minimaux (le pool gère déjà WAL via ConnectionOptions)
         conn.busy_timeout(std::time::Duration::from_millis(5000))
             .map_err(|e| LoaderError::Connection(e.to_string()))?;
 
@@ -111,7 +104,8 @@ impl DatabaseLoader {
 
         let mut stmt = conn
             .prepare(
-                "SELECT symbol, time, open, high, low, close, volume
+                "SELECT symbol, time, open, high, low, close, volume,
+                        spread_open, spread_high, spread_low, spread_close, spread_mean, tick_count
                  FROM candle_data
                  WHERE symbol = ? AND timeframe = ? AND time >= ? AND time <= ?
                  ORDER BY time ASC",
@@ -126,13 +120,19 @@ impl DatabaseLoader {
                 rusqlite::params![symbol, timeframe, &start_str, &end_str],
                 |row| {
                     Ok((
-                        row.get::<_, String>(0)?, // symbol
-                        row.get::<_, String>(1)?, // time
-                        row.get::<_, f64>(2)?,    // open
-                        row.get::<_, f64>(3)?,    // high
-                        row.get::<_, f64>(4)?,    // low
-                        row.get::<_, f64>(5)?,    // close
-                        row.get::<_, f64>(6)?,    // volume
+                        row.get::<_, String>(0)?,  // symbol
+                        row.get::<_, String>(1)?,  // time
+                        row.get::<_, f64>(2)?,     // open
+                        row.get::<_, f64>(3)?,     // high
+                        row.get::<_, f64>(4)?,     // low
+                        row.get::<_, f64>(5)?,     // close
+                        row.get::<_, f64>(6)?,     // volume
+                        row.get::<_, Option<f64>>(7)?,  // spread_open
+                        row.get::<_, Option<f64>>(8)?,  // spread_high
+                        row.get::<_, Option<f64>>(9)?,  // spread_low
+                        row.get::<_, Option<f64>>(10)?, // spread_close
+                        row.get::<_, Option<f64>>(11)?, // spread_mean
+                        row.get::<_, Option<i32>>(12)?, // tick_count
                     ))
                 },
             )
@@ -143,7 +143,8 @@ impl DatabaseLoader {
 
         let candles: Result<Vec<_>, LoaderError> = rows
             .map(|row_result| {
-                let (sym, time_str, open, high, low, close, volume) =
+                let (sym, time_str, open, high, low, close, volume,
+                     sp_open, sp_high, sp_low, sp_close, sp_mean, t_count) =
                     row_result.map_err(|e| LoaderError::Query(e.to_string()))?;
 
                 let datetime = DateTime::parse_from_rfc3339(&time_str)
@@ -153,8 +154,15 @@ impl DatabaseLoader {
                         LoaderError::Parsing(format!("Invalid datetime: {}", time_str))
                     })?;
 
-                Candle::new(sym, datetime, open, high, low, close, volume)
-                    .map_err(|e| LoaderError::Validation(e.to_string()))
+                let mut candle = Candle::new(sym, datetime, open, high, low, close, volume)
+                    .map_err(|e| LoaderError::Validation(e.to_string()))?;
+                candle.spread_open = sp_open;
+                candle.spread_high = sp_high;
+                candle.spread_low = sp_low;
+                candle.spread_close = sp_close;
+                candle.spread_mean = sp_mean;
+                candle.tick_count = t_count;
+                Ok(candle)
             })
             .collect();
 

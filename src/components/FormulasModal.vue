@@ -48,22 +48,21 @@
             <div class="formulas-separator"></div>
 
             <template v-for="cat in categories" :key="cat.id">
-              <div v-if="cat.id === 'conversion'" class="formulas-separator"></div>
+              <div v-if="cat.id === 'spread_cost'" class="formulas-separator"></div>
               <button
                 :class="['formulas-category-btn', { active: selectedCategory === cat.id }]"
                 @click="selectCategory(cat.id)"
               >
                 <span class="formulas-category-emoji">{{ cat.emoji }}</span>
                 <span class="formulas-category-label">{{ cat.titre }}</span>
-                <span v-if="cat.id !== 'conversion' && cat.id !== 'spread_cost'" class="formulas-category-count">({{ cat.formules.length }})</span>
+                <span v-if="cat.id !== 'spread_cost'" class="formulas-category-count">({{ cat.formules.length }})</span>
               </button>
             </template>
           </div>
         </nav>
 
         <div class="formulas-content">
-          <ConversionTable v-if="selectedCategory === 'conversion'" />
-          <SpreadCostTable v-else-if="selectedCategory === 'spread_cost'" />
+          <SpreadCostTable v-if="selectedCategory === 'spread_cost'" />
           <FormuleDetailPanel
             v-else
             :formule="formuleSélectionnée"
@@ -80,7 +79,7 @@
 
       <div class="formulas-footer">
         <button 
-          v-if="selectedCategory !== 'conversion' && selectedCategory !== 'spread_cost'"
+          v-if="selectedCategory !== 'spread_cost'"
           class="formulas-btn formulas-btn-export" 
           @click="exporterPDF"
         >
@@ -98,7 +97,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { save } from '@tauri-apps/plugin-dialog'
 import '../styles/formulas-modal.css'
 import FormuleDetailPanel from './FormuleDetailPanel.vue'
-import ConversionTable from './ConversionTable.vue'
 import SpreadCostTable from './SpreadCostTable.vue'
 import { useFormulasLogic } from '../composables/useFormulasLogic'
 import type { Formule } from '../data/formules'

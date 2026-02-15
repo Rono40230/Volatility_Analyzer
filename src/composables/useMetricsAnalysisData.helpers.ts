@@ -1,8 +1,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { Stats15Min } from '../stores/volatilityTypes'
-import { calculateStraddleScore } from '../utils/straddleAnalysis'
-import type { SliceAnalysis } from '../utils/straddleAnalysis'
-import { buildTradingPlanFromBackend } from '../utils/straddleCalculators.helpers'
+import { calculateVolatilityScore, buildTradingPlanFromBackend } from '../utils/volatilityScore'
+import type { SliceAnalysis } from '../utils/volatilityScore'
 import type { VolatilityDuration, MovementQuality, RecurringEvent } from './metricsAnalysisTypes'
 export { obtenirProfilVolatiliteAssemble } from '../utils/volatilityProfile'
 export type { VolatilityDuration, MovementQuality, RecurringEvent }
@@ -96,7 +95,7 @@ export function createBestSlice(
   quarter: number,
   movementQualityScore?: number
 ): SliceAnalysis {
-  const finalScore = calculateStraddleScore(bestSliceStats, movementQualityScore)
+  const finalScore = calculateVolatilityScore(bestSliceStats, movementQualityScore)
   return {
     rank: 1,
     slice: {

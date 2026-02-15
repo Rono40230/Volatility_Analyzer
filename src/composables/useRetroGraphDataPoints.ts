@@ -3,7 +3,6 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 export function useRetroGraphDataPoints(props: {
   atrTimelineBefore?: number[],
   atrTimelineAfter?: number[],
-  meilleurMoment?: number,
   eventDatetime?: string,
   pointValue?: number
 }) {
@@ -79,11 +78,10 @@ export function useRetroGraphDataPoints(props: {
     const baseTime = dateStr ? new Date(dateStr).getTime() : Date.now()
     
     const d = new Date(baseTime + offset * 60000)
-    const m = Math.round(d.getMinutes() / 5) * 5
-    d.setMinutes(m)
-    // Retourne uniquement le décalage relatif (ex: "T-5", "T+15") au lieu de l'heure absolue
-    if (offset === 0) return 'T0'
-    return offset > 0 ? `T+${offset}` : `T${offset}`
+    // Affiche l'horaire exacte: HH:MM
+    const hh = String(d.getUTCHours()).padStart(2, '0')
+    const mm = String(d.getUTCMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
   }
 
   const getXPositionBefore = (min: number): number => {
@@ -95,11 +93,6 @@ export function useRetroGraphDataPoints(props: {
     const m = svgMargins.value
     return m.t0 + (min / 90) * (m.right - m.t0)
   }
-
-  const bestMomentX = computed(() => {
-    if ((props.meilleurMoment || 0) <= 0) return svgMargins.value.t0
-    return getXPositionBefore(-(props.meilleurMoment || 0))
-  })
 
   const beforePointsString = computed(() => {
     if (!props.atrTimelineBefore?.length) return ''
@@ -143,7 +136,7 @@ export function useRetroGraphDataPoints(props: {
     getXPositionAfter,
     ceilValue: Math.ceil,
     formatValue,
-    bestMomentX,
+    bestMomentX: svgMargins.value.t0,
     beforePointsString,
     afterPointsString,
     curvePathBefore,

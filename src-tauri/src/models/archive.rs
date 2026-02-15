@@ -49,3 +49,12 @@ pub struct NewArchive {
     pub comment: Option<String>,
     pub data_json: String,
 }
+
+/// Paires/événements archivés pour marquer les cellules heatmap
+#[derive(QueryableByName, Serialize, Deserialize, Debug, Clone)]
+pub struct ArchivedPairEvent {
+    #[diesel(sql_type = Text)]
+    pub pair: String,
+    #[diesel(sql_type = Text)]
+    pub event_type: String,
+}

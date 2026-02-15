@@ -2,7 +2,7 @@
   <div v-if="isOpen" class="modal-overlay" @click.self="close">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>📊 Méta-Analyse des Archives</h2>
+        <h2>📊 Méta-Analyse : Corrélation Volatilité</h2>
         <button class="close-btn" @click="close">×</button>
       </div>
 

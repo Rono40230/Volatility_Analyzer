@@ -102,9 +102,12 @@ impl<'a> HourlyStatsCalculator<'a> {
         let breakout_percentage =
             (breakout_count as f64 / tr_dist.is_breakout.len() as f64) * 100.0;
 
-        // Direction Strength: Force directionnelle = (|directionalite| * cassures) / 10000
-        // Note: Both values are percentages (0-100), so divide by 10000 to get result in 0-100 range
-        let direction_strength = (body_range_mean.abs() * breakout_percentage) / 10000.0;
+        // Direction Strength: Force directionnelle [Ratio, 0-1]
+        // = (Body Range % / 100) × (Breakout % / 100)
+        // Exemple: 45% body × 18% breakout = 0.45 × 0.18 = 0.081 [ratio]
+        // Sémantique: Score combiné de pureté directionnelle (0=aucun, 1=parfait)
+        // Frontend affiche en % en multipliant par 100: 0.081 → 8.1%
+        let direction_strength = (body_range_mean / 100.0) * (breakout_percentage / 100.0);
 
         Ok(HourlyStats {
             hour,

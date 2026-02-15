@@ -20,7 +20,6 @@
             />
             <th>Heure</th>
             <th>ATR Moyen</th>
-            <th>Max Spike</th>
             <th>Volatilite %</th>
             <th>Body Range %</th>
             <th>Direction Strength</th>
@@ -56,18 +55,15 @@
                   class="star"
                 >⭐</span>
               </td>
-              <td><UnitDisplay :value="stat.atr_mean" :unit="props.unit || 'pts'" :symbol="props.symbol" /></td>
-              <td>
-                <UnitDisplay :value="stat.max_true_range" :unit="props.unit || 'pts'" :symbol="props.symbol" />
-              </td>
-              <td>{{ (stat.volatility_mean * 100).toFixed(2) }}%</td>
-              <td>
+              <td :class="metricClass('atr', stat.atr_mean)">{{ formatVal(stat.atr_mean) }} {{ props.unit || 'pips' }}</td>
+              <td :class="metricClass('volatility', stat.volatility_mean)">{{ (stat.volatility_mean * 100).toFixed(2) }}%</td>
+              <td :class="metricClass('bodyrange', stat.body_range_mean)">
                 {{ Math.abs(stat.body_range_mean).toFixed(2) }}%
                 <span style="font-size: 0.8em; opacity: 0.7;">{{ stat.body_range_mean >= 0 ? '↗' : '↘' }}</span>
               </td>
-              <td>{{ (stat.volume_imbalance_mean * 100).toFixed(2) }}%</td>
-              <td>{{ stat.noise_ratio_mean.toFixed(2) }}%</td>
-              <td>{{ stat.breakout_percentage.toFixed(2) }}%</td>
+              <td :class="metricClass('volumeimbalance', Math.abs(stat.volume_imbalance_mean))">{{ (stat.volume_imbalance_mean * 100).toFixed(2) }}%</td>
+              <td :class="metricClass('noiseratio', stat.noise_ratio_mean)">{{ stat.noise_ratio_mean.toFixed(2) }}%</td>
+              <td :class="metricClass('breakout', stat.breakout_percentage)">{{ stat.breakout_percentage.toFixed(2) }}%</td>
             </tr>
 
             <!-- Accordion 15-minutes -->
@@ -76,7 +72,7 @@
               class="accordion-row"
             >
               <td
-                :colspan="props.stats15min ? 9 : 8"
+                :colspan="props.stats15min ? 8 : 7"
                 class="accordion-cell"
               >
                 <QuarterDetails
@@ -85,7 +81,7 @@
                   :best-quarter="props.bestQuarter"
                   :unit="props.unit || 'pts'"
                   :symbol="props.symbol"
-                  @analyze-quarter="(h, q) => emit('analyze-quarter', h, q)"
+                  @entry-point-analyze="(h, q) => emit('entry-point-analyze', h, q)"
                 />
               </td>
             </tr>
@@ -99,9 +95,9 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { HourlyStats, Stats15Min } from '../stores/volatility'
-import { calculateStraddleScore } from '../utils/straddleCalculators'
-import UnitDisplay from './UnitDisplay.vue'
+import { calculateStraddleScore } from '../utils/volatilityScore'
 import QuarterDetails from './QuarterDetails.vue'
+import { pipsToDisplayValue } from '../utils/assetUnit'
 
 interface GlobalMetrics {
   mean_atr: number
@@ -131,8 +127,14 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'analyze-quarter': [hour: number, quarter: number]
+  'entry-point-analyze': [hour: number, quarter: number]
 }>()
+
+/** Dénormalise les pips en valeur réelle pour les assets en $ ou pts */
+function formatVal(pipsValue: number): string {
+  const display = props.symbol ? pipsToDisplayValue(pipsValue, props.symbol) : pipsValue
+  return display.toFixed(1)
+}
 
 const stats = computed(() => props.stats ?? [])
 
@@ -205,6 +207,33 @@ function getQuartersForHour(hour: number) {
   }
   return quarters
 }
+
+function metricClass(metric: string, value: number): string {
+  let quality: string
+  switch (metric) {
+    case 'atr':
+      quality = value > 50 ? 'excellent' : value > 20 ? 'good' : value > 10 ? 'acceptable' : 'poor'
+      break
+    case 'volatility':
+      quality = value >= 0.30 ? 'excellent' : value >= 0.15 ? 'good' : value >= 0.05 ? 'acceptable' : 'poor'
+      break
+    case 'bodyrange':
+      quality = Math.abs(value) > 45 ? 'excellent' : Math.abs(value) > 35 ? 'good' : Math.abs(value) > 15 ? 'acceptable' : 'poor'
+      break
+    case 'noiseratio':
+      quality = value < 2.0 ? 'excellent' : value < 3.0 ? 'good' : value < 4.0 ? 'acceptable' : 'poor'
+      break
+    case 'volumeimbalance':
+      quality = value > 0.5 ? 'excellent' : value > 0.3 ? 'good' : value > 0.1 ? 'acceptable' : 'poor'
+      break
+    case 'breakout':
+      quality = value >= 20 ? 'excellent' : value >= 10 ? 'good' : value >= 5 ? 'acceptable' : 'poor'
+      break
+    default:
+      return ''
+  }
+  return `metric-${quality}`
+}
 </script>
 
 <style scoped>
@@ -237,6 +266,11 @@ function getQuartersForHour(hour: number) {
 .accordion-row {
   background-color: #0d1117;
 }
+
+.metric-excellent { color: #10b981; font-weight: 600; }
+.metric-good { color: #3b82f6; }
+.metric-acceptable { color: #f59e0b; }
+.metric-poor { color: #ef4444; font-weight: 600; }
 
 .accordion-cell {
   padding: 0 !important;

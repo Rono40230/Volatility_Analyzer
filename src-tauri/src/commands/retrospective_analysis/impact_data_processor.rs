@@ -1,4 +1,3 @@
-use super::helpers::calculer_atr;
 use super::helpers::{calculate_p95, calculate_avg_timestamp};
 use chrono::Duration;
 
@@ -15,7 +14,9 @@ pub struct ProcessedImpactData {
     pub volatility_increase: f64,
     pub event_count: usize,
     pub avg_timestamp: i64,
+    #[allow(dead_code)]
     pub p95_wick: f64,
+    #[allow(dead_code)]
     pub p95_range: f64,
     pub avg_deviation: f64,
     pub surprise_event_count: usize,
@@ -62,7 +63,7 @@ impl ImpactDataProcessor {
 
             let (mut atrs, mut bodies) = (Vec::new(), Vec::new());
             for candle in &occurrence_candles {
-                atrs.push(calculer_atr(candle.high, candle.low, candle.close));
+                atrs.push(crate::services::atr::calculate_true_range(candle.high, candle.low, None));
                 let range = candle.high - candle.low;
                 bodies.push(if range > 0.0 { (candle.close - candle.open).abs() / range * 100.0 } else { 0.0 });
             }
@@ -97,20 +98,33 @@ impl ImpactDataProcessor {
                 counts_after[idx] += 1;
             }
 
-            let calc_noise = |body: f64| if body > 0.0 { 100.0 / body } else { 1.0 };
+            let calc_noise = |candle: &crate::models::candle::Candle| -> f64 {
+                let body = (candle.close - candle.open).abs();
+                let range = candle.high - candle.low;
+                let upper_wick = candle.high - candle.close.max(candle.open);
+                let lower_wick = candle.open.min(candle.close) - candle.low;
+                let total_wicks = upper_wick + lower_wick;
+                if body > f64::EPSILON {
+                    total_wicks / body
+                } else if range > f64::EPSILON {
+                    10.0 // Doji = max noise
+                } else {
+                    0.0
+                }
+            };
 
-            for body in bodies.iter().take(event_index.min(atrs.len())) {
-                noise_before_sum += calc_noise(*body);
+            for candle in occurrence_candles.iter().take(event_index.min(occurrence_candles.len())) {
+                noise_before_sum += calc_noise(candle);
             }
-            if event_index < atrs.len() {
-                noise_during_sum += calc_noise(bodies[event_index]);
+            if event_index < occurrence_candles.len() {
+                noise_during_sum += calc_noise(occurrence_candles[event_index]);
             }
-            for body in bodies
+            for candle in occurrence_candles
                 .iter()
-                .take(atrs.len().min(event_index + 90))
+                .take(occurrence_candles.len().min(event_index + 90))
                 .skip(event_index + 1)
             {
-                noise_after_sum += calc_noise(*body);
+                noise_after_sum += calc_noise(candle);
             }
         }
 

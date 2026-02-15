@@ -1,0 +1,35 @@
+# Configuration pour Analyses-Historiques
+# Ce fichier est un exemple. Copiez-le en tant que config.toml pour l'utiliser
+
+[database]
+# Chemin de la base de données SQLite
+path = "/var/lib/analyses-historiques/db/pairs.db"
+enable_cache = true
+cache_ttl_minutes = 5
+
+[data]
+# Dossier contenant les fichiers CSV d'import
+csv_folder = "/var/lib/analyses-historiques/data"
+# Dossier de sauvegarde des imports
+imports_folder = "/var/lib/analyses-historiques/imports"
+
+[analysis]
+# Nombre de bougies minimum pour une analyse
+min_candles = 100
+# Timeframe par défaut (en minutes)
+default_timeframe = 1
+
+[ui]
+# Thème de l'interface
+theme = "dark"
+# Langue
+language = "fr"
+# Taille de la fenêtre
+window_width = 1400
+window_height = 900
+
+[logging]
+# Niveau de log (debug, info, warn, error)
+level = "info"
+# Fichier de log
+file = "/var/lib/analyses-historiques/app.log"

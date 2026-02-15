@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import EventActionParams from './EventActionParams.vue'
 import { 
   getDefaultPairForCurrency, 
   getEventDisplayInfo, 
@@ -15,12 +14,6 @@ interface EventAction {
   currency: string
   impact: 'High' | 'Medium' | 'Low'
   pair: string
-  offset: number
-  tp: number
-  sl: number
-  offset_simultaneous: number
-  tp_simultaneous: number
-  sl_simultaneous: number
   confidence_score: number
   source: string
   has_history: boolean
@@ -33,7 +26,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'update', id: string, field: string, value: number): void
   (e: 'analyze', event: EventAction, pair: string): void
 }>()
 
@@ -90,12 +82,6 @@ const displayInfo = computed(() => getEventDisplayInfo(props.event.name, props.e
         </div>
       </div>
     </div>
-
-    <EventActionParams 
-      :event="event" 
-      :has-archive="hasArchive"
-      @update="(id, field, value) => emit('update', id, field, value)"
-    />
   </div>
 </template>
 

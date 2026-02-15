@@ -16,13 +16,6 @@ export interface RetroGraphData {
   pair: string
   event_datetime: string             // ISO 8601: heure de l'événement
   timezone_offset: string            // Ex: "UTC+0"
-  meilleur_moment: number            // Offset optimal en minutes
-  timeout: number                    // Timeout en minutes
-  // Champs Simultané
-  stop_loss_simultaneous: number
-  trailing_stop_simultaneous: number
-  offset_simultaneous: number
-  stop_loss_recovery_simultaneous: number
 
   point_value: number                // Valeur d'un point pour normalisation
   avg_deviation: number

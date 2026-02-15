@@ -3,8 +3,6 @@ import { computed } from 'vue'
 import { useEventPairCorrelation } from '../../composables/useEventPairCorrelation'
 import { useEventTranslation } from '../../composables/useEventTranslation'
 import EventDetailPairs from './EventDetailPairs.vue'
-import EventDetailStraddle from './EventDetailStraddle.vue'
-import { formaterPointsAvecPips } from '../../utils/pipConverter'
 import type { EventDetailState } from '../../composables/useEventDetail'
 
 interface Props {
@@ -51,7 +49,7 @@ const allPairs = computed(() => {
         </div>
         <div class="stat-box">
           <div class="stat-label">Volatilité ATR</div>
-          <div class="stat-value">{{ formaterPointsAvecPips(event.pair || 'EURUSD', event.avgATR || 0) }}</div>
+          <div class="stat-value">{{ (event.avgATR || 0).toFixed(1) }} pips</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">Pic (+/-)</div>
@@ -65,14 +63,6 @@ const allPairs = computed(() => {
 
       <!-- All Pairs Grid -->
       <EventDetailPairs :pairs="allPairs" />
-
-      <!-- Straddle Setup -->
-      <EventDetailStraddle 
-        :avgATR="event.avgATR || 0" 
-        :pair="event.pair || 'N/A'"
-        :sl-adjusted="event.slAdjusted || 0"
-        :trailing-stop-coefficient="event.trailingStopCoefficient || 1.5"
-      />
     </div>
   </div>
   </Teleport>

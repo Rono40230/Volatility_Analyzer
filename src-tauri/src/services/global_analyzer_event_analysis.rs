@@ -130,7 +130,7 @@ pub fn compute_optimal_time_windows(archives: &[crate::models::Archive]) -> Vec<
             };
 
             let avg_peak_time_minutes = if avg_after_vol > avg_before_vol {
-                10.0 + (avg_after_vol / (avg_before_vol + 0.01)) * 5.0
+                (10.0 + (avg_after_vol / (avg_before_vol + 0.01)) * 5.0).min(120.0)
             } else {
                 2.0
             };

@@ -35,7 +35,12 @@ export const useVolatilityStore = defineStore('volatility', () => {
     }
   }
 
-  async function analyserSymbole(symbol: string, calendarId?: number | null) {
+  async function analyserSymbole(
+    symbol: string, 
+    calendarId?: number | null,
+    dateStart?: string | null,
+    dateEnd?: string | null
+  ) {
     loading.value = true
     error.value = ''
     selectedSymbol.value = symbol
@@ -48,7 +53,11 @@ export const useVolatilityStore = defineStore('volatility', () => {
         throw new Error('Veuillez sélectionner un calendrier avant de lancer l\'analyse')
       }
       
-      const result = await invoke<AnalysisResult>('analyze_symbol', { symbol, calendarId: cid })
+      const invokeParams: Record<string, unknown> = { symbol, calendarId: cid }
+      if (dateStart) invokeParams.dateStart = dateStart
+      if (dateEnd) invokeParams.dateEnd = dateEnd
+      
+      const result = await invoke<AnalysisResult>('analyze_symbol', invokeParams)
       analysisResult.value = result
     } catch (e: Error | unknown) {
       error.value = `Erreur analyse: ${e instanceof Error ? e.message : String(e)}`

@@ -68,3 +68,11 @@ impl From<diesel::result::Error> for VolatilityError {
         VolatilityError::DatabaseError(err.to_string())
     }
 }
+
+// Conversion VolatilityError → String pour les commandes Tauri utilisant Result<T, String>
+// Permet d'utiliser `?` sur des Result<T, VolatilityError> dans les handlers.
+impl From<VolatilityError> for String {
+    fn from(err: VolatilityError) -> Self {
+        err.to_string()
+    }
+}

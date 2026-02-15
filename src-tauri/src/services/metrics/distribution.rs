@@ -37,11 +37,22 @@ impl TrueRangeDistribution {
         );
 
         // Calcule tous les True Ranges
+        // IMPORTANT: vérifier la contiguïté temporelle pour éviter les faux TR inter-jours
+        // Quand les bougies sont groupées par heure (08:xx de jours différents),
+        // prev_close serait celui d'un autre jour → TR artificiellement gonflé
         let mut true_ranges = Vec::new();
 
         for i in 0..candles.len() {
             let prev_close = if i > 0 {
-                Some(candles[i - 1].close)
+                let diff = candles[i]
+                    .datetime
+                    .signed_duration_since(candles[i - 1].datetime);
+                // Contiguïté: la bougie précédente doit être à 1-2 minutes max
+                if diff.num_minutes().abs() <= 2 {
+                    Some(candles[i - 1].close)
+                } else {
+                    None // Gap temporel → pas de prev_close (TR = high - low)
+                }
             } else {
                 None
             };
@@ -117,6 +128,7 @@ mod tests {
                 low: 1.0,
                 close: 1.5,
                 volume: 100.0,
+                ..Default::default()
             });
         }
         // Ajouter quelques outliers (5 candles avec TR = 10.0)

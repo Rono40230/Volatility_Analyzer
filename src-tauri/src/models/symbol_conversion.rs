@@ -10,5 +10,6 @@ pub struct SymbolConversion {
     pub pip_value: f64,
     pub unit: String,
     pub display_digits: i32,
-    pub mt5_digits: i32,
+    #[serde(default)]
+    pub hidden: bool,
 }

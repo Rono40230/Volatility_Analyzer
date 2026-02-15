@@ -25,6 +25,7 @@ mod tests {
             low: base_price - 0.0010,
             close: base_price + 0.0005,
             volume: 100.0,
+            ..Default::default()
         }
     }
 

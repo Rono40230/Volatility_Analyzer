@@ -95,12 +95,46 @@ async function handleFileChange() {
   }
 }
 
-// Formater le label du fichier pour le dropdown
+// Formater le label du fichier pour le dropdown - même format que CalendarImportSection
 function formatFileLabel(file: CalendarFileInfo): string {
   if (file.date_range) {
-    // Format: "2007-2025 (calendar_2007-01-01_2025-10-31.csv)"
-    const years = file.date_range.split(' → ').map(d => d.split('-')[0]).join('-')
-    return `${years} - ${file.filename}`
+    // Format du date_range du backend : "du 2025-01-01 au 2026-01-31"
+    const match = file.date_range.match(/du (\d{4}-\d{2}-\d{2}) au (\d{4}-\d{2}-\d{2})/)
+    
+    if (match) {
+      const [, startStr, endStr] = match
+      
+      try {
+        // Parser au format YYYY-MM-DD
+        const [startYear, startMonth, startDay] = startStr.split('-').map(Number)
+        const [endYear, endMonth, endDay] = endStr.split('-').map(Number)
+        
+        const startDate = new Date(startYear, startMonth - 1, startDay)
+        const endDate = new Date(endYear, endMonth - 1, endDay)
+        
+        // Vérifier que les dates sont valides
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+          return file.filename
+        }
+        
+        // Fichiers ForexFactory_Sync - format spécial
+        if (file.filename.startsWith('ForexFactory_Sync')) {
+          const startDayFmt = startDate.getDate()
+          const startMonthFmt = startDate.toLocaleDateString('fr-FR', { month: 'long' })
+          const endDayFmt = endDate.getDate()
+          const endMonthFmt = endDate.toLocaleDateString('fr-FR', { month: 'long' })
+          const endYearFmt = endDate.getFullYear()
+          
+          return `News du ${startDayFmt} ${startMonthFmt} au ${endDayFmt} ${endMonthFmt} ${endYearFmt}`
+        }
+        
+        // Format standard: du DD/MM/YYYY au DD/MM/YYYY
+        const formatDate = (d: Date) => d.toLocaleDateString('fr-FR', { year: 'numeric', month: '2-digit', day: '2-digit' })
+        return `du ${formatDate(startDate)} au ${formatDate(endDate)}`
+      } catch {
+        return file.filename
+      }
+    }
   }
   return file.filename
 }
@@ -138,7 +172,8 @@ label {
   font-size: 0.95em;
   cursor: pointer;
   transition: all 0.3s;
-  min-width: 300px;
+  min-width: 500px;
+  max-width: 650px;
 }
 
 .calendar-dropdown:hover:not(:disabled) {

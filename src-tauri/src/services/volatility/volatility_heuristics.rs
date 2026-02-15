@@ -66,7 +66,7 @@ impl VolatilityHeuristics {
     /// 2. Corps petit par rapport au range (Indécision)
     ///
     /// Un Doji Géant signifie que le prix explose mais revient au point de départ.
-    /// C'est le pire scénario pour un Straddle (déclenche les deux ordres + SL).
+    /// C'est le pire scénario pour le trading (déclenche les deux ordres + SL).
     pub fn is_giant_doji(stats: &Stats15Min) -> bool {
         // Seuil de volatilité minimale (pour ne pas flagger les dojis de nuit sans volume)
         // Stats15Min contient des valeurs normalisées (Pips/Points) après agrégation
@@ -127,7 +127,6 @@ mod tests {
             recommended_trade_expiration_mean: None,
             max_true_range: 0.0,
             p95_wick: 0.0,
-            straddle_parameters: None,
             volatility_profile: None,
             optimal_entry_minute: None,
         }

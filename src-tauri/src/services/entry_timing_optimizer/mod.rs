@@ -155,6 +155,7 @@ mod tests {
             low: price - range,
             close: price + range / 2.0,
             volume: 100.0,
+            ..Default::default()
         }
     }
 
